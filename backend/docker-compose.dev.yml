@@ -1,0 +1,28 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - '3000:3000'
+    volumes:
+      - .:/usr/src/app
+    networks:
+      - civitas_network
+
+  postgres:
+    image: postgres:17
+    ports:
+      - '5432:5432'
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - civitas_network
+volumes:
+  postgres_data:
+
+networks:
+  civitas_network:
+    driver: bridge
