@@ -10,6 +10,15 @@ log() {
 
 log "Nuevo deploy detectado"
 
+if [ -f "$ENV_FILE" ]; then
+  set -o allexport
+  source "$ENV_FILE"
+  set +o allexport
+else
+  log "ERROR: No existe $ENV_FILE"
+  exit 1
+fi
+
 # Actualizar código
 cd $WORK_DIR
 git fetch "https://${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git" $GITHUB_BRANCH >> $LOG 2>&1
