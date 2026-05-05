@@ -2,6 +2,7 @@
 set -e
 
 WORK_DIR="/var/www/civitas-/backend"
+ENV_FILE="/etc/deploy-agent/secrets.env"
 LOG="/var/log/deploy-agent.log"
 
 log() {
@@ -25,7 +26,7 @@ git fetch "https://${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git" $GITHUB_BRANCH
 git reset --hard FETCH_HEAD >> $LOG 2>&1
 
 # Reconstruir contenedor
-docker-compose down >> $LOG 2>&1
-docker-compose up -d --build >> $LOG 2>&1
+docker compose down >> $LOG 2>&1
+docker compose up -d --build >> $LOG 2>&1
 
 log "Deploy exitoso"

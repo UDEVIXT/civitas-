@@ -17,5 +17,4 @@ jobs:
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
           port: ${{ secrets.PORT }}
-          script: |
-            /usr/local/bin/deploy-agent/deploy-agent.sh
+          script: /usr/local/bin/deploy-agent/deploy-agent.sh
