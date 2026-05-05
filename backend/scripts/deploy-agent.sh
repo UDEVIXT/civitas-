@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-WORK_DIR="/var/www/civitas"
+WORK_DIR="/var/www/civitas/backend"
 LOG="/var/log/deploy-agent.log"
 
 log() {
