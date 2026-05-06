@@ -24,6 +24,7 @@ Completa `backend/.env` con al menos estas variables:
 POSTGRES_DB=civitas
 POSTGRES_USER=civitas
 POSTGRES_PASSWORD=civitas123
+DATABASE_URL="postgresql://civitas:civitas123@localhost:5432/civitas"
 ```
 
 Opcional:
@@ -62,3 +63,6 @@ npm run test:e2e
 
 ## Nota importante
 Aquí se irán colocando notas importantes...
+
+## Comandos utiles
+Craer arquitectura de carpetas limpias: nest generate resource bitacora
