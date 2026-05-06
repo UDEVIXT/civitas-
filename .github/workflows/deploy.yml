@@ -18,4 +18,4 @@ jobs:
           password: ${{ secrets.PASSWORD }}
           port: ${{ secrets.PORT }}
           debug: true
-          script: sudo bash /usr/local/bin/deploy-agent/deploy-agent.sh
+          script: /usr/local/bin/deploy-agent/deploy-agent.sh
