@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { BitacoraModule } from './bitacora/bitacora.module';
+import { ReportesModule } from './reportes/reportes.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { BitacoraModule } from './bitacora/bitacora.module';
     }),
     PrismaModule,
     BitacoraModule,
+    ReportesModule
   ],
   controllers: [AppController],
   providers: [AppService],
