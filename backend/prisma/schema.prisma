@@ -123,6 +123,8 @@ model Servicio {
   rfc             String? @unique
   activo          Boolean @default(true)
 
+  id_tipo_servicio String?
+  tipo_servicio    TipoServicio? @relation(fields: [id_tipo_servicio], references: [id_tipo_servicio])
   visitantes Visitante[]
   horarios   HorarioAccesoServicios[]
 }
@@ -149,3 +151,13 @@ model Guardia {
   usuario     Usuario    @relation(fields: [id_usuario], references: [id_usuario])
   bitacoras   Bitacora[]
 }
+
+model TipoServicio {
+  id_tipo_servicio String @id @default(uuid())
+  categoria        String  // "Limpieza", "Repartidor", "Mantenimiento", "Proveedor"
+  nombre           String @unique
+  descripcion      String?
+
+  servicios Servicio[]
+}
+

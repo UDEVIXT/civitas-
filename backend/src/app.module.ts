@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { BitacoraModule } from './bitacora/bitacora.module';
 import { EmpleadoModule } from './empleado/empleado.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { EmpleadoModule } from './empleado/empleado.module';
     PrismaModule,
     BitacoraModule,
     EmpleadoModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
