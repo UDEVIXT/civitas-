@@ -28,6 +28,11 @@ enum DiaSemana {
   DOMINGO
 }
 
+enum Cargo {
+  Gobierno
+  Comite
+}
+
 model Persona {
   id_persona       String   @id @default(uuid())
   nombre           String
@@ -58,6 +63,7 @@ model Usuario {
   accesos    Acceso[]
   residentes Residente[]
   guardias   Guardia?
+  administradores Administrador[]
 }
 
 model Residente {
@@ -161,3 +167,11 @@ model TipoServicio {
   servicios Servicio[]
 }
 
+model Administrador {
+  id_administrador String    @id @default(uuid())
+  id_usuario       String    @unique
+  nombre           String    @db.VarChar(128)
+  apellidos        String    @db.VarChar(128)
+  cargo            Cargo
+  usuario          Usuario @relation(fields: [id_usuario], references: [id_usuario])
+}
