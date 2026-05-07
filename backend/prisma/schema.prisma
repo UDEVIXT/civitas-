@@ -1,10 +1,10 @@
 generator client {
   provider     = "prisma-client-js"
-  moduleFormat = "cjs" 
+  moduleFormat = "cjs"
 }
 
 datasource db {
-  provider = "postgresql" 
+  provider = "postgresql"
 }
 
 enum EstatusAcceso {
@@ -18,110 +18,123 @@ enum Rol {
   Residente
 }
 
-model Persona {
-  id_persona         String   @id @default(uuid())
-  nombre             String
-  genero             String
-  fecha_nacimiento   DateTime
-  telefono           String?
-  url_imagen         String?
+enum DiaSemana {
+  LUNES
+  MARTES
+  MIERCOLES
+  JUEVES
+  VIERNES
+  SABADO
+  DOMINGO
+}
 
-  usuario            Usuario[]
+model Persona {
+  id_persona       String   @id @default(uuid())
+  nombre           String
+  genero           String
+  fecha_nacimiento DateTime
+  telefono         String?
+  url_imagen       String?
+
+  usuario Usuario?
 }
 
 model Vivienda {
-  id_vivienda        String   @id @default(uuid())
-  numero_vivienda    String
+  id_vivienda     String @id @default(uuid())
+  numero_vivienda String @unique
 
-  residentes         Residente[]
+  residentes Residente[]
 }
 
-
 model Usuario {
-  id_usuario         String   @id @default(uuid())
-  nombre_usuario     String
-  correo             String   @unique
-  contraseña         String
-  rol                Rol
-  id_persona         String
+  id_usuario String @id @default(uuid())
+  nombre_usuario String @unique
+  correo         String @unique
+  password       String
+  rol            Rol
+  id_persona     String @unique
 
-  persona            Persona  @relation(fields: [id_persona], references: [id_persona])
-  accesos            Acceso[]
-  residente          Residente[]
+  persona    Persona     @relation(fields: [id_persona], references: [id_persona])
+  accesos    Acceso[]
+  residentes Residente[]
+  bitacoras  Bitacora[]
 }
 
 model Residente {
-  id_residente       String   @id @default(uuid())
-  id_usuario         String
-  id_vivienda        String
+  id_residente String @id @default(uuid())
+  id_usuario   String
+  id_vivienda  String
 
-  vivienda           Vivienda  @relation(fields: [id_vivienda], references: [id_vivienda])
-  usuario            Usuario   @relation(fields: [id_usuario], references: [id_usuario])
-}
-
-model Bitacora {
-  id_bitacora        String   @id @default(uuid())
-  id_acceso          String   @unique
-  id_guardia         String
-  fecha_hora_entrada DateTime @default(now())
-  fecha_hora_salida  DateTime?
-  comentario         String?
-
-  acceso             Acceso   @relation(fields: [id_acceso], references: [id_acceso])
-}
-
-model Acceso {
-  id_acceso          String        @id @default(uuid())
-  id_usuario         String
-  id_visitante       String
-  codigo_qr          String        @unique
-  fecha_creacion     DateTime      @default(now())
-  fecha_expiracion   DateTime
-  estatus            EstatusAcceso @default(Activo)
-  comentario_admin   String?
-
-  visitante          Visitante     @relation(fields: [id_visitante], references: [id_visitante])
-  usuario            Usuario    @relation(fields: [id_usuario], references: [id_usuario])
-  bitacora           Bitacora?
+  usuario    Usuario     @relation(fields: [id_usuario], references: [id_usuario])
+  vivienda   Vivienda    @relation(fields: [id_vivienda], references: [id_vivienda])
+  visitantes Visitante[]
 }
 
 model Visitante {
-  id_visitante       String   @id @default(uuid())
-  nombre             String
-  es_frecuente       Boolean  @default(false)
-  telefono           String?
-  url_imagen         String?
-  motivo             String?
-  id_residente       String
-  id_servicio        String?
+  id_visitante String  @id @default(uuid())
+  nombre       String
+  es_frecuente Boolean @default(false)
+  telefono     String?
+  url_imagen   String?
+  motivo       String?
+  id_residente String
+  id_servicio  String?
 
-  accesos            Acceso[]
-  servicio           Servicio? @relation(fields: [id_servicio], references: [id_servicio])
+  residente Residente @relation(fields: [id_residente], references: [id_residente])
+  servicio  Servicio? @relation(fields: [id_servicio], references: [id_servicio])
+  accesos   Acceso[]
+}
+
+model Acceso {
+  id_acceso        String        @id @default(uuid())
+  id_usuario       String
+  id_visitante     String
+  codigo_qr        String        @unique
+  fecha_creacion   DateTime      @default(now())
+  fecha_expiracion DateTime
+  estatus          EstatusAcceso @default(Activo)
+  comentario_admin String?
+
+  usuario   Usuario   @relation(fields: [id_usuario], references: [id_usuario])
+  visitante Visitante @relation(fields: [id_visitante], references: [id_visitante])
+  bitacora  Bitacora?
+}
+
+model Bitacora {
+  id_bitacora        String    @id @default(uuid())
+  id_acceso          String    @unique
+  id_guardia         String
+  fecha_hora_entrada DateTime  @default(now())
+  fecha_hora_salida  DateTime?
+  comentario         String?
+
+  acceso  Acceso  @relation(fields: [id_acceso], references: [id_acceso])
+  guardia Usuario @relation(fields: [id_guardia], references: [id_usuario])
 }
 
 model Servicio {
-  id_servicio        String   @id @default(uuid())
-  nombre_servicio    String
-  cargo              String?
-  nombre_empresa     String?
-  tipo_carro         String?
-  placas             String?  @unique
-  id_horario         String?
-  rfc                String?  @unique
-  activo             Boolean  @default(true)
+  id_servicio     String  @id @default(uuid())
+  nombre_servicio String
+  cargo           String?
+  nombre_empresa  String?
+  tipo_carro      String?
+  placas          String? @unique
+  rfc             String? @unique
+  activo          Boolean @default(true)
 
-  visitantes         Visitante[]
-  horario            HorarioAccesoServicios? @relation(fields: [id_horario], references: [id_horario])
+  visitantes Visitante[]
+  horarios   HorarioAccesoServicios[]
 }
 
 model HorarioAccesoServicios {
-  id_horario         String   @id @default(uuid())
-  dia_semana         String   
-  hora_inicio        DateTime
-  hora_fin           DateTime
-  tipo_servicio      String
-  activo             Boolean  @default(true)
+  id_horario  String    @id @default(uuid())
+  dia_semana  DiaSemana
+  hora_inicio DateTime  @db.Time
+  hora_fin    DateTime  @db.Time
+  id_servicio String
+  activo      Boolean   @default(true)
 
-  servicios          Servicio[]
+  servicio Servicio @relation(fields: [id_servicio], references: [id_servicio])
+
+  @@index([dia_semana, activo])
 }
-
