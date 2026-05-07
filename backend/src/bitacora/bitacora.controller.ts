@@ -6,9 +6,12 @@ import {
   Body,
   Sse,
   MessageEvent,
+  Query,
 } from '@nestjs/common';
+
 import { BitacoraService } from './bitacora.service';
 import { CreateBitacoraDto } from './dto/create-bitacora.dto';
+
 import { Subject, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
@@ -18,24 +21,44 @@ const bitacoraUpdates$ = new Subject<any>();
 export class BitacoraController {
   constructor(private readonly bitacoraService: BitacoraService) {}
 
+  // ---------------------------------------------------------
+  // SSE
+  // ---------------------------------------------------------
   @Sse('updates')
   sse(): Observable<MessageEvent> {
     return bitacoraUpdates$.asObservable().pipe(
       map((data) => ({
-        data: data,
-      } as MessageEvent)),
+        data,
+      })),
     );
   }
 
-  @Get('proveedores-activos')
-  async getProveedoresActivos() {
-    const data = await this.bitacoraService.obtenerProveedoresActivos();
+  // ---------------------------------------------------------
+  // GET BITACORA
+  // ---------------------------------------------------------
+  @Get()
+  async getBitacora(
+    @Query('search') search?: string,
+    @Query('tipo') tipo?: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+  ) {
+    const data = await this.bitacoraService.obtenerProveedoresActivos({
+      search,
+      tipo,
+      page: Number(page),
+      limit: Number(limit),
+    });
+
     return {
       success: true,
-      data,
+      ...data,
     };
   }
 
+  // ---------------------------------------------------------
+  // REGISTRAR SALIDA
+  // ---------------------------------------------------------
   @Patch('proveedores/:id_bitacora/salida')
   async registrarSalida(
     @Param('id_bitacora') id_bitacora: string,
@@ -49,6 +72,7 @@ export class BitacoraController {
       comentario_salida,
     );
 
+    // SSE EVENT
     bitacoraUpdates$.next({
       tipo_evento: 'PROVEEDOR_SALIDA',
       id_bitacora: resultado.id_bitacora,
