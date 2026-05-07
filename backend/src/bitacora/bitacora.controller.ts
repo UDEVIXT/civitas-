@@ -1,34 +1,37 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body } from '@nestjs/common';
 import { BitacoraService } from './bitacora.service';
 import { CreateBitacoraDto } from './dto/create-bitacora.dto';
-import { UpdateBitacoraDto } from './dto/update-bitacora.dto';
 
 @Controller('bitacora')
 export class BitacoraController {
   constructor(private readonly bitacoraService: BitacoraService) {}
 
-  @Post()
-  create(@Body() createBitacoraDto: CreateBitacoraDto) {
-    return this.bitacoraService.create(createBitacoraDto);
+  @Get('proveedores-activos')
+  async getProveedoresActivos() {
+    const data = await this.bitacoraService.obtenerProveedoresActivos();
+    return {
+      success: true,
+      data,
+    };
   }
 
-  @Get()
-  findAll() {
-    return this.bitacoraService.findAll();
-  }
+  @Patch('proveedores/:id_bitacora/salida')
+  async registrarSalida(
+    @Param('id_bitacora') id_bitacora: string,
+    @Body() createBitacoraDto: CreateBitacoraDto,
+  ) {
+    const { id_guardia, comentario_salida } = createBitacoraDto;
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.bitacoraService.findOne(+id);
-  }
+    const resultado = await this.bitacoraService.registrarSalidaProveedor(
+      id_bitacora,
+      id_guardia,
+      comentario_salida,
+    );
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateBitacoraDto: UpdateBitacoraDto) {
-    return this.bitacoraService.update(+id, updateBitacoraDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.bitacoraService.remove(+id);
+    return {
+      success: true,
+      message: 'Salida registrada correctamente',
+      data: resultado,
+    };
   }
 }
