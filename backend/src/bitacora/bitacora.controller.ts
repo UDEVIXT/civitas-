@@ -1,10 +1,31 @@
-import { Controller, Get, Patch, Param, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Param,
+  Body,
+  Sse,
+  MessageEvent,
+} from '@nestjs/common';
 import { BitacoraService } from './bitacora.service';
 import { CreateBitacoraDto } from './dto/create-bitacora.dto';
+import { Subject, Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+
+const bitacoraUpdates$ = new Subject<any>();
 
 @Controller('bitacora')
 export class BitacoraController {
   constructor(private readonly bitacoraService: BitacoraService) {}
+
+  @Sse('updates')
+  sse(): Observable<MessageEvent> {
+    return bitacoraUpdates$.asObservable().pipe(
+      map((data) => ({
+        data: data,
+      } as MessageEvent)),
+    );
+  }
 
   @Get('proveedores-activos')
   async getProveedoresActivos() {
@@ -27,6 +48,13 @@ export class BitacoraController {
       id_guardia,
       comentario_salida,
     );
+
+    bitacoraUpdates$.next({
+      tipo_evento: 'PROVEEDOR_SALIDA',
+      id_bitacora: resultado.id_bitacora,
+      fecha: resultado.fecha_hora_salida,
+      mensaje: `Salida registrada para el registro ${id_bitacora}`,
+    });
 
     return {
       success: true,
