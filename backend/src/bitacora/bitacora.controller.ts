@@ -7,13 +7,17 @@ import {
   Sse,
   MessageEvent,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 
 import { BitacoraService } from './bitacora.service';
 import { CreateBitacoraDto } from './dto/create-bitacora.dto';
 
 import { Subject, Observable } from 'rxjs';
+import { Roles } from 'src/auth/decorators/roles/roles.decorator';
 import { map } from 'rxjs/operators';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth/jwt-auth.guard';
+import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
 
 const bitacoraUpdates$ = new Subject<any>();
 
@@ -59,6 +63,8 @@ export class BitacoraController {
   // ---------------------------------------------------------
   // REGISTRAR SALIDA
   // ---------------------------------------------------------
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Guardia')
   @Patch('proveedores/:id_bitacora/salida')
   async registrarSalida(
     @Param('id_bitacora') id_bitacora: string,
