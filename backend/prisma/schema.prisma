@@ -149,5 +149,3 @@ model Guardia {
   usuario     Usuario    @relation(fields: [id_usuario], references: [id_usuario])
   bitacoras   Bitacora[]
 }
-
-
