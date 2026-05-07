@@ -74,7 +74,8 @@ export class BitacoraService {
       );
     }
 
-    const textoSalida = comentario_salida || `Salida verificada por: ${guardiaInfo.nombre}`;
+    const textoSalida =
+      comentario_salida || `Salida verificada por: ${guardiaInfo.nombre}`;
 
     const salidaRegistrada = await this.prisma.bitacora.update({
       where: { id_bitacora },

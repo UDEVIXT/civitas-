@@ -69,13 +69,13 @@ Nest resuelve dependencias por tipos/tokens en constructor. Esto habilita:
 
 ## 4) Flujo de request en Nest (orden real)
 
-1. **Middleware**
-2. **Guards**
-3. **Interceptors (before)**
-4. **Pipes** (transform/validate parametros/body)
-5. **Controller handler**
-6. **Interceptors (after)**
-7. **Exception Filters** (si hay error)
+1. **Middleware** : Es lo primero que se ejecuta. Es idéntico al middleware de Express o Laravel. Se usa para tareas genéricas como logs, compresión o leer headers básicos.
+2. **Guards**: u única responsabilidad es determinar si la petición tiene permiso para continuar (autorización). En Laravel, esto sería equivalente a los Policies o los middlewares de auth. Si el Guard devuelve false, la petición muere aquí.
+3. **Interceptors (before)**: Permiten ejecutar lógica antes de que el método del controlador sea llamado. Son útiles para transformar la petición o iniciar temporizadores de rendimiento.
+4. **Pipes** (transform/validate parametros/body): Permiten transformar y validar los datos de la petición antes de que lleguen al controlador.
+5. **Controller handler**: Es el método del controlador que maneja la petición. Aquí es donde se ejecuta la lógica de negocio.
+6. **Interceptors (after)**: Permiten ejecutar lógica después de que el método del controlador haya terminado. Son útiles para finalizar temporizadores de rendimiento o realizar tareas de limpieza.
+7. **Exception Filters** (si hay error): Permiten manejar errores de manera centralizada y devolver respuestas adecuadas al cliente.
 
 Esto te ayuda a decidir "donde va cada cosa".
 

@@ -23,7 +23,7 @@ export class BitacoraController {
     return bitacoraUpdates$.asObservable().pipe(
       map((data) => ({
         data: data,
-      } as MessageEvent)),
+      })),
     );
   }
 
