@@ -57,7 +57,7 @@ model Usuario {
   persona    Persona     @relation(fields: [id_persona], references: [id_persona])
   accesos    Acceso[]
   residentes Residente[]
-  bitacoras  Bitacora[]
+  guardias   Guardia?
 }
 
 model Residente {
@@ -107,9 +107,10 @@ model Bitacora {
   fecha_hora_entrada DateTime  @default(now())
   fecha_hora_salida  DateTime?
   comentario         String?
+  comentario_salida  String?
 
-  acceso  Acceso  @relation(fields: [id_acceso], references: [id_acceso])
-  guardia Usuario @relation(fields: [id_guardia], references: [id_usuario])
+  acceso       Acceso  @relation(fields: [id_acceso], references: [id_acceso])
+  guardia      Guardia  @relation(fields: [id_guardia], references: [id_guardia])
 }
 
 model Servicio {
@@ -122,6 +123,8 @@ model Servicio {
   rfc             String? @unique
   activo          Boolean @default(true)
 
+  id_tipo_servicio String?
+  tipo_servicio    TipoServicio? @relation(fields: [id_tipo_servicio], references: [id_tipo_servicio])
   visitantes Visitante[]
   horarios   HorarioAccesoServicios[]
 }
@@ -138,3 +141,23 @@ model HorarioAccesoServicios {
 
   @@index([dia_semana, activo])
 }
+
+model Guardia {
+  id_guardia  String     @id @default(uuid())
+  id_usuario  String     @unique
+  nombre      String     @db.VarChar(128)
+  turno       String
+
+  usuario     Usuario    @relation(fields: [id_usuario], references: [id_usuario])
+  bitacoras   Bitacora[]
+}
+
+model TipoServicio {
+  id_tipo_servicio String @id @default(uuid())
+  categoria        String  // "Limpieza", "Repartidor", "Mantenimiento", "Proveedor"
+  nombre           String @unique
+  descripcion      String?
+
+  servicios Servicio[]
+}
+
