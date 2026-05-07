@@ -80,6 +80,13 @@ async function main() {
 
   const [admin, guardia, res1, res2, res3] = usuariosCreados;
 
+  const guardiaDB = await prisma.guardia.create({
+    data: {
+      id_usuario: guardia.id_usuario,
+      nombre: 'Orlando',
+      turno: 'Matutino',
+    },
+  });
   // ---------------------------------------------------------
   // VIVIENDAS Y RESIDENTES
   // ---------------------------------------------------------
@@ -240,8 +247,9 @@ async function main() {
     await prisma.bitacora.create({
       data: {
         id_acceso: acceso.id_acceso,
-        id_guardia: guardia.id_usuario, 
+        id_guardia: guardiaDB.id_guardia, 
         comentario: 'Ingreso sin novedades',
+        comentario_salida: null,
         fecha_hora_salida: i % 2 === 0 ? new Date(Date.now() + 3600000) : null,
       },
     });
