@@ -1,0 +1,82 @@
+[
+  {
+    "id": "ed-001",
+    "nombre": "Candy Saenz",
+    "email": "olivia@untitledui.com",
+    "estado": "Activo",
+    "destino": "Casa #15",
+    "horarioAutorizado": "Lun-Vie: 8am-4pm"
+  },
+  {
+    "id": "ed-002",
+    "nombre": "Rosa Perez",
+    "email": "getciro@oles.com",
+    "estado": "Activo",
+    "destino": "Casa #8",
+    "horarioAutorizado": "Mie: 10am-2pm"
+  },
+  {
+    "id": "ed-003",
+    "nombre": "Frida Sofia",
+    "email": "cmdr.ai",
+    "estado": "Inactivo",
+    "destino": "Casa #23",
+    "horarioAutorizado": "Dom: 9am-12pm"
+  },
+  {
+    "id": "ed-004",
+    "nombre": "Ramon Valdez",
+    "email": "hourglass.app",
+    "estado": "Activo",
+    "destino": "Casa #742",
+    "horarioAutorizado": "Lun: 10am-12pm"
+  },
+  {
+    "id": "ed-005",
+    "nombre": "Gerardo Daniel",
+    "email": "getlayers.io",
+    "estado": "Inactivo",
+    "destino": "Casa #120",
+    "horarioAutorizado": "Lun-Vie: 8am-4pm"
+  },
+  {
+    "id": "ed-006",
+    "nombre": "Howard Wolowitz",
+    "email": "quotient.co",
+    "estado": "Activo",
+    "destino": "Casa #4A",
+    "horarioAutorizado": "Lun-Vie: 8am-4pm"
+  },
+  {
+    "id": "ed-007",
+    "nombre": "Mayim Bialik",
+    "email": "sisyphus.com",
+    "estado": "Activo",
+    "destino": "Casa #71",
+    "horarioAutorizado": "Lun-Vie: 9am-6pm"
+  },
+  {
+    "id": "ed-008",
+    "nombre": "Jaime Rios",
+    "email": "tablero.mx",
+    "estado": "Activo",
+    "destino": "Casa #55",
+    "horarioAutorizado": "Sab: 9am-1pm"
+  },
+  {
+    "id": "ed-009",
+    "nombre": "Laura Delgado",
+    "email": "studio.dev",
+    "estado": "Inactivo",
+    "destino": "Casa #19",
+    "horarioAutorizado": "Vie: 1pm-6pm"
+  },
+  {
+    "id": "ed-010",
+    "nombre": "Hugo Martinez",
+    "email": "solido.ai",
+    "estado": "Activo",
+    "destino": "Casa #88",
+    "horarioAutorizado": "Lun-Mie: 7am-3pm"
+  }
+]
