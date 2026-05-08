@@ -18,7 +18,7 @@ export async function seedAccesos(prisma: PrismaClient) {
     return;
   }
 
-  const estatusValues = [EstatusAcceso.Activo, EstatusAcceso.Expirado, EstatusAcceso.Usado, EstatusAcceso.Inactivo];
+  const estatusValues = [EstatusAcceso.Activo, EstatusAcceso.Inactivo];
 
   for (const visitante of visitantes) {
     // Cada visitante tiene 1 o 2 intentos de acceso
