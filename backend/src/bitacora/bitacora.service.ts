@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -146,5 +147,83 @@ export class BitacoraService {
     });
 
     return salidaRegistrada;
+  }
+
+  async obtenerHistorialBitacora(filters: {
+    fechaInicio?: string;
+    fechaFin?: string;
+    nombre?: string;
+    numeroVivienda?: string;
+    tipoPersona?: 'Residente' | 'Visitante' | 'Servicio';
+    page?: number;
+    limit?: number;
+  }) {
+    const { fechaInicio, fechaFin, nombre, numeroVivienda, page = 1, limit = 10 } = filters;
+    const where: Prisma.BitacoraWhereInput = {};
+
+    // Filtros por fecha
+    if (fechaInicio || fechaFin) {
+      where.fecha_hora_entrada = {};
+      if (fechaInicio) where.fecha_hora_entrada.gte = new Date(fechaInicio);
+      if (fechaFin) where.fecha_hora_entrada.lte = new Date(fechaFin);
+    }
+
+    // Búsqueda por nombre de visitante
+    if (nombre) {
+      where.acceso = {
+        visitante: {
+          nombre: { contains: nombre, mode: 'insensitive' },
+        },
+      };
+    }
+
+    // Filtro por propiedad (Vivienda)
+    if (numeroVivienda) {
+      where.acceso = {
+        ...(where.acceso as any), // Preservar filtros previos si existen
+        visitante: {
+          ...(where.acceso as any)?.visitante,
+          residente: {
+            vivienda: {
+              numero_vivienda: numeroVivienda,
+            },
+          },
+        },
+      };
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.bitacora.findMany({
+        where,
+        include: {
+          guardia: true,
+          acceso: {
+            include: {
+              usuario: true, // Quién autorizó
+              visitante: {
+                include: {
+                  residente: { include: { vivienda: true } },
+                  servicio: { include: { tipo_servicio: true } },
+                },
+              },
+            },
+          },
+        },
+        orderBy: { fecha_hora_entrada: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.bitacora.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 }
