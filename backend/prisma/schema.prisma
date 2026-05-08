@@ -139,15 +139,9 @@ model Administrador {
   usuario          Usuario @relation(fields: [id_usuario], references: [id_usuario])
 }
 
-enum EstatusAcceso {
-  Activo
-  Inactivo
-}
-
-enum Rol {
-  Administrador
-  Guardia
-  Residente
+enum Cargo {
+  Gobierno
+  Comite
 }
 
 enum DiaSemana {
@@ -160,7 +154,13 @@ enum DiaSemana {
   DOMINGO
 }
 
-enum Cargo {
-  Gobierno
-  Comite
+enum EstatusAcceso {
+  Activo
+  Inactivo
+}
+
+enum Rol {
+  Administrador
+  Guardia
+  Residente
 }
