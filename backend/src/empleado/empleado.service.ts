@@ -54,6 +54,7 @@ export class EmpleadoService {
       this.prisma.visitante.findMany({
         where,
         select: {
+          id_visitante: true,
           nombre: true,
           telefono: true,
           url_imagen: true,
@@ -85,5 +86,11 @@ export class EmpleadoService {
     ]);
 
     return { data, total };
+  }
+
+  async eliminarEmpleado(id: string) {
+    await this.prisma.visitante.delete({
+      where: { id_visitante: id },
+    });
   }
 }

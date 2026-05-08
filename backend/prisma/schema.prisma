@@ -70,7 +70,7 @@ model Acceso {
   estatus          EstatusAcceso @default(Activo)
   comentario_admin String?
   usuario          Usuario       @relation(fields: [id_usuario], references: [id_usuario])
-  visitante        Visitante     @relation(fields: [id_visitante], references: [id_visitante])
+  visitante        Visitante     @relation(fields: [id_visitante], references: [id_visitante], onDelete: Cascade)
   bitacora         Bitacora?
 }
 
@@ -82,7 +82,7 @@ model Bitacora {
   fecha_hora_salida  DateTime?
   comentario         String?
   comentario_salida  String?
-  acceso             Acceso    @relation(fields: [id_acceso], references: [id_acceso])
+  acceso             Acceso    @relation(fields: [id_acceso], references: [id_acceso], onDelete: Cascade)
   guardia            Guardia   @relation(fields: [id_guardia], references: [id_guardia])
 }
 

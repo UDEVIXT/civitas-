@@ -56,6 +56,6 @@ export class EmpleadoController {
   }
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return { message: `Empleado ${id} eliminado` };
+    return this.empleadoService.eliminarEmpleado(id);
   }
 }
