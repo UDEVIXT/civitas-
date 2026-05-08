@@ -2,6 +2,13 @@ import { PrismaClient } from '@prisma/client';
 import { faker } from '@faker-js/faker';
 
 export async function seedServicios(prisma: PrismaClient) {
+  const tiposServicio = await prisma.tipoServicio.findMany();
+
+  if (tiposServicio.length === 0) {
+    console.error('No hay tipos de servicio para asignar a los servicios.');
+    return;
+  }
+
   const serviciosBase = [
     'Jardinería', 'Plomería', 'Limpieza', 'Internet', 'Comida', 
     'Seguridad', 'Electricidad', 'Mantenimiento', 'Paquetería', ' Gas'
@@ -13,6 +20,7 @@ export async function seedServicios(prisma: PrismaClient) {
     const tipoCarro = faker.vehicle.type();
     const placas = faker.vehicle.vrm();
     const rfc = faker.helpers.replaceSymbols('????######???').toUpperCase();
+    const tipoServicio = faker.helpers.arrayElement(tiposServicio);
 
     const servicioExistente = await prisma.servicio.findFirst({
       where: {
@@ -28,6 +36,8 @@ export async function seedServicios(prisma: PrismaClient) {
       tipo_carro: tipoCarro,
       placas: placas,
       rfc: faker.datatype.boolean() ? rfc : null,
+      id_tipo_servicio: tipoServicio.id_tipo_servicio,
+      activo: true
     };
 
     if (servicioExistente) {
@@ -45,6 +55,7 @@ export async function seedServicios(prisma: PrismaClient) {
   for (let i = 0; i < 20; i++) {
     const nombreServicio = faker.commerce.department();
     const nombreEmpresa = faker.company.name();
+    const tipoServicio = faker.helpers.arrayElement(tiposServicio);
 
     await prisma.servicio.create({
       data: {
@@ -53,8 +64,9 @@ export async function seedServicios(prisma: PrismaClient) {
         nombre_empresa: nombreEmpresa,
         tipo_carro: faker.vehicle.type(),
         placas: faker.vehicle.vrm(),
-        rfc: faker.helpers.replaceSymbols('????######???').toUpperCase(),
-      }
+        id_tipo_servicio: tipoServicio.id_tipo_servicio,
+        activo: true
+      },
     });
   }
 }

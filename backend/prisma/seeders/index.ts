@@ -10,6 +10,7 @@ import { seedGuardias } from './guardias.seeder';
 import { seedViviendas } from './viviendas.seeder';
 import { seedResidentes } from './residentes.seeder';
 import { seedServicios } from './servicios.seeder';
+import { seedTipoServicio } from './tipos-servicio.seeder';
 import { seedHorariosAccesoServicios } from './horarios-acceso-servicios.seeder';
 import { seedVisitantes } from './visitantes.seeder';
 import { seedAccesos } from './accesos.seeder';
@@ -35,7 +36,8 @@ async function truncateAll(prismaClient: PrismaClient) {
       "Administrador",
       "Usuario",
       "Vivienda",
-      "Persona"
+      "Persona",
+      "TipoServicio"
     RESTART IDENTITY CASCADE;
   `);
 }
@@ -50,6 +52,7 @@ async function main() {
   await seedGuardias(prisma);
   await seedViviendas(prisma);
   await seedResidentes(prisma);
+  await seedTipoServicio(prisma);
   await seedServicios(prisma);
   await seedHorariosAccesoServicios(prisma);
   await seedVisitantes(prisma);
