@@ -29,7 +29,20 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'warn',
-      "prettier/prettier": ["error", { endOfLine: "auto" }],
+      'prettier/prettier': [
+        'error',
+        {
+          endOfLine: 'auto',
+          useTabs: false,
+          tabWidth: 2,
+          semi: true,
+          singleQuote: true,
+          trailingComma: 'all',
+          printWidth: 80,
+        },
+      ],
+      indent: ['error', 2, { SwitchCase: 1 }],
+      'no-mixed-spaces-and-tabs': ['error', 'smart-tabs'],
     },
   },
 );
