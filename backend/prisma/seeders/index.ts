@@ -5,6 +5,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
 import { seedUsuarios } from './usuarios.seeder';
+import { seedAdministradores } from './administradores.seeder';
 import { seedGuardias } from './guardias.seeder';
 import { seedViviendas } from './viviendas.seeder';
 import { seedResidentes } from './residentes.seeder';
@@ -45,6 +46,7 @@ async function main() {
   await truncateAll(prisma);
 
   await seedUsuarios(prisma);
+  await seedAdministradores(prisma);
   await seedGuardias(prisma);
   await seedViviendas(prisma);
   await seedResidentes(prisma);

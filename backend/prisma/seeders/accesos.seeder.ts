@@ -1,38 +1,44 @@
-import { EstatusAcceso, PrismaClient } from '@prisma/client';
+import { EstatusAcceso, PrismaClient, Rol } from '@prisma/client';
+import { faker } from '@faker-js/faker';
 
 export async function seedAccesos(prisma: PrismaClient) {
-  const admin = await prisma.usuario.findUnique({
-    where: { correo: 'mariana@civitas.com' },
+  const administradores = await prisma.usuario.findMany({
+    where: { rol: Rol.Administrador },
   });
 
-  if (!admin) {
-    throw new Error('No se encontró el usuario administrador mariana@civitas.com.');
+  if (administradores.length === 0) {
+    console.error('No se encontraron administradores para crear accesos.');
+    return;
   }
 
-  const visitantes = await prisma.visitante.findMany({
-    orderBy: { nombre: 'asc' },
-  });
+  const visitantes = await prisma.visitante.findMany();
 
-  for (let i = 0; i < visitantes.length; i++) {
-    const codigoQR = `QR-CIVITAS-${1000 + i}`;
+  if (visitantes.length === 0) {
+    console.error('No hay visitantes para generar accesos.');
+    return;
+  }
 
-    await prisma.acceso.upsert({
-      where: { codigo_qr: codigoQR },
-      update: {
-        id_usuario: admin.id_usuario,
-        id_visitante: visitantes[i].id_visitante,
-        fecha_expiracion: new Date(Date.now() + 86400000),
-        estatus: EstatusAcceso.Activo,
-        comentario_admin: 'Acceso autorizado desde plataforma',
-      },
-      create: {
-        id_usuario: admin.id_usuario,
-        id_visitante: visitantes[i].id_visitante,
-        codigo_qr: codigoQR,
-        fecha_expiracion: new Date(Date.now() + 86400000),
-        estatus: EstatusAcceso.Activo,
-        comentario_admin: 'Acceso autorizado desde plataforma',
-      },
-    });
+  const estatusValues = [EstatusAcceso.Activo, EstatusAcceso.Expirado, EstatusAcceso.Usado, EstatusAcceso.Inactivo];
+
+  for (const visitante of visitantes) {
+    // Cada visitante tiene 1 o 2 intentos de acceso
+    const numAccesos = faker.number.int({ min: 1, max: 2 });
+    
+    for (let j = 0; j < numAccesos; j++) {
+      const codigoQR = faker.string.uuid();
+      const admin = faker.helpers.arrayElement(administradores);
+      const estatus = faker.helpers.arrayElement(estatusValues);
+
+      await prisma.acceso.create({
+        data: {
+          id_usuario: admin.id_usuario,
+          id_visitante: visitante.id_visitante,
+          codigo_qr: codigoQR,
+          fecha_expiracion: faker.date.future(),
+          estatus: estatus,
+          comentario_admin: faker.lorem.sentence(),
+        },
+      });
+    }
   }
 }
