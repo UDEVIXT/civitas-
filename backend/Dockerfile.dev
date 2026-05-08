@@ -17,6 +17,9 @@ ENV DOCKER_CONTAINER=true
 # Copy the rest of the application files
 COPY . .
 
+# Install the application dependencies
+RUN npm install
+
 # Build the NestJS application
 RUN npm run build
 
