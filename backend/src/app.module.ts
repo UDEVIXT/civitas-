@@ -7,6 +7,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { BitacoraModule } from './bitacora/bitacora.module';
 import { ReportesModule } from './reportes/reportes.module';
 import { EvidenciaIncidenciaModule } from './evidencia-incidencia/evidencia-incidencia.module';
+import { EmpleadoModule } from './empleado/empleado.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -16,7 +18,9 @@ import { EvidenciaIncidenciaModule } from './evidencia-incidencia/evidencia-inci
     PrismaModule,
     BitacoraModule,
     ReportesModule,
-    EvidenciaIncidenciaModule
+    EvidenciaIncidenciaModule,
+    EmpleadoModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
