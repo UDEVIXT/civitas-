@@ -5,6 +5,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { BitacoraModule } from './bitacora/bitacora.module';
+import { ReportesModule } from './reportes/reportes.module';
+import { EvidenciaIncidenciaModule } from './evidencia-incidencia/evidencia-incidencia.module';
 import { EmpleadoModule } from './empleado/empleado.module';
 import { AuthModule } from './auth/auth.module';
 
@@ -15,6 +17,8 @@ import { AuthModule } from './auth/auth.module';
     }),
     PrismaModule,
     BitacoraModule,
+    ReportesModule,
+    EvidenciaIncidenciaModule,
     EmpleadoModule,
     AuthModule,
   ],
