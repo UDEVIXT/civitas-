@@ -16,8 +16,16 @@ export async function seedBitacoras(prisma: PrismaClient) {
     
     // Solo creamos bitácora para algunos accesos (simulando que no todos han sido procesados o registrados)
     if (faker.datatype.boolean(0.8)) {
-      const fechaEntrada = faker.date.recent({ days: 30 });
-      const fechaSalida = faker.datatype.boolean(0.7) 
+      // Fecha de entrada dispersa en los últimos 30 días con hora/minuto aleatorios
+      const baseDate = faker.date.recent({ days: 30 });
+      const fechaEntrada = new Date(baseDate);
+      fechaEntrada.setHours(
+        faker.number.int({ min: 0, max: 23 }),
+        faker.number.int({ min: 0, max: 59 }),
+        faker.number.int({ min: 0, max: 59 })
+      );
+
+      const fechaSalida = faker.datatype.boolean(0.7)
         ? new Date(fechaEntrada.getTime() + faker.number.int({ min: 1800000, max: 28800000 })) // +30min a 8h
         : null;
 

@@ -82,4 +82,61 @@ export async function seedUsuarios(prisma: PrismaClient) {
       },
     });
   }
+
+  // Garantizar un número mínimo de guardias y residentes para pruebas
+  const MIN_GUARDIAS = 5;
+  const MIN_RESIDENTES = 12;
+
+  const currentGuardias = await prisma.usuario.count({ where: { rol: Rol.Guardia } });
+  const currentResidentes = await prisma.usuario.count({ where: { rol: Rol.Residente } });
+
+  for (let i = currentGuardias; i < MIN_GUARDIAS; i++) {
+    const firstName = faker.person.firstName();
+    const lastName = faker.person.lastName();
+    const email = faker.internet.email({ firstName, lastName });
+
+    const persona = await prisma.persona.create({
+      data: {
+        nombre: `${firstName} ${lastName}`,
+        genero: faker.person.sex(),
+        fecha_nacimiento: faker.date.birthdate({ min: 18, max: 65, mode: 'age' }),
+        telefono: faker.phone.number({ style: 'national' }),
+      },
+    });
+
+    await prisma.usuario.create({
+      data: {
+        nombre_usuario: `guardia_${i}_${faker.string.alphanumeric(4)}`,
+        correo: email,
+        password: 'hashed_password_123',
+        rol: Rol.Guardia,
+        id_persona: persona.id_persona,
+      },
+    });
+  }
+
+  for (let i = currentResidentes; i < MIN_RESIDENTES; i++) {
+    const firstName = faker.person.firstName();
+    const lastName = faker.person.lastName();
+    const email = faker.internet.email({ firstName, lastName });
+
+    const persona = await prisma.persona.create({
+      data: {
+        nombre: `${firstName} ${lastName}`,
+        genero: faker.person.sex(),
+        fecha_nacimiento: faker.date.birthdate({ min: 18, max: 80, mode: 'age' }),
+        telefono: faker.phone.number({ style: 'national' }),
+      },
+    });
+
+    await prisma.usuario.create({
+      data: {
+        nombre_usuario: `residente_${i}_${faker.string.alphanumeric(4)}`,
+        correo: email,
+        password: 'hashed_password_123',
+        rol: Rol.Residente,
+        id_persona: persona.id_persona,
+      },
+    });
+  }
 }

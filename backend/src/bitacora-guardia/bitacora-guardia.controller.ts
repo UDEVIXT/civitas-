@@ -14,7 +14,7 @@ import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
 
 @Controller('bitacora-guardia')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('Guardia')
+@Roles('Guardia', 'Admin', 'Administrador')
 export class BitacoraGuardiaController {
   constructor(
     private readonly bitacoraGuardiaService: BitacoraGuardiaService,

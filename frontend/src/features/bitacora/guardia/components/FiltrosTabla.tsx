@@ -20,28 +20,49 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-const tipos = [
-  { value: "todos", label: "Todos los tipos" },
-  { value: "visitante", label: "Visitante" },
-  { value: "residente", label: "Residente" },
-  { value: "empleado doméstico", label: "Empleado doméstico" },
-  { value: "proveedor", label: "Proveedor" },
-];
+// tipos, residencias y ordenamientos se definen dentro del componente
 
-const residencias = [
-  { value: "todas", label: "Todas las residencias" },
-  { value: "Apartamento 101", label: "Apartamento 101" },
-  { value: "Apartamento 205", label: "Apartamento 205" },
-  { value: "Apartamento 305", label: "Apartamento 305" },
-  { value: "Administración", label: "Administración" },
-];
+type Filters = {
+  search?: string;
+  tipo?: string;
+  residencia?: string;
+  fecha_inicio?: string;
+  fecha_fin?: string;
+  ordenar?: string;
+  page?: string;
+  limit?: string;
+};
 
-const ordenamientos = [
-  { value: "reciente", label: "Más reciente primero" },
-  { value: "antiguo", label: "Más antiguo primero" },
-];
+export function FiltrosTabla({
+  filters,
+  onChange,
+}: {
+  filters: Filters;
+  onChange: (f: Partial<Filters>) => void;
+}) {
+  const [localDate, setLocalDate] = React.useState<any>(null);
 
-export function FiltrosTabla() {
+  const tipos = [
+    { value: "todos", label: "Todos los tipos" },
+    { value: "visitante", label: "Visitante" },
+    { value: "residente", label: "Residente" },
+    { value: "empleado_domestico", label: "Empleado doméstico" },
+    { value: "proveedor", label: "Proveedor" },
+  ];
+
+  const residencias = [
+    { value: "todas", label: "Todas las residencias" },
+    { value: "Apartamento 101", label: "Apartamento 101" },
+    { value: "Apartamento 205", label: "Apartamento 205" },
+    { value: "Apartamento 305", label: "Apartamento 305" },
+    { value: "Administración", label: "Administración" },
+  ];
+
+  const ordenamientos = [
+    { value: "reciente", label: "Más reciente primero" },
+    { value: "antiguo", label: "Más antiguo primero" },
+  ];
+
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="flex items-center gap-4">
@@ -51,6 +72,8 @@ export function FiltrosTabla() {
           <input
             type="search"
             placeholder="Buscar por nombre..."
+            value={filters.search || ""}
+            onChange={(e) => onChange({ search: e.target.value })}
             className="flex h-9 w-[240px] rounded-md border border-input bg-background pl-9 pr-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>
@@ -58,7 +81,7 @@ export function FiltrosTabla() {
 
       <div className="flex items-center gap-4">
         {/* CA004 - Filtro por tipo */}
-        <Select defaultValue="todos">
+        <Select value={filters.tipo || "todos"} onValueChange={(v) => onChange({ tipo: v })}>
           <SelectTrigger className="w-[180px] h-9">
             <SelectValue placeholder="Tipo" />
           </SelectTrigger>
@@ -72,7 +95,7 @@ export function FiltrosTabla() {
         </Select>
 
         {/* CA004 - Filtro por residencia */}
-        <Select defaultValue="todas">
+        <Select value={filters.residencia || "todas"} onValueChange={(v) => onChange({ residencia: v })}>
           <SelectTrigger className="w-[200px] h-9">
             <SelectValue placeholder="Residencia" />
           </SelectTrigger>
@@ -86,10 +109,15 @@ export function FiltrosTabla() {
         </Select>
 
         {/* CA003 - Filtro por rango de fechas */}
-        <DatePickerWithRange />
+        <DatePickerWithRange
+          onChangeDate={(from, to) => {
+            setLocalDate({ from, to });
+            onChange({ fecha_inicio: from ? from.toISOString().split("T")[0] : undefined, fecha_fin: to ? to.toISOString().split("T")[0] : undefined });
+          }}
+        />
 
         {/* CA006 - Ordenar por fecha */}
-        <Select defaultValue="reciente">
+        <Select value={filters.ordenar || "reciente"} onValueChange={(v) => onChange({ ordenar: v })}>
           <SelectTrigger className="w-[180px] h-9">
             <ArrowUpDown className="h-4 w-4 mr-2 text-muted-foreground" />
             <SelectValue placeholder="Ordenar por" />
@@ -104,7 +132,12 @@ export function FiltrosTabla() {
         </Select>
 
         {/* Botón limpiar filtros */}
-        <Button variant="outline" size="icon" className="h-9 w-9">
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-9 w-9"
+          onClick={() => onChange({ search: "", tipo: "todos", residencia: "todas", fecha_inicio: undefined, fecha_fin: undefined })}
+        >
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -112,11 +145,8 @@ export function FiltrosTabla() {
   );
 }
 
-function DatePickerWithRange() {
-  const [date, setDate] = React.useState<DateRange | undefined>({
-    from: new Date(new Date().getFullYear(), 0, 20),
-    to: addDays(new Date(new Date().getFullYear(), 0, 20), 20),
-  });
+function DatePickerWithRange({ onChangeDate }: { onChangeDate: (from: Date | null, to: Date | null) => void }) {
+  const [date, setDate] = React.useState<DateRange | undefined>(undefined);
 
   return (
     <Popover>
@@ -145,7 +175,12 @@ function DatePickerWithRange() {
           mode="range"
           defaultMonth={date?.from}
           selected={date}
-          onSelect={setDate}
+          onSelect={(d) => {
+            setDate(d);
+            const from = (d as any)?.from ?? null;
+            const to = (d as any)?.to ?? null;
+            onChangeDate(from, to);
+          }}
           numberOfMonths={2}
           locale={es}
         />
