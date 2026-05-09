@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -232,15 +233,38 @@ export class BitacoraService {
     });
 
     if (!guardiaInfo) {
-      throw new NotFoundException('El guardia no existe en la base de datos.');
+      throw new NotFoundException('El guardia no existe.');
     }
 
     const registroActual = await this.prisma.bitacora.findUnique({
       where: { id_bitacora },
+      include: {
+        acceso: {
+          include: {
+            visitante: {
+              include: {
+                servicio: {
+                  include: {
+                    tipo_servicio: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!registroActual) {
-      throw new NotFoundException('No se encontró el registro de entrada.');
+      throw new NotFoundException('No se encontró el registro.');
+    }
+    const categoria =
+      registroActual.acceso?.visitante?.servicio?.tipo_servicio?.categoria;
+
+    if (categoria !== 'Proveedor') {
+      throw new BadRequestException(
+        `Este registro es de categoría ${categoria || 'Desconocida'}, no es un Proveedor.`,
+      );
     }
 
     if (registroActual.fecha_hora_salida !== null) {
@@ -249,18 +273,14 @@ export class BitacoraService {
       );
     }
 
-    const textoSalida =
-      comentario_salida || `Salida verificada por: ${guardiaInfo.nombre}`;
-
-    const salidaRegistrada = await this.prisma.bitacora.update({
+    return await this.prisma.bitacora.update({
       where: { id_bitacora },
       data: {
         fecha_hora_salida: new Date(),
-        comentario_salida: textoSalida,
+        comentario_salida:
+          comentario_salida || `Salida verificada por: ${guardiaInfo.nombre}`,
       },
     });
-
-    return salidaRegistrada;
   }
 
   // Detalle de registro en bitácora a partir de su ID
