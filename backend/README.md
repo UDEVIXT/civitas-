@@ -47,6 +47,14 @@ Para detener servicios:
 docker compose -f docker-compose.dev.yml down
 ```
 
+# 4. Inicializar base de datos
+```bash
+# Esto inicializará las tablas
+npx prisma generate
+# Esto generará los datos de prueba
+npx prisma db seed
+```
+
 ## 3. Comandos utiles
 
 ```bash
@@ -59,6 +67,10 @@ npm run build
 # pruebas
 npm run test
 npm run test:e2e
+
+# resetear bd
+```bash
+npx prisma migrate reset
 ```
 
 ## Nota importante

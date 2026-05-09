@@ -24,12 +24,14 @@ export async function seedVisitantes(prisma: PrismaClient) {
   for (let i = 0; i < 50; i++) {
     const residente = faker.helpers.arrayElement(residentes);
     const nombre = faker.person.fullName();
+    const telefono = faker.phone.number({ style: 'national' });
+    const url_imagen = faker.image.url();
     const motivo = faker.helpers.arrayElement(motivos);
     const es_frecuente = faker.datatype.boolean();
-    
+
     // 50% de probabilidad de tener un servicio asociado
-    const servicio = faker.datatype.boolean() 
-      ? faker.helpers.arrayElement(servicios) 
+    const servicio = faker.datatype.boolean()
+      ? faker.helpers.arrayElement(servicios)
       : null;
 
     const existente = await prisma.visitante.findFirst({
@@ -42,6 +44,8 @@ export async function seedVisitantes(prisma: PrismaClient) {
     const data = {
       nombre: nombre,
       motivo: motivo,
+      telefono: telefono,
+      url_imagen: url_imagen,
       es_frecuente: es_frecuente,
       id_residente: residente.id_residente,
       id_servicio: servicio?.id_servicio ?? null,

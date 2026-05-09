@@ -23,7 +23,11 @@ export async function seedUsuarios(prisma: PrismaClient) {
         data: {
           nombre: `${perfil.nombre} ${perfil.apellido}`,
           genero: perfil.genero,
-          fecha_nacimiento: faker.date.birthdate({ min: 18, max: 65, mode: 'age' }),
+          fecha_nacimiento: faker.date.birthdate({
+            min: 18,
+            max: 65,
+            mode: 'age',
+          }),
           telefono: faker.phone.number({ style: 'national' }),
         },
       });
@@ -43,7 +47,7 @@ export async function seedUsuarios(prisma: PrismaClient) {
   // Generar usuarios aleatorios adicionales
   const ROL_VALUES = [Rol.Administrador, Rol.Guardia, Rol.Residente];
 
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 20; i++) {
     const firstName = faker.person.firstName();
     const lastName = faker.person.lastName();
     const email = faker.internet.email({ firstName, lastName });
@@ -59,7 +63,11 @@ export async function seedUsuarios(prisma: PrismaClient) {
       data: {
         nombre: `${firstName} ${lastName}`,
         genero: faker.person.sex(),
-        fecha_nacimiento: faker.date.birthdate({ min: 18, max: 80, mode: 'age' }),
+        fecha_nacimiento: faker.date.birthdate({
+          min: 18,
+          max: 80,
+          mode: 'age',
+        }),
         telefono: faker.phone.number({ style: 'national' }),
       },
     });

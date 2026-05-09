@@ -9,7 +9,14 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   constructor() {
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    let connectionString = process.env.DATABASE_URL;
+
+    // Si estamos dentro de Docker, reemplazamos localhost por el nombre del servicio 'postgres'
+    if (process.env.DOCKER_CONTAINER === 'true' && connectionString) {
+      connectionString = connectionString.replace('localhost', 'postgres');
+    }
+
+    const pool = new Pool({ connectionString });
     const adapter = new PrismaPg(pool);
     super({ adapter });
   }
