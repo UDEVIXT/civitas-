@@ -1,5 +1,4 @@
 import { IsOptional, IsString, IsDateString } from 'class-validator';
-
 export class FindHistoryDto {
   @IsOptional()
   @IsDateString()
@@ -16,5 +15,4 @@ export class FindHistoryDto {
   @IsOptional()
   @IsString()
   numeroVivienda?: string;
-
 }

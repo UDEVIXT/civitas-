@@ -1,9 +1,8 @@
 import { PrismaClient, TipoReporte, EstadoReporte, PrioridadReporte } from '@prisma/client';
 import { fakerES_MX as faker } from '@faker-js/faker';
 
-const prisma = new PrismaClient();
 
-async function main() {
+export async function seedReportes(prisma: PrismaClient) {
   console.log('Iniciando el seeder...');
 
   for (let i = 0; i < 10; i++) {
@@ -39,11 +38,11 @@ async function main() {
   console.log('Seeder ejecutado con éxito. Se crearon 10 reportes con sus evidencias.');
 }
 
-main()
+/*seedReportes()
   .catch((e) => {
     console.error('Error al ejecutar el seeder:', e);
     process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
-  });
+  });*/
