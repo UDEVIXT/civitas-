@@ -10,7 +10,7 @@ export const seedTipoServicio = async (prisma: PrismaClient) => {
       descripcion: 'Personal encargado de la limpieza de las viviendas.',
     },
     {
-      nombre: 'Jardinería',
+      nombre: 'Empleado',
       categoria: 'Mantenimiento',
       descripcion: 'Personal encargado del mantenimiento de áreas verdes.',
     },

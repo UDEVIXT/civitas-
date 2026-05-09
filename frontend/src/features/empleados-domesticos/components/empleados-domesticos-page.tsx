@@ -83,10 +83,6 @@ export function EmpleadosDomesticosPage({
     });
   }, [empleados, search, statusFilter]);
 
-  React.useEffect(() => {
-    setPage(1);
-  }, [search, statusFilter]);
-
   const totalPages = Math.max(
     1,
     Math.ceil(filteredEmployees.length / PAGE_SIZE),
@@ -112,7 +108,10 @@ export function EmpleadosDomesticosPage({
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(1);
+                }}
                 placeholder="Search"
                 className="pl-9"
               />
@@ -125,7 +124,10 @@ export function EmpleadosDomesticosPage({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setStatusFilter(status)}
+                onClick={() => {
+                  setStatusFilter(status);
+                  setPage(1);
+                }}
                 className={cn(
                   "rounded-full",
                   statusFilter === status &&

@@ -8,6 +8,7 @@ import {
   MessageEvent,
   Query,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 
 import { BitacoraService } from './bitacora.service';
@@ -25,6 +26,23 @@ const bitacoraUpdates$ = new Subject<any>();
 export class BitacoraController {
   constructor(private readonly bitacoraService: BitacoraService) {}
 
+  private resolveResidentUserId(
+    request: { headers?: Record<string, unknown>; user?: Record<string, unknown> },
+    residentUserIdFromQuery?: string,
+  ) {
+    const userIdFromRequest =
+      typeof request.user?.id_usuario === 'string'
+        ? request.user.id_usuario
+        : undefined;
+
+    const userIdFromHeader =
+      typeof request.headers?.['x-resident-user-id'] === 'string'
+        ? request.headers['x-resident-user-id']
+        : undefined;
+
+    return userIdFromRequest ?? residentUserIdFromQuery ?? userIdFromHeader;
+  }
+
   // ---------------------------------------------------------
   // SSE
   // ---------------------------------------------------------
@@ -35,6 +53,103 @@ export class BitacoraController {
         data,
       })),
     );
+  }
+
+  @Get('mi-bitacora')
+  async getMiBitacora(
+    @Req() req: { headers?: Record<string, unknown>; user?: Record<string, unknown> },
+    @Query('residentUserId') residentUserId?: string,
+    @Query('residentName') residentName?: string,
+    @Query('search') search?: string,
+    @Query('personType') personType?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+    @Query('sort') sort?: 'asc' | 'desc',
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+  ) {
+    const resolvedResidentUserId = this.resolveResidentUserId(
+      req,
+      residentUserId,
+    );
+
+    const data = await this.bitacoraService.obtenerMiBitacora({
+      residentUserId: resolvedResidentUserId,
+      residentName,
+      search,
+      personType,
+      dateFrom,
+      dateTo,
+      sort,
+      page: Number(page),
+      limit: Number(limit),
+    });
+
+    return {
+      success: true,
+      ...data,
+    };
+  }
+
+  @Get('mi-bitacora/:id_bitacora')
+  async getDetalleMiBitacora(
+    @Req() req: { headers?: Record<string, unknown>; user?: Record<string, unknown> },
+    @Param('id_bitacora') id_bitacora: string,
+    @Query('residentUserId') residentUserId?: string,
+    @Query('residentName') residentName?: string,
+  ) {
+    const resolvedResidentUserId = this.resolveResidentUserId(
+      req,
+      residentUserId,
+    );
+
+    const data = await this.bitacoraService.obtenerDetalleMiBitacora(
+      id_bitacora,
+      resolvedResidentUserId,
+      residentName,
+    );
+
+    return {
+      success: true,
+      data,
+    };
+  }
+
+  // ---------------------------------------------------------
+  // CA012: Actualizar Frecuencia de Visitante
+  // ---------------------------------------------------------
+  @Patch('mi-bitacora/:id_bitacora/frecuencia')
+  async actualizarFrecuencia(
+    @Body() body: { es_frecuente: boolean },
+    @Req() req: { headers?: Record<string, unknown>; user?: Record<string, unknown> },
+    @Param('id_bitacora') id_bitacora: string,
+    @Query('residentUserId') residentUserId?: string,
+    @Query('residentName') residentName?: string,
+  ) {
+    const resolvedResidentUserId = this.resolveResidentUserId(
+      req,
+      residentUserId,
+    );
+
+    const resultado = await this.bitacoraService.actualizarFrecuenciaVisitante(
+      id_bitacora,
+      body.es_frecuente,
+      resolvedResidentUserId,
+      residentName,
+    );
+
+    bitacoraUpdates$.next({
+      tipo_evento: 'FRECUENCIA_ACTUALIZADA',
+      id_bitacora,
+      es_frecuente: body.es_frecuente,
+      timestamp: new Date().toISOString(),
+      mensaje: resultado.message,
+    });
+
+    return {
+      success: true,
+      ...resultado,
+    };
   }
 
   // ---------------------------------------------------------
