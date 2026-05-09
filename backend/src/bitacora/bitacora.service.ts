@@ -17,6 +17,7 @@ export class BitacoraService {
     fecha_inicio?: string;
     fecha_fin?: string;
     ordenar?: string;
+    estado?: 'dentro' | 'fuera' | 'todos';
     page: number;
     limit: number;
   }) {
@@ -27,21 +28,22 @@ export class BitacoraService {
       fecha_inicio,
       fecha_fin,
       ordenar,
+      estado,
       page,
       limit,
     } = filters;
 
     const where: any = {
-      fecha_hora_salida: null,
-
       acceso: {
-        visitante: {
-          id_servicio: {
-            not: null,
-          },
-        },
+        visitante: {},
       },
     };
+
+    if (estado === 'dentro') {
+      where.fecha_hora_salida = null;
+    } else if (estado === 'fuera') {
+      where.fecha_hora_salida = { not: null };
+    }
 
     // SEARCH
     if (search) {
@@ -221,46 +223,58 @@ export class BitacoraService {
     };
   }
 
-  // HU-1.9.1: Registrar salida y validar
+  // HU-1.9.1: Registrar salida (Individual o Masiva)
   async registrarSalida(
-    id_bitacora: string,
+    id_bitacora: string | string[],
     id_guardia: string,
     comentario_salida?: string,
   ) {
-    const guardiaInfo = await this.prisma.guardia.findUnique({
-      where: { id_guardia: id_guardia },
-    });
+    try {
+      const guardiaInfo = await this.prisma.guardia.findUnique({
+        where: { id_guardia: id_guardia },
+      });
 
-    if (!guardiaInfo) {
-      throw new NotFoundException('El guardia no existe.');
+      if (!guardiaInfo) {
+        throw new NotFoundException('El guardia no existe.');
+      }
+
+      const ids = Array.isArray(id_bitacora) ? id_bitacora : [id_bitacora];
+
+      const auditoria = ` (Registrado por: ${guardiaInfo.nombre})`;
+      const textoSalida = comentario_salida
+        ? `${comentario_salida}${auditoria}`
+        : `Salida verificada por: ${guardiaInfo.nombre}`;
+
+      const resultado = await this.prisma.bitacora.updateMany({
+        where: {
+          id_bitacora: { in: ids },
+          fecha_hora_salida: null,
+        },
+        data: {
+          fecha_hora_salida: new Date(),
+          comentario_salida: textoSalida,
+        },
+      });
+
+      if (resultado.count === 0) {
+        throw new ConflictException(
+          'No se encontraron registros pendientes de salida, o ya han sido registrados previamente.',
+        );
+      }
+
+      return {
+        mensaje: `Se registraron ${resultado.count} salidas exitosamente.`,
+        cantidad: resultado.count,
+      };
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ConflictException
+      ) {
+        throw error;
+      }
+      throw new Error('Error interno del servidor al registrar salida.');
     }
-
-    const registroActual = await this.prisma.bitacora.findUnique({
-      where: { id_bitacora },
-    });
-
-    if (!registroActual) {
-      throw new NotFoundException('No se encontró el registro de entrada.');
-    }
-
-    if (registroActual.fecha_hora_salida !== null) {
-      throw new ConflictException(
-        'Este proveedor ya tiene una salida registrada.',
-      );
-    }
-
-    const textoSalida =
-      comentario_salida || `Salida verificada por: ${guardiaInfo.nombre}`;
-
-    const salidaRegistrada = await this.prisma.bitacora.update({
-      where: { id_bitacora },
-      data: {
-        fecha_hora_salida: new Date(),
-        comentario_salida: textoSalida,
-      },
-    });
-
-    return salidaRegistrada;
   }
 
   async obtenerDetalleRegistro(id: string) {
