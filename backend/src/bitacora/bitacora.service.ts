@@ -149,6 +149,7 @@ export class BitacoraService {
     }
 
     const [data, total] = await Promise.all([
+
       this.prisma.bitacora.findMany({
         where,
 
@@ -156,6 +157,7 @@ export class BitacoraService {
           acceso: {
             select: {
               codigo_qr: true,
+              fecha_expiracion: true,
 
               visitante: {
                 select: {
@@ -211,8 +213,31 @@ export class BitacoraService {
       }),
     ]);
 
+    // =========================
+    // CALCULAR TIEMPO EXCEDIDO
+    // =========================
+    const ahora = new Date();
+    const dataConEstado = data.map((registro) => {
+      const tiempo_excedido =
+        !registro.fecha_hora_salida && registro.acceso.fecha_expiracion < ahora;
+
+      let estado_registro: 'dentro' | 'fuera' | 'excedido' = 'dentro';
+
+      if (registro.fecha_hora_salida) {
+        estado_registro = 'fuera';
+      } else if (tiempo_excedido) {
+        estado_registro = 'excedido';
+      }
+
+      return {
+        ...registro,
+        tiempo_excedido,
+        estado_registro,
+      };
+    });
+
     return {
-      data,
+      data: dataConEstado,
 
       meta: {
         total,
