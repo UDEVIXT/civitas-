@@ -2,7 +2,6 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
-  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -223,7 +222,7 @@ export class BitacoraService {
   }
 
   // HU-1.9.1: Registrar salida y validar
-  async registrarSalidaProveedor(
+  async registrarSalida(
     id_bitacora: string,
     id_guardia: string,
     comentario_salida?: string,
@@ -238,33 +237,10 @@ export class BitacoraService {
 
     const registroActual = await this.prisma.bitacora.findUnique({
       where: { id_bitacora },
-      include: {
-        acceso: {
-          include: {
-            visitante: {
-              include: {
-                servicio: {
-                  include: {
-                    tipo_servicio: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
     });
 
     if (!registroActual) {
-      throw new NotFoundException('No se encontró el registro.');
-    }
-    const categoria =
-      registroActual.acceso?.visitante?.servicio?.tipo_servicio?.categoria;
-
-    if (categoria !== 'Proveedor') {
-      throw new BadRequestException(
-        `Este registro es de categoría ${categoria || 'Desconocida'}, no es un Proveedor.`,
-      );
+      throw new NotFoundException('No se encontró el registro de entrada.');
     }
 
     if (registroActual.fecha_hora_salida !== null) {
@@ -273,17 +249,20 @@ export class BitacoraService {
       );
     }
 
-    return await this.prisma.bitacora.update({
+    const textoSalida =
+      comentario_salida || `Salida verificada por: ${guardiaInfo.nombre}`;
+
+    const salidaRegistrada = await this.prisma.bitacora.update({
       where: { id_bitacora },
       data: {
         fecha_hora_salida: new Date(),
-        comentario_salida:
-          comentario_salida || `Salida verificada por: ${guardiaInfo.nombre}`,
+        comentario_salida: textoSalida,
       },
     });
+
+    return salidaRegistrada;
   }
 
-  // Detalle de registro en bitácora a partir de su ID
   async obtenerDetalleRegistro(id: string) {
     const registro = await this.prisma.bitacora.findUnique({
       where: { id_bitacora: id },

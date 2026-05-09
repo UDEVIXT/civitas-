@@ -85,18 +85,18 @@ export class BitacoraController {
   }
 
   // ---------------------------------------------------------
-  // REGISTRAR SALIDA A -> (PROVEEDORES) POR ROL (GUARDIA)
+  // REGISTRAR SALIDA A -> (Todos) POR ROL (GUARDIA)
   // ---------------------------------------------------------
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('Guardia')
-  @Patch('proveedores/:id_bitacora/salida')
+  @Patch(':id_bitacora/salida')
   async registrarSalida(
     @Param('id_bitacora') id_bitacora: string,
     @Body() createBitacoraDto: CreateBitacoraDto,
   ) {
     const { id_guardia, comentario_salida } = createBitacoraDto;
 
-    const resultado = await this.bitacoraService.registrarSalidaProveedor(
+    const resultado = await this.bitacoraService.registrarSalida(
       id_bitacora,
       id_guardia,
       comentario_salida,
