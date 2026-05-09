@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 
 // Componentes UI
 import {
@@ -11,6 +12,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { ModalSalidaProveedor } from "@/components/layout/modals/guardia/registrosalida";
 
 // Icons
 import {
@@ -99,6 +102,9 @@ const getEstadoBadge = (estado: string) => {
 };
 
 export function TablaAccesosGuardia() {
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedName, setSelectedName] = useState<string>("");
+
   return (
     <div className="space-y-4">
       <Table className="border rounded-lg">
@@ -116,6 +122,7 @@ export function TablaAccesosGuardia() {
             <TableHead className="text-center">Método de acceso</TableHead>
             <TableHead className="text-center">Guardia que registró</TableHead>
             <TableHead className="text-center">Estado</TableHead>
+            <TableHead className="text-center">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -221,10 +228,29 @@ export function TablaAccesosGuardia() {
                   {acceso.estado}
                 </Badge>
               </TableCell>
+              <TableCell className="text-center">
+                {acceso.estado === "entrada" && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => { setSelectedId(acceso.id); setSelectedName(acceso.nombre); }}
+                  >
+                    Dar Salida
+                  </Button>
+                )}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+
+      <ModalSalidaProveedor 
+        isOpen={!!selectedId}
+        onClose={() => setSelectedId(null)}
+        onSuccess={() => setSelectedId(null)}
+        accesoId={selectedId}
+        visitorName={selectedName}
+      />
     </div>
   );
 }
