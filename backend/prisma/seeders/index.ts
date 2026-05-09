@@ -54,8 +54,8 @@ async function main() {
   await seedResidentes(prisma);
   await seedTipoServicio(prisma);
   await seedServicios(prisma);
-  await seedHorariosAccesoServicios(prisma);
   await seedVisitantes(prisma);
+  await seedHorariosAccesoServicios(prisma);
   await seedAccesos(prisma);
   await seedBitacoras(prisma);
 
