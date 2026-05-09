@@ -2,10 +2,15 @@ import { EmpleadosDomesticosPage } from "@/features/empleados-domesticos/compone
 import { getEmpleadosDomesticos } from "@/features/empleados-domesticos/data/empleados";
 
 export default async function EmpleadosDomesticos() {
-  const empleados = await getEmpleadosDomesticos({
+  const response = await getEmpleadosDomesticos({
     page: 1,
-    limit: 200,
+    limit: 7,
   });
 
-  return <EmpleadosDomesticosPage empleados={empleados} />;
+  return (
+    <EmpleadosDomesticosPage
+      initialData={response.data}
+      initialMeta={response.meta}
+    />
+  );
 }
