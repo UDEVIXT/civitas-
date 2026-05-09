@@ -19,26 +19,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-
-// tipos, residencias y ordenamientos se definen dentro del componente
-
-type Filters = {
-  search?: string;
-  tipo?: string;
-  residencia?: string;
-  fecha_inicio?: string;
-  fecha_fin?: string;
-  ordenar?: string;
-  page?: string;
-  limit?: string;
-};
+import { BitacoraFiltro } from "../api/bitacora";
 
 export function FiltrosTabla({
   filters,
   onChange,
+  onClear,
 }: {
-  filters: Filters;
-  onChange: (f: Partial<Filters>) => void;
+  filters: BitacoraFiltro;
+  onChange: (f: Partial<BitacoraFiltro>) => void;
+  onClear: () => void;
 }) {
   const [localDate, setLocalDate] = React.useState<any>(null);
 
@@ -48,14 +38,6 @@ export function FiltrosTabla({
     { value: "residente", label: "Residente" },
     { value: "empleado_domestico", label: "Empleado doméstico" },
     { value: "proveedor", label: "Proveedor" },
-  ];
-
-  const residencias = [
-    { value: "todas", label: "Todas las residencias" },
-    { value: "Apartamento 101", label: "Apartamento 101" },
-    { value: "Apartamento 205", label: "Apartamento 205" },
-    { value: "Apartamento 305", label: "Apartamento 305" },
-    { value: "Administración", label: "Administración" },
   ];
 
   const ordenamientos = [
@@ -81,7 +63,10 @@ export function FiltrosTabla({
 
       <div className="flex items-center gap-4">
         {/* CA004 - Filtro por tipo */}
-        <Select value={filters.tipo || "todos"} onValueChange={(v) => onChange({ tipo: v })}>
+        <Select
+          value={filters.tipo || "todos"}
+          onValueChange={(v) => onChange({ tipo: v as BitacoraFiltro["tipo"] })}
+        >
           <SelectTrigger className="w-[180px] h-9">
             <SelectValue placeholder="Tipo" />
           </SelectTrigger>
@@ -95,29 +80,35 @@ export function FiltrosTabla({
         </Select>
 
         {/* CA004 - Filtro por residencia */}
-        <Select value={filters.residencia || "todas"} onValueChange={(v) => onChange({ residencia: v })}>
-          <SelectTrigger className="w-[200px] h-9">
-            <SelectValue placeholder="Residencia" />
-          </SelectTrigger>
-          <SelectContent>
-            {residencias.map((res) => (
-              <SelectItem key={res.value} value={res.value}>
-                {res.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="search"
+            placeholder="Buscar por residencia..."
+            value={filters.residencia || ""}
+            onChange={(e) => onChange({ residencia: e.target.value })}
+            className="flex h-9 w-[200px] rounded-md border border-input bg-background pl-9 pr-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+        </div>
 
         {/* CA003 - Filtro por rango de fechas */}
         <DatePickerWithRange
           onChangeDate={(from, to) => {
             setLocalDate({ from, to });
-            onChange({ fecha_inicio: from ? from.toISOString().split("T")[0] : undefined, fecha_fin: to ? to.toISOString().split("T")[0] : undefined });
+            onChange({
+              fecha_inicio: from ? from.toISOString().split("T")[0] : undefined,
+              fecha_fin: to ? to.toISOString().split("T")[0] : undefined,
+            });
           }}
         />
 
         {/* CA006 - Ordenar por fecha */}
-        <Select value={filters.ordenar || "reciente"} onValueChange={(v) => onChange({ ordenar: v })}>
+        <Select
+          value={filters.ordenar || "reciente"}
+          onValueChange={(v) =>
+            onChange({ ordenar: v as BitacoraFiltro["ordenar"] })
+          }
+        >
           <SelectTrigger className="w-[180px] h-9">
             <ArrowUpDown className="h-4 w-4 mr-2 text-muted-foreground" />
             <SelectValue placeholder="Ordenar por" />
@@ -136,7 +127,7 @@ export function FiltrosTabla({
           variant="outline"
           size="icon"
           className="h-9 w-9"
-          onClick={() => onChange({ search: "", tipo: "todos", residencia: "todas", fecha_inicio: undefined, fecha_fin: undefined })}
+          onClick={onClear}
         >
           <X className="h-4 w-4" />
         </Button>
@@ -145,7 +136,11 @@ export function FiltrosTabla({
   );
 }
 
-function DatePickerWithRange({ onChangeDate }: { onChangeDate: (from: Date | null, to: Date | null) => void }) {
+function DatePickerWithRange({
+  onChangeDate,
+}: {
+  onChangeDate: (from: Date | null, to: Date | null) => void;
+}) {
   const [date, setDate] = React.useState<DateRange | undefined>(undefined);
 
   return (
