@@ -169,7 +169,8 @@ export class BitacoraGuardiaService {
       }
 
       let metodoAcceso: string;
-      if (registro.acceso.codigo_qr) metodoAcceso = 'QR';
+      if (visitante.es_frecuente) metodoAcceso = 'lista';
+      else if (registro.acceso.codigo_qr) metodoAcceso = 'QR';
       else metodoAcceso = 'manual';
 
       const estado = registro.fecha_hora_salida ? 'salida' : 'entrada';
@@ -244,7 +245,8 @@ export class BitacoraGuardiaService {
     }
 
     let metodoAcceso: string;
-    if (registro.acceso.codigo_qr) metodoAcceso = 'QR';
+    if (visitante.es_frecuente) metodoAcceso = 'lista';
+    else if (registro.acceso.codigo_qr) metodoAcceso = 'QR';
     else metodoAcceso = 'manual';
 
     const estado = registro.fecha_hora_salida ? 'salida' : 'entrada';

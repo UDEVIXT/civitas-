@@ -33,6 +33,16 @@ const getTipoPersonaColor = (tipo: string) => {
   return colors[tipo] || "bg-gray-100 text-gray-800 hover:bg-gray-100";
 };
 
+const getTipoPersonaLabel = (tipo: string) => {
+  const labels: Record<string, string> = {
+    visitante: 'Visitante',
+    residente: 'Residente',
+    empleado_domestico: 'Empleado doméstico',
+    proveedor: 'Proveedor',
+  };
+  return labels[tipo] || tipo;
+};
+
 const getEstadoBadge = (estado: string) => {
   const variants: Record<string, string> = {
     entrada: "bg-green-100 text-green-800",
@@ -81,7 +91,7 @@ export function TablaAccesosGuardia({ data = [], loading = false, error = null }
                   </div>
                 </TableCell>
                 <TableCell className="text-center">
-                  <Badge className={getTipoPersonaColor(registro.tipo_persona)}>{registro.tipo_persona}</Badge>
+                  <Badge className={getTipoPersonaColor(registro.tipo_persona)}>{getTipoPersonaLabel(registro.tipo_persona)}</Badge>
                 </TableCell>
                 <TableCell>
                   {registro.residente_asociado?.nombre && registro.residente_asociado.nombre !== "-" ? (
