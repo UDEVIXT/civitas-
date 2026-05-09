@@ -6,6 +6,8 @@ import {
   Post,
   Put,
   Delete,
+  Body,
+  BadRequestException,
 } from '@nestjs/common';
 
 import { EmpleadoService } from './empleado.service';
@@ -18,14 +20,18 @@ export class EmpleadoController {
   async findAll(
     @Query('search') search?: string,
     @Query('page') page = '1',
-    @Query('limit') limit = '10',
+    @Query('limit') limit = '7',
     @Query('isActive') isActive?: string,
     @Query('byResidenteId') byResidenteId?: string,
     @Query('byViviendaId') byViviendaId?: string,
   ) {
-    const isActiveBool = isActive
-      ? isActive.toLowerCase() === 'true'
-      : undefined;
+    const isActiveValue = isActive?.toLowerCase();
+    const isActiveBool =
+      isActiveValue === 'true'
+        ? true
+        : isActiveValue === 'false'
+          ? false
+          : undefined;
     const byResidenteIdNum = byResidenteId
       ? parseInt(byResidenteId, 10)
       : undefined;
@@ -33,7 +39,7 @@ export class EmpleadoController {
       ? parseInt(byViviendaId, 10)
       : undefined;
 
-    return this.empleadoService.obtenerEmpleadosActivos({
+    return this.empleadoService.obtenerEmpleados({
       search,
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
@@ -51,8 +57,24 @@ export class EmpleadoController {
     return { message: 'Empleado creado' };
   }
   @Put(':id')
-  update(@Param('id') id: string) {
-    return { message: `Empleado ${id} actualizado` };
+  async update(
+    @Param('id') id: string,
+    @Body() body: { activo?: boolean; motivo?: string },
+  ) {
+    const { activo, motivo } = body;
+
+    if (activo === undefined) {
+      throw new BadRequestException('El campo "activo" es requerido');
+    }
+
+    if (activo === false) {
+      if (!motivo || !motivo.trim()) {
+        throw new BadRequestException('El motivo es requerido');
+      }
+      return this.empleadoService.eliminarEmpleado(id, motivo);
+    }
+
+    return this.empleadoService.reactivarEmpleado(id);
   }
   @Delete(':id')
   remove(@Param('id') id: string) {
