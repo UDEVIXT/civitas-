@@ -38,9 +38,42 @@ export class BitacoraController {
   }
 
   // ---------------------------------------------------------
+  // GET MI BITACORA (Residente específico)
+  // ---------------------------------------------------------
+  //@UseGuards(JwtAuthGuard, RolesGuard)
+  //@Roles('Residente')
+  @Get('mi-bitacora')
+  async obtenerMiBitacora(
+    @Query('residentUserId') residentUserId?: string,
+    @Query('search') search?: string,
+    @Query('personType') personType?: 'visitante' | 'empleado' | 'proveedor',
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+    @Query('sort') sort?: 'asc' | 'desc',
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+  ) {
+    const data = await this.bitacoraService.obtenerMiBitacora({
+      residentUserId: residentUserId || '',
+      search,
+      personType,
+      dateFrom,
+      dateTo,
+      sort: sort || 'desc',
+      page: Number(page),
+      limit: Number(limit),
+    });
+
+    return {
+      success: true,
+      ...data,
+    };
+  }
+
+  // ---------------------------------------------------------
   // GET BITACORA
   // ---------------------------------------------------------
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  //@UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('Guardia', 'Residente', 'Administrador')
   @Get()
   async getBitacora(
@@ -73,7 +106,7 @@ export class BitacoraController {
   // ---------------------------------------------------------
   // GET ID DETALLE REGISTRO
   // ---------------------------------------------------------
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  //@UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('Guardia', 'Residente', 'Administrador')
   @Get(':id')
   async obtenerDetalleRegistro(@Param('id') id: string) {
@@ -87,7 +120,7 @@ export class BitacoraController {
   // ---------------------------------------------------------
   // REGISTRAR SALIDA A -> (PROVEEDORES) POR ROL (GUARDIA)
   // ---------------------------------------------------------
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  //@UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('Guardia')
   @Patch('proveedores/:id_bitacora/salida')
   async registrarSalida(

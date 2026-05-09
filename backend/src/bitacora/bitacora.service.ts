@@ -263,6 +263,152 @@ export class BitacoraService {
     return salidaRegistrada;
   }
 
+  // Obtener bitácora de un residente específico con filtros
+  async obtenerMiBitacora(filters: {
+    residentUserId?: string;
+    search?: string;
+    personType?: 'visitante' | 'empleado' | 'proveedor';
+    dateFrom?: string;
+    dateTo?: string;
+    sort?: 'asc' | 'desc';
+    page: number;
+    limit: number;
+  }) {
+    const {
+      residentUserId,
+      search,
+      personType,
+      dateFrom,
+      dateTo,
+      sort = 'desc',
+      page,
+      limit,
+    } = filters;
+
+    const where: any = {
+      acceso: {
+        visitante: {
+          residente: {
+            usuario: {
+              id_usuario: residentUserId,
+            },
+          },
+        },
+      },
+    };
+
+    // SEARCH
+    if (search) {
+      where.acceso.visitante.nombre = {
+        contains: search,
+        mode: 'insensitive',
+      };
+    }
+
+    // FILTRO TIPO
+    if (personType === 'visitante') {
+      where.acceso.visitante.id_servicio = null;
+    } else if (personType === 'proveedor') {
+      where.acceso.visitante.id_servicio = { not: null };
+    } else if (personType === 'empleado') {
+      where.acceso.visitante.es_frecuente = true;
+    }
+
+    // FILTRO FECHAS
+    if (dateFrom || dateTo) {
+      where.fecha_hora_entrada = {};
+      if (dateFrom) {
+        where.fecha_hora_entrada.gte = new Date(dateFrom);
+      }
+      if (dateTo) {
+        where.fecha_hora_entrada.lte = new Date(dateTo);
+      }
+    }
+
+    const orderBy: any = {
+      fecha_hora_entrada: sort === 'asc' ? 'asc' : 'desc',
+    };
+
+    const [bitacoras, total] = await Promise.all([
+      this.prisma.bitacora.findMany({
+        where,
+        include: {
+          acceso: {
+            select: {
+              codigo_qr: true,
+              visitante: {
+                select: {
+                  nombre: true,
+                  es_frecuente: true,
+                  id_servicio: true,
+                  url_imagen: true,
+                  servicio: {
+                    select: {
+                      tipo_servicio: {
+                        select: {
+                          categoria: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          guardia: {
+            select: {
+              nombre: true,
+              id_guardia: true,
+            },
+          },
+        },
+        orderBy,
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.bitacora.count({ where }),
+    ]);
+
+    // Transform to include tipo_persona
+    const data = bitacoras.map((bitacora) => {
+      const visitante = bitacora.acceso.visitante;
+      let tipoPersona: 'visitante' | 'empleado' | 'proveedor';
+
+      if (visitante.id_servicio) {
+        tipoPersona = 'proveedor';
+      } else if (visitante.es_frecuente) {
+        tipoPersona = 'empleado';
+      } else {
+        tipoPersona = 'visitante';
+      }
+
+      return {
+        id_bitacora: bitacora.id_bitacora,
+        id_visitante: visitante.nombre, // placeholder for frontend mapping
+        nombre_persona: visitante.nombre,
+        tipo_persona: tipoPersona,
+        fecha_hora_entrada: bitacora.fecha_hora_entrada.toISOString(),
+        fecha_hora_salida: bitacora.fecha_hora_salida?.toISOString() || null,
+        metodo_acceso: visitante.es_frecuente ? 'lista' : (bitacora.acceso.codigo_qr ? 'QR' : 'manual'),
+        guardia: {
+          id_guardia: bitacora.guardia.id_guardia,
+          nombre: bitacora.guardia.nombre,
+        },
+        es_frecuente: visitante.es_frecuente,
+      };
+    });
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
   // Detalle de registro en bitácora a partir de su ID
   async obtenerDetalleRegistro(id: string) {
     const registro = await this.prisma.bitacora.findUnique({
@@ -300,7 +446,7 @@ export class BitacoraService {
     if (visitante.id_servicio) {
       tipoPersona = 'proveedor';
     } else if (visitante.es_frecuente) {
-      tipoPersona = 'empleado_domestico';
+      tipoPersona = 'empleado';
     } else {
       tipoPersona = 'visitante';
     }
