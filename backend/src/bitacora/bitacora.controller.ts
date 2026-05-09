@@ -40,16 +40,26 @@ export class BitacoraController {
   // ---------------------------------------------------------
   // GET BITACORA
   // ---------------------------------------------------------
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Guardia', 'Residente', 'Administrador')
   @Get()
   async getBitacora(
     @Query('search') search?: string,
     @Query('tipo') tipo?: string,
+    @Query('residencia') residencia?: string,
+    @Query('fecha_inicio') fecha_inicio?: string,
+    @Query('fecha_fin') fecha_fin?: string,
+    @Query('ordenar') ordenar?: string,
     @Query('page') page = '1',
     @Query('limit') limit = '10',
   ) {
-    const data = await this.bitacoraService.obtenerProveedoresActivos({
+    const data = await this.bitacoraService.obtenerBitacora({
       search,
       tipo,
+      residencia,
+      fecha_inicio,
+      fecha_fin,
+      ordenar,
       page: Number(page),
       limit: Number(limit),
     });
@@ -61,7 +71,21 @@ export class BitacoraController {
   }
 
   // ---------------------------------------------------------
-  // REGISTRAR SALIDA
+  // GET ID DETALLE REGISTRO
+  // ---------------------------------------------------------
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Guardia', 'Residente', 'Administrador')
+  @Get(':id')
+  async obtenerDetalleRegistro(@Param('id') id: string) {
+    const result = await this.bitacoraService.obtenerDetalleRegistro(id);
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
+  // ---------------------------------------------------------
+  // REGISTRAR SALIDA A -> (PROVEEDORES) POR ROL (GUARDIA)
   // ---------------------------------------------------------
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('Guardia')
