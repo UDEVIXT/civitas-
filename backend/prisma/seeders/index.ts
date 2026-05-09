@@ -15,6 +15,7 @@ import { seedHorariosAccesoServicios } from './horarios-acceso-servicios.seeder'
 import { seedVisitantes } from './visitantes.seeder';
 import { seedAccesos } from './accesos.seeder';
 import { seedBitacoras } from './bitacoras.seeder';
+import { seedReportes } from './reportes.seeder';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -37,7 +38,9 @@ async function truncateAll(prismaClient: PrismaClient) {
       "Usuario",
       "Vivienda",
       "Persona",
-      "TipoServicio"
+      "TipoServicio",
+      "Reporte",
+      "EvidenciaIncidencia"
     RESTART IDENTITY CASCADE;
   `);
 }
@@ -58,6 +61,7 @@ async function main() {
   await seedVisitantes(prisma);
   await seedAccesos(prisma);
   await seedBitacoras(prisma);
+  await seedReportes(prisma)
 
   console.log('Seed modular ejecutado correctamente.');
 }
