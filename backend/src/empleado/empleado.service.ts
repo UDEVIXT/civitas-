@@ -12,12 +12,124 @@ import { PrismaService } from '../prisma/prisma.service';
 export class EmpleadoService {
   constructor(private prisma: PrismaService) {}
 
+  private readonly dayOrder = [
+    'LUNES',
+    'MARTES',
+    'MIERCOLES',
+    'JUEVES',
+    'VIERNES',
+    'SABADO',
+    'DOMINGO',
+  ];
+
+  private readonly dayLabel: Record<string, string> = {
+    LUNES: 'Lun',
+    MARTES: 'Mar',
+    MIERCOLES: 'Mie',
+    JUEVES: 'Jue',
+    VIERNES: 'Vie',
+    SABADO: 'Sab',
+    DOMINGO: 'Dom',
+  };
+
+  private parseTime(value: Date | string) {
+    if (value instanceof Date) {
+      return { hours: value.getUTCHours(), minutes: value.getUTCMinutes() };
+    }
+
+    if (value.includes('T')) {
+      const date = new Date(value);
+      return { hours: date.getUTCHours(), minutes: date.getUTCMinutes() };
+    }
+
+    const [hours, minutes] = value.split(':');
+    return { hours: Number(hours), minutes: Number(minutes) };
+  }
+
+  private formatTime(value: Date | string) {
+    const { hours, minutes } = this.parseTime(value);
+    const period = hours >= 12 ? 'pm' : 'am';
+    const hours12 = hours % 12 || 12;
+    if (minutes === 0) {
+      return `${hours12}${period}`;
+    }
+
+    const padded = String(minutes).padStart(2, '0');
+    return `${hours12}:${padded}${period}`;
+  }
+
+  private buildHorarioTexto(
+    horarios: Array<{
+      dia_semana: string;
+      hora_inicio: Date | string;
+      hora_fin: Date | string;
+    }>,
+  ) {
+    if (!horarios.length) {
+      return '';
+    }
+    const byDay = new Map<string, typeof horarios>();
+    for (const horario of horarios) {
+      const current = byDay.get(horario.dia_semana) ?? [];
+      current.push(horario);
+      byDay.set(horario.dia_semana, current);
+    }
+
+    const orderedDays = this.dayOrder.filter((day) => byDay.has(day));
+    const firstDay = orderedDays[0];
+    const lastDay = orderedDays[orderedDays.length - 1];
+
+    const parts: string[] = [];
+
+    const buildRangeForDay = (day: string) => {
+      const dayHorarios = byDay.get(day) ?? [];
+      if (!dayHorarios.length) {
+        return null;
+      }
+
+      const toMinutes = (value: Date | string) => {
+        const { hours, minutes } = this.parseTime(value);
+        return hours * 60 + minutes;
+      };
+
+      const sortedByStart = dayHorarios
+        .slice()
+        .sort((a, b) => toMinutes(a.hora_inicio) - toMinutes(b.hora_inicio));
+      const sortedByEnd = dayHorarios
+        .slice()
+        .sort((a, b) => toMinutes(a.hora_fin) - toMinutes(b.hora_fin));
+
+      const start = sortedByStart[0];
+      const end = sortedByEnd[sortedByEnd.length - 1];
+
+      return `${this.dayLabel[day] ?? day}: ${this.formatTime(
+        start.hora_inicio,
+      )} - ${this.formatTime(end.hora_fin)}`;
+    };
+
+    if (firstDay) {
+      const firstText = buildRangeForDay(firstDay);
+      if (firstText) {
+        parts.push(firstText);
+      }
+    }
+
+    if (lastDay && lastDay !== firstDay) {
+      const lastText = buildRangeForDay(lastDay);
+      if (lastText) {
+        parts.push(lastText);
+      }
+    }
+
+    return parts.join(' | ');
+  }
+
   //HU-1.5.6: Administrador puede ver empleados domesticos dentro del residencial
-  async obtenerEmpleadosActivos(filters: {
+  async obtenerEmpleados(filters: {
     search?: string;
     page: number;
     limit?: number;
-    isActive?: boolean;
+    isActive?: boolean | undefined;
     byResidenteId?: number;
     byViviendaId?: number;
   }) {
@@ -49,10 +161,8 @@ export class EmpleadoService {
       };
     }
 
-    if (isActive !== undefined) {
+    if (isActive != undefined) {
       where.servicio.activo = isActive;
-    } else {
-      where.servicio.activo = true;
     }
 
     const [data, total] = await Promise.all([
@@ -66,6 +176,16 @@ export class EmpleadoService {
           servicio: {
             select: {
               activo: true,
+              horarios: {
+                where: {
+                  activo: true,
+                },
+                select: {
+                  dia_semana: true,
+                  hora_inicio: true,
+                  hora_fin: true,
+                },
+              },
               tipo_servicio: {
                 select: {
                   nombre: true,
@@ -90,6 +210,24 @@ export class EmpleadoService {
       this.prisma.visitante.count({ where }),
     ]);
 
+    const dataWithHorario = data.map((item) => {
+      if (!item.servicio) {
+        return item;
+      }
+
+      const horario_texto = this.buildHorarioTexto(
+        item.servicio.horarios ?? [],
+      );
+
+      return {
+        ...item,
+        servicio: {
+          ...item.servicio,
+          horario_texto,
+        },
+      };
+    });
+
     return {
       meta: {
         total,
@@ -97,63 +235,83 @@ export class EmpleadoService {
         limit,
         totalPages: limit ? Math.ceil(total / limit) : 1,
       },
-      data,
+      data: dataWithHorario,
     };
   }
 
-  async eliminarEmpleado(id: string) {
+  async obtenerServicio(id_visitante: string) {
+    const visitante = await this.prisma.visitante.findUnique({
+      where: {
+        id_visitante: id_visitante,
+      },
+      select: {
+        nombre: true,
+        id_visitante: true,
+        id_servicio: true,
+      },
+    });
+
+    // Error 404
+    if (!visitante) {
+      throw new NotFoundException(
+        `No se encontró ningún empleado con el ID proporcionado.`,
+      );
+    }
+
+    // Error 400
+    if (!visitante.id_servicio) {
+      throw new BadRequestException(
+        `El registro de ${visitante.nombre} no está configurado como un empleado de servicio.`,
+      );
+    }
+
+    //Verificar que el servicio asociado al empleado esté activo antes de intentar darlo de baja
+    const servicio = await this.prisma.servicio.findFirst({
+      where: {
+        id_servicio: visitante.id_servicio,
+      },
+      select: {
+        id_servicio: true,
+      },
+    });
+
+    if (!servicio) {
+      throw new NotFoundException(
+        `El empleado que deseas actualizar no está registrado.`,
+      );
+    }
+
+    return {
+      id_servicio: servicio.id_servicio,
+      id_visitante: visitante.id_visitante,
+      nombre: visitante.nombre,
+    };
+  }
+
+  async eliminarEmpleado(id: string, motivo?: string) {
     try {
-      const visitante = await this.prisma.visitante.findUnique({
-        where: {
-          id_visitante: id,
-        },
-        select: {
-          nombre: true,
-          id_servicio: true,
-        },
-      });
-
-      // Error 404
-      if (!visitante) {
-        throw new NotFoundException(
-          `No se encontró ningún empleado con el ID proporcionado.`,
-        );
-      }
-
-      // Error 400
-      if (!visitante.id_servicio) {
-        throw new BadRequestException(
-          `El registro de ${visitante.nombre} no está configurado como un empleado de servicio.`,
-        );
-      }
-
-      //Verificar que el servicio asociado al empleado esté activo antes de intentar darlo de baja
-      const servicio = await this.prisma.servicio.findUnique({
-        where: {
-          id_servicio: visitante.id_servicio,
-          activo: true,
-        },
-        select: {
-          activo: true,
-        },
-      });
-
-      if (!servicio) {
-        throw new NotFoundException(
-          `El empleado que deseas dar de baja no está registrado.`,
-        );
-      }
-      console.log('Servicio encontrado:', servicio);
+      const servicio = await this.obtenerServicio(id);
 
       // Borrado lógico
       await this.prisma.servicio.update({
-        where: { id_servicio: visitante.id_servicio },
-        data: { activo: false },
+        where: { id_servicio: servicio.id_servicio },
+        data: {
+          activo: false,
+        },
+      });
+
+      //Revocar su QR
+      await this.prisma.acceso.updateMany({
+        where: { id_visitante: servicio.id_visitante },
+        data: {
+          estatus: 'Inactivo',
+          comentario_admin: motivo,
+        },
       });
 
       return {
         statusCode: 200,
-        message: `El empleado ${visitante.nombre} ha sido dado de baja exitosamente.`,
+        message: `El empleado ${servicio.nombre} ha sido dado de baja exitosamente.`,
       };
     } catch (error) {
       if (
@@ -167,6 +325,34 @@ export class EmpleadoService {
       console.error('Error en eliminarEmpleado:', error);
       throw new InternalServerErrorException(
         'Ocurrió un error inesperado al intentar dar de baja al empleado. Por favor, inténtelo de nuevo más tarde.',
+      );
+    }
+  }
+
+  async reactivarEmpleado(id: string) {
+    try {
+      const servicio = await this.obtenerServicio(id);
+
+      await this.prisma.servicio.update({
+        where: { id_servicio: servicio.id_servicio },
+        data: {
+          activo: true,
+        },
+      });
+
+      await this.prisma.acceso.updateMany({
+        where: { id_visitante: servicio.id_visitante },
+        data: { estatus: 'Activo' },
+      });
+
+      return {
+        statusCode: 200,
+        message: `El empleado ${servicio.nombre} ha sido reactivado exitosamente.`,
+      };
+    } catch (error) {
+      console.error('Error en reactivarEmpleado:', error);
+      throw new InternalServerErrorException(
+        'Ocurrió un error inesperado al intentar reactivar al empleado. Por favor, inténtelo de nuevo más tarde.',
       );
     }
   }
