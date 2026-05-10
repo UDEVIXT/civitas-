@@ -6,10 +6,10 @@ export interface Bitacora {
     id: number;
     visitorName: string;
     visitorType: string;
-    qrCode?: string;
+    accessMethod: string;
     entryTime: string;
     exitTime?: string;
-    visitReason: string;
+    guardName: string;
     guardNotes?: string;
     propertyId: number; // o string, dependiendo de tu BD
 }

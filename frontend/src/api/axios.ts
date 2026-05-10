@@ -3,7 +3,7 @@ import axios, { AxiosInstance, AxiosResponse, AxiosError, InternalAxiosRequestCo
 // 1. Creamos la instancia de Axios con la configuración base
 const apiClient: AxiosInstance = axios.create({
   // Usa una variable de entorno para la URL base de tu backend (ej. NestJS)
-  baseURL: process.env.NEXT_PUBLIC_API_URL || process.env.REACT_APP_API_URL || 'http://localhost:3001/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/',
   timeout: 10000, // Tiempo de espera (10 segundos)
   headers: {
     'Content-Type': 'application/json',
