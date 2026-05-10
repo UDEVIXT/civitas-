@@ -2,6 +2,7 @@
 
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+
 import {
   Dialog,
   DialogContent,
@@ -9,21 +10,30 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
 import { Badge } from "@/components/ui/badge";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+
 import {
   QrCode,
   Calendar,
-  Clock,
   User,
-  Home,
   ShieldCheck,
   FileText,
   Camera,
 } from "lucide-react";
-// import { useBitacoraDetalleAdmin } from "../hooks/useBitacoraAdmin";
+
 import { ReactQRCode } from "@lglab/react-qr-code";
+
+import { useBitacoraDetalleAdmin } from "../hooks/useBitacoraAdmin";
 
 interface ModalDetalleRegistroProps {
   isOpen: boolean;
@@ -36,60 +46,11 @@ export function ModalDetalleRegistro({
   onClose,
   registroId,
 }: ModalDetalleRegistroProps) {
-  // ----- DATOS ESTÁTICOS DE PRUEBA (MOCK DATA) -----
-  // Comentamos la petición real al backend temporalmente
-  // const { data: detalle, isLoading, error } = useBitacoraDetalleAdmin(registroId || "");
-
-  const isLoading = false;
-  const error = null;
-
-  const mockDb: Record<string, any> = {
-    "1": {
-      id: "1",
-      nombre: "Juan Pérez",
-      tipo_persona: "visitante",
-      residente_asociado: { nombre: "Propiedad 101" },
-      fecha_entrada: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-      fecha_salida: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-      hora_validacion: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-      metodo_acceso: "QR",
-      qr_utilizado: "1",
-      guardia_registro: "Ramon Díaz",
-      estado: "salida",
-      notas_guardia: "Entró con un paquete",
-      notas: "Entró con un paquete", // Añadido por compatibilidad
-    },
-    "2": {
-      id: "2",
-      nombre: "María Gómez",
-      tipo_persona: "proveedor",
-      residente_asociado: { nombre: "Propiedad 102" },
-      fecha_entrada: new Date(Date.now() - 1000 * 60 * 60 * 14).toISOString(),
-      fecha_salida: "-",
-      hora_validacion: new Date(Date.now() - 1000 * 60 * 60 * 14).toISOString(),
-      metodo_acceso: "manual",
-      guardia_registro: "Carlos Rodríguez",
-      estado: "entrada",
-      notas_guardia: "Camión placas XYZ-123",
-      notas: "Camión placas XYZ-123",
-    },
-    "3": {
-      id: "3",
-      nombre: "Carlos López",
-      tipo_persona: "residente",
-      residente_asociado: { nombre: "Propiedad 103" },
-      fecha_entrada: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-      fecha_salida: "-",
-      hora_validacion: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-      metodo_acceso: "lista",
-      guardia_registro: "Ana Martínez",
-      estado: "entrada",
-      notas_guardia: "-",
-      notas: "-",
-    }
-  };
-
-  const detalle = registroId && mockDb[registroId] ? { data: mockDb[registroId] } : null;
+  const {
+    data: detalle,
+    isLoading,
+    error,
+  } = useBitacoraDetalleAdmin(registroId || "");
 
   if (!registroId) return null;
 
@@ -97,10 +58,15 @@ export function ModalDetalleRegistro({
     const colors: Record<string, string> = {
       visitante: "bg-blue-100 text-blue-800 hover:bg-blue-100",
       residente: "bg-purple-100 text-purple-800 hover:bg-purple-100",
-      empleado_domestico: "bg-teal-100 text-teal-800 hover:bg-teal-100",
+      empleado_domestico:
+        "bg-teal-100 text-teal-800 hover:bg-teal-100",
       proveedor: "bg-orange-100 text-orange-800 hover:bg-orange-100",
     };
-    return colors[tipo] || "bg-gray-100 text-gray-800 hover:bg-gray-100";
+
+    return (
+      colors[tipo] ||
+      "bg-gray-100 text-gray-800 hover:bg-gray-100"
+    );
   };
 
   const getEstadoColor = (estado: string) => {
@@ -108,6 +74,7 @@ export function ModalDetalleRegistro({
       entrada: "bg-green-100 text-green-800",
       salida: "bg-red-100 text-red-800",
     };
+
     return colors[estado] || "bg-gray-100 text-gray-800";
   };
 
@@ -115,10 +82,13 @@ export function ModalDetalleRegistro({
     switch (metodo) {
       case "QR":
         return <QrCode className="h-5 w-5" />;
+
       case "lista":
         return <User className="h-5 w-5" />;
+
       case "manual":
         return <FileText className="h-5 w-5" />;
+
       default:
         return <User className="h-5 w-5" />;
     }
@@ -131,6 +101,7 @@ export function ModalDetalleRegistro({
           <DialogHeader>
             <DialogTitle>Cargando...</DialogTitle>
           </DialogHeader>
+
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
@@ -144,14 +115,18 @@ export function ModalDetalleRegistro({
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-destructive">Error</DialogTitle>
+            <DialogTitle className="text-destructive">
+              Error
+            </DialogTitle>
+
             <DialogDescription>
               No se pudo cargar la información del registro.
             </DialogDescription>
           </DialogHeader>
+
           <div className="text-center py-4">
             <p className="text-muted-foreground">
-              Por favor, intente nuevamente más tarde.
+              Por favor, intenta nuevamente más tarde.
             </p>
           </div>
         </DialogContent>
@@ -175,7 +150,9 @@ export function ModalDetalleRegistro({
         </DialogHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Información Principal */}
+
+          {/* INFORMACIÓN PRINCIPAL */}
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -183,8 +160,11 @@ export function ModalDetalleRegistro({
                 Información del Visitante
               </CardTitle>
             </CardHeader>
+
             <CardContent className="space-y-4">
-              {/* Foto del visitante */}
+
+              {/* FOTO */}
+
               <div className="flex items-center gap-4">
                 <div className="relative">
                   {registro.avatar_url ? (
@@ -205,45 +185,47 @@ export function ModalDetalleRegistro({
                       </AvatarFallback>
                     </Avatar>
                   )}
+
                   {!registro.avatar_url && (
                     <div className="absolute -bottom-1 -right-1 bg-muted rounded-full p-1">
                       <Camera className="h-4 w-4 text-muted-foreground" />
                     </div>
                   )}
                 </div>
+
                 <div className="flex-1">
-                  <h3 className="font-semibold text-lg">{registro.nombre}</h3>
-                  <Badge className={getTipoPersonaColor(registro.tipo_persona)}>
+                  <h3 className="font-semibold text-lg">
+                    {registro.nombre}
+                  </h3>
+
+                  <Badge
+                    className={getTipoPersonaColor(
+                      registro.tipo_persona
+                    )}
+                  >
                     {registro.tipo_persona.replace("_", " ")}
                   </Badge>
                 </div>
               </div>
 
-              {/* Residente asociado */}
+              {/* RESIDENTE */}
+
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
-                  <span className="font-medium">Residente asociado:</span>
+                  <span className="font-medium">
+                    Residente asociado:
+                  </span>
+
                   <span className="text-muted-foreground">
                     {registro.residente_asociado?.nombre || "N/A"}
                   </span>
                 </div>
-                {registro.residente_asociado?.avatar_url && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="font-medium">Avatar residente:</span>
-                    <Avatar className="w-8 h-8">
-                      <img
-                        src={registro.residente_asociado.avatar_url}
-                        alt={`Avatar de ${registro.residente_asociado.nombre}`}
-                        className="w-full h-full object-cover rounded-full"
-                      />
-                    </Avatar>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Información de Acceso */}
+          {/* INFORMACIÓN DE ACCESO */}
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -251,70 +233,108 @@ export function ModalDetalleRegistro({
                 Información de Acceso
               </CardTitle>
             </CardHeader>
+
             <CardContent className="space-y-4">
-              {/* Método de acceso */}
+
+              {/* MÉTODO */}
+
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
                   {getMetodoAccesoIcon(registro.metodo_acceso)}
+
                   <span className="font-medium capitalize">
                     {registro.metodo_acceso}
                   </span>
                 </div>
-                <Badge className={getEstadoColor(registro.estado)}>
+
+                <Badge
+                  className={getEstadoColor(registro.estado)}
+                >
                   {registro.estado}
                 </Badge>
               </div>
 
-              {/* QR utilizado */}
+              {/* QR */}
+
               {registro.metodo_acceso === "QR" && (
                 <div className="p-3 bg-muted rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <QrCode className="h-4 w-4" />
-                    <span className="font-medium text-sm">QR Utilizado</span>
+
+                    <span className="font-medium text-sm">
+                      QR Utilizado
+                    </span>
                   </div>
+
                   <div className="bg-white p-4 rounded-lg flex justify-center">
-                    <ReactQRCode value={registro.id} size={200} />
+                    <ReactQRCode
+                      value={registro.qr_utilizado}
+                      size={200}
+                    />
                   </div>
+
                   <div className="font-mono text-xs bg-background p-2 rounded border mt-2 text-center">
-                    {registro.id}
+                    {registro.qr_utilizado}
                   </div>
                 </div>
               )}
 
-              {/* Fechas y horas */}
+              {/* FECHAS */}
+
               <div className="space-y-3">
+
+                {/* ENTRADA */}
+
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Entrada:</span>
+
+                  <span className="font-medium">
+                    Entrada:
+                  </span>
+
                   <span className="text-muted-foreground">
-                    {registro.fecha_entrada
+                    {registro.fecha_entrada &&
+                    !isNaN(new Date(registro.fecha_entrada).getTime())
                       ? format(
                           new Date(registro.fecha_entrada),
                           "dd/MM/yyyy HH:mm:ss",
-                          { locale: es },
+                          { locale: es }
                         )
                       : "N/A"}
                   </span>
                 </div>
-                {registro.fecha_salida && registro.fecha_salida !== "-" && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Salida:</span>
-                    <span className="text-muted-foreground">
-                      {format(
-                        new Date(registro.fecha_salida),
-                        "dd/MM/yyyy HH:mm:ss",
-                        { locale: es },
-                      )}
-                    </span>
-                  </div>
-                )}
+
+                {/* SALIDA */}
+
+                {registro.fecha_salida &&
+                  !isNaN(new Date(registro.fecha_salida).getTime()) && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+
+                      <span className="font-medium">
+                        Salida:
+                      </span>
+
+                      <span className="text-muted-foreground">
+                        {format(
+                          new Date(registro.fecha_salida),
+                          "dd/MM/yyyy HH:mm:ss",
+                          { locale: es }
+                        )}
+                      </span>
+                    </div>
+                  )}
               </div>
 
-              {/* Guardia que registró */}
+              {/* GUARDIA */}
+
               <div className="flex items-center gap-2 text-sm">
                 <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">Guardia:</span>
+
+                <span className="font-medium">
+                  Guardia:
+                </span>
+
                 <span className="text-muted-foreground">
                   {registro.guardia_registro}
                 </span>
@@ -322,7 +342,8 @@ export function ModalDetalleRegistro({
             </CardContent>
           </Card>
 
-          {/* Notas del Guardia */}
+          {/* NOTAS */}
+
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -330,11 +351,12 @@ export function ModalDetalleRegistro({
                 Notas del Guardia
               </CardTitle>
             </CardHeader>
+
             <CardContent>
               <div className="p-4 bg-muted rounded-lg min-h-[100px]">
-                {registro.notas_guardia ? (
+                {registro.notas ? (
                   <p className="text-sm whitespace-pre-wrap">
-                    {registro.notas_guardia}
+                    {registro.notas}
                   </p>
                 ) : (
                   <p className="text-sm text-muted-foreground italic">
