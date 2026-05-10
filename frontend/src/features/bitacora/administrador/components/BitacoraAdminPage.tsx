@@ -98,8 +98,8 @@ export function BitacoraAdminPage() {
         <h1 className="text-2xl font-bold">Hitorial de Accesos (Administrador)</h1>
         <p className="text-muted-foreground text-sm mt-1">Supervisa todas las entradas y salidas de la residencia.</p>
       </div>
-      
-      <FiltrosTablaAdmin 
+
+      <FiltrosTablaAdmin
         onSearchProperty={setPropertyFilter}
         onTypeChange={setTypeFilter}
         onSortChange={setSortOrder}

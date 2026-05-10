@@ -25,6 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 
 import type { EmpleadoDomestico } from "../types";
+import type { EmpleadosMeta } from "../data/empleados";
 
 const PAGE_SIZE = 7;
 
@@ -53,10 +54,13 @@ function getInitials(name: string) {
 }
 
 export function EmpleadosDomesticosPage({
-  empleados,
+  initialData,
+  initialMeta,
 }: {
-  empleados: EmpleadoDomestico[];
+  initialData: EmpleadoDomestico[];
+  initialMeta: EmpleadosMeta;
 }) {
+  const [empleados] = React.useState<EmpleadoDomestico[]>(initialData || []);
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("Todos");
   const [page, setPage] = React.useState(1);
@@ -68,12 +72,7 @@ export function EmpleadosDomesticosPage({
       const matchesStatus =
         statusFilter === "Todos" || empleado.estado === "Activo";
       const matchesSearch = normalizedSearch
-        ? [
-            empleado.nombre,
-            empleado.email,
-            empleado.destino,
-            empleado.horarioAutorizado,
-          ]
+        ? [empleado.nombre, empleado.destino, empleado.horarioAutorizado]
             .join(" ")
             .toLowerCase()
             .includes(normalizedSearch)
@@ -183,7 +182,7 @@ export function EmpleadosDomesticosPage({
                           {empleado.nombre}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {empleado.email}
+                          {empleado.telefono}
                         </p>
                       </div>
                     </div>
