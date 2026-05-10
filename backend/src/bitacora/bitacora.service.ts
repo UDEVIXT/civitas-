@@ -39,10 +39,13 @@ export class BitacoraService {
       },
     };
 
+    // FILTRO ESTADO
     if (estado === 'dentro') {
       where.fecha_hora_salida = null;
     } else if (estado === 'fuera') {
-      where.fecha_hora_salida = { not: null };
+      where.fecha_hora_salida = {
+        not: null,
+      };
     }
 
     // SEARCH
@@ -117,7 +120,7 @@ export class BitacoraService {
     };
 
     switch (ordenar) {
-      case 'antiguos':
+      case 'antiguo':
         orderBy = {
           fecha_hora_entrada: 'asc',
         };
@@ -149,7 +152,6 @@ export class BitacoraService {
     }
 
     const [data, total] = await Promise.all([
-
       this.prisma.bitacora.findMany({
         where,
 
@@ -213,37 +215,56 @@ export class BitacoraService {
       }),
     ]);
 
-    // =========================
-    // CALCULAR TIEMPO EXCEDIDO
-    // =========================
     const ahora = new Date();
-    const dataConEstado = data.map((registro) => {
-      const tiempo_excedido =
-        !registro.fecha_hora_salida && registro.acceso.fecha_expiracion < ahora;
+    const registros = data.map((item) => {
+      const expiracion = item.acceso.fecha_expiracion;
 
-      let estado_registro: 'dentro' | 'fuera' | 'excedido' = 'dentro';
-
-      if (registro.fecha_hora_salida) {
-        estado_registro = 'fuera';
-      } else if (tiempo_excedido) {
-        estado_registro = 'excedido';
-      }
+      const tiempoExcedido =
+        item.fecha_hora_salida === null &&
+        expiracion &&
+        new Date(expiracion) < ahora;
 
       return {
-        ...registro,
-        tiempo_excedido,
-        estado_registro,
+        id: item.id_bitacora,
+
+        nombre: item.acceso.visitante.nombre,
+
+        tipo_persona:
+          item.acceso.visitante.servicio?.tipo_servicio?.categoria ??
+          'Visitante',
+
+        residente_asociado: {
+          nombre:
+            item.acceso.visitante.residente?.vivienda?.numero_vivienda ?? '',
+
+          avatar_url: null,
+        },
+
+        fecha_entrada: item.fecha_hora_entrada,
+
+        fecha_salida: item.fecha_hora_salida,
+
+        metodo_acceso: 'QR',
+
+        guardia_registro: item.guardia.nombre,
+
+        estado:
+          item.fecha_hora_salida === null
+            ? tiempoExcedido
+              ? 'excedido'
+              : 'dentro'
+            : 'fuera',
+
+        avatar_url: null,
       };
     });
-
     return {
-      data: dataConEstado,
-
+      data: registros,
       meta: {
         total,
         page,
         limit,
-        totalPages: Math.ceil(total / limit),
+        total_pages: Math.ceil(total / limit),
       },
     };
   }

@@ -41,9 +41,11 @@ model Residente {
   id_residente String      @id @default(uuid())
   id_usuario   String
   id_vivienda  String
-  usuario      Usuario     @relation(fields: [id_usuario], references: [id_usuario])
-  vivienda     Vivienda    @relation(fields: [id_vivienda], references: [id_vivienda])
-  visitantes   Visitante[]
+
+  usuario    Usuario     @relation(fields: [id_usuario], references: [id_usuario])
+  vivienda   Vivienda    @relation(fields: [id_vivienda], references: [id_vivienda])
+  visitantes Visitante[]
+  incidencias Incidencia[]
 }
 
 model Visitante {
@@ -139,70 +141,36 @@ model Administrador {
   usuario          Usuario @relation(fields: [id_usuario], references: [id_usuario])
 }
 
-enum Cargo {
-  Gobierno
-  Comite
-}
-
-enum DiaSemana {
-  LUNES
-  MARTES
-  MIERCOLES
-  JUEVES
-  VIERNES
-  SABADO
-  DOMINGO
-}
-
-enum EstatusAcceso {
-  Activo
-  Inactivo
-}
-
-enum TipoReporte {
-  QUEJA
-  SUGERENCIA
-  INCIDENCIA
-}
-
-enum EstadoReporte {
+enum EstadoIncidencia {
   PENDIENTE
   EN_PROCESO
-  RESUELTO
+  RESUELTA
+  CANCELADA
 }
 
-enum PrioridadReporte {
-  BAJA
-  MEDIA
-  ALTA
-}
-  
-model Reporte {
-  id_reporte         String                @id @default(uuid()) @db.Uuid
-  id_usuario         String                @db.Uuid
-  motivo             String                @db.VarChar(100)
-  descripcion        String                @db.Text
-  tipo               TipoReporte
-  latitud            Decimal
-  longitud           Decimal
-  estado             EstadoReporte
-  prioridad          PrioridadReporte
-  es_anonimo         Boolean
-  resultado_esperado String?               @db.Text
-  resultado_solucion String?               @db.Text
-  evidencias         EvidenciaIncidencia[]
+model Incidencia {
+  id_incidencia    String           @id @default(uuid())
+  titulo           String
+  descripcion      String
+  estado           EstadoIncidencia @default(PENDIENTE)
+  prioridad        String?          @default("MEDIA") 
+  es_anonimo       Boolean          @default(false)   
+  fecha_creacion   DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt        
+
+  id_residente     String
+  residente        Residente        @relation(fields: [id_residente], references: [id_residente])
+  historial        HistorialIncidencia[]
 }
 
-model EvidenciaIncidencia {
-  id_evidencia      String   @id @default(uuid()) @db.Uuid
-  id_reporte        String   @db.Uuid
-  reporte           Reporte  @relation(fields: [id_reporte], references: [id_reporte])
-  url_archivo       String   @db.Text
-  nombre_archivo    String   @db.VarChar(256)
-  createdAt         DateTime @default(now()) @db.Timestamp()
-}
-enum Rol {
-  Administrador
-  Guardia
-  Residente
+model HistorialIncidencia {
+  id_historial     String           @id @default(uuid())
+  estado_anterior  EstadoIncidencia 
+  nuevo_estado     EstadoIncidencia 
+  comentario       String?
+  fecha            DateTime         @default(now())
+  actualizado_por  String?          @default("Sistema") 
+
+  id_incidencia    String
+  incidencia       Incidencia       @relation(fields: [id_incidencia], references: [id_incidencia])
 }

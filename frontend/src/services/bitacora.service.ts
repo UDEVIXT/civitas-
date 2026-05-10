@@ -1,33 +1,55 @@
-import { BaseService } from './base.service';
-import apiClient from '../api/axios';
+import apiClient from "../api/axios";
 
-// 1. Definimos la interfaz basada en tu tabla de Bitácora
-export interface Bitacora {
-    id: number;
-    visitorName: string;
-    visitorType: string;
-    accessMethod: string;
-    entryTime: string;
-    exitTime?: string;
-    guardName: string;
-    guardNotes?: string;
-    propertyId: number; // o string, dependiendo de tu BD
+// DETALLE
+export interface BitacoraDetalleResponse {
+  success: boolean;
+
+  data: {
+    id: string;
+
+    nombre: string;
+
+    tipo_persona: string;
+
+    residente_asociado: {
+      nombre: string;
+      avatar_url: string | null;
+    };
+
+    fecha_entrada: string;
+
+    fecha_salida: string | null;
+
+    metodo_acceso: string;
+
+    guardia_registro: string;
+
+    estado: string;
+
+    avatar_url: string | null;
+
+    qr_utilizado: string;
+
+    notas: string;
+
+    hora_validacion: string;
+  };
 }
 
-export interface CreateBitacoraDto extends Omit<Bitacora, 'id'> { }
-export interface UpdateBitacoraDto extends Partial<CreateBitacoraDto> { }
+class BitacoraService {
+  async obtenerBitacoraHistorica(filtros = {}) {
+    const response = await apiClient.get("/bitacora", {
+      params: filtros,
+    });
 
-class BitacoraService extends BaseService<Bitacora, CreateBitacoraDto, UpdateBitacoraDto> {
-    constructor() {
-        super('/bitacora'); // Asegúrate de que coincida con el endpoint de tu backend (ej: '/logs', '/audit')
-    }
+    return response.data;
+  }
 
-    // Método específico para registrar una salida
-    async registerExit(id: number, notes?: string): Promise<Bitacora> {
-        const response = await apiClient.patch<Bitacora>(`${this.endpoint}/${id}/salida`, { guardNotes: notes });
-        return response.data;
-    }
+  async obtenerDetalleRegistro(id: string): Promise<BitacoraDetalleResponse> {
+    const response = await apiClient.get(`/bitacora/${id}`);
 
+    return response.data;
+  }
 }
 
 export const bitacoraService = new BitacoraService();

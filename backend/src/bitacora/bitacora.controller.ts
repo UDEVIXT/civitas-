@@ -69,7 +69,9 @@ export class BitacoraController {
 
     return {
       success: true,
-      ...data,
+      data: data.data,
+
+      meta: data.meta,
     };
   }
 
