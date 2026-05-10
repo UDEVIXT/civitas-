@@ -25,6 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 
 import type { EmpleadoDomestico } from "../types";
+import type { EmpleadosMeta } from "../data/empleados";
 
 const PAGE_SIZE = 7;
 
@@ -32,7 +33,6 @@ const statusOptions = ["Todos", "Activos"] as const;
 
 type StatusFilter = (typeof statusOptions)[number];
 
-<<<<<<< Updated upstream
 const avatarPalette = [
   "bg-amber-100 text-amber-700",
   "bg-rose-100 text-rose-700",
@@ -54,23 +54,13 @@ function getInitials(name: string) {
 }
 
 export function EmpleadosDomesticosPage({
-  empleados,
-}: {
-  empleados: EmpleadoDomestico[];
-}) {
-=======
-export interface EmpleadosDomesticosPageProps {
-  initialData: EmpleadoDomestico[];
-  initialMeta: EmpleadosMeta;
-}
-
-export function EmpleadosDomesticosPage({
   initialData,
   initialMeta,
-}: EmpleadosDomesticosPageProps) {
-  const [items, setItems] = React.useState(initialData);
-  const [meta, setMeta] = React.useState<EmpleadosMeta>(initialMeta);
->>>>>>> Stashed changes
+}: {
+  initialData: EmpleadoDomestico[];
+  initialMeta: EmpleadosMeta;
+}) {
+  const [empleados] = React.useState<EmpleadoDomestico[]>(initialData || []);
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("Todos");
   const [page, setPage] = React.useState(1);
@@ -82,12 +72,7 @@ export function EmpleadosDomesticosPage({
       const matchesStatus =
         statusFilter === "Todos" || empleado.estado === "Activo";
       const matchesSearch = normalizedSearch
-        ? [
-            empleado.nombre,
-            empleado.email,
-            empleado.destino,
-            empleado.horarioAutorizado,
-          ]
+        ? [empleado.nombre, empleado.destino, empleado.horarioAutorizado]
             .join(" ")
             .toLowerCase()
             .includes(normalizedSearch)
@@ -197,7 +182,7 @@ export function EmpleadosDomesticosPage({
                           {empleado.nombre}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {empleado.email}
+                          {empleado.telefono}
                         </p>
                       </div>
                     </div>

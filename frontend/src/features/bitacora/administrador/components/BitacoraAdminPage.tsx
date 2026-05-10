@@ -51,7 +51,7 @@ export function BitacoraAdminPage() {
         onClearFilters={() => { setPropertyFilter(""); setTypeFilter("todos"); setSortOrder("desc"); }}
       />
       
-      <TablaAccesosAdmin data={records} loading={loading} />
+      <TablaAccesosAdmin data={records} loading={loading} onRefresh={loadData} />
     </div>
   );
 }
