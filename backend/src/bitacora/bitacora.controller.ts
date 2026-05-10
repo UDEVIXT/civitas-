@@ -8,6 +8,7 @@ import {
   MessageEvent,
   Query,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
 
 import { BitacoraService } from './bitacora.service';
@@ -50,6 +51,7 @@ export class BitacoraController {
     @Query('fecha_inicio') fecha_inicio?: string,
     @Query('fecha_fin') fecha_fin?: string,
     @Query('ordenar') ordenar?: string,
+    @Query('estado') estado?: 'dentro' | 'fuera' | 'todos',
     @Query('page') page = '1',
     @Query('limit') limit = '10',
   ) {
@@ -60,6 +62,7 @@ export class BitacoraController {
       fecha_inicio,
       fecha_fin,
       ordenar,
+      estado,
       page: Number(page),
       limit: Number(limit),
     });
@@ -85,35 +88,51 @@ export class BitacoraController {
   }
 
   // ---------------------------------------------------------
-  // REGISTRAR SALIDA A -> (PROVEEDORES) POR ROL (GUARDIA)
+  // REGISTRAR SALIDA A -> (Todos) POR ROL (GUARDIA)
   // ---------------------------------------------------------
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('Guardia')
-  @Patch('proveedores/:id_bitacora/salida')
+  @Patch('registrar-salida')
   async registrarSalida(
-    @Param('id_bitacora') id_bitacora: string,
-    @Body() createBitacoraDto: CreateBitacoraDto,
+    @Body()
+    dto: {
+      id_bitacora?: string | string[];
+      id_guardia: string;
+      comentario_salida?: string;
+    },
   ) {
-    const { id_guardia, comentario_salida } = createBitacoraDto;
+    const { id_bitacora, id_guardia, comentario_salida } = dto;
 
-    const resultado = await this.bitacoraService.registrarSalidaProveedor(
+    if (
+      !id_bitacora ||
+      (Array.isArray(id_bitacora) && id_bitacora.length === 0)
+    ) {
+      throw new BadRequestException(
+        'Debes proporcionar al menos un ID de bitácora.',
+      );
+    }
+
+    const resultado = await this.bitacoraService.registrarSalida(
       id_bitacora,
       id_guardia,
       comentario_salida,
     );
 
-    // SSE EVENT
+    const idsProcesados = Array.isArray(id_bitacora) ? id_bitacora : [id_bitacora];
     bitacoraUpdates$.next({
       tipo_evento: 'PROVEEDOR_SALIDA',
-      id_bitacora: resultado.id_bitacora,
-      fecha: resultado.fecha_hora_salida,
-      mensaje: `Salida registrada para el registro ${id_bitacora}`,
+      ids_afectados: idsProcesados,
+      mensaje:
+        idsProcesados.length > 1
+          ? `${idsProcesados.length} salidas registradas masivamente`
+          : `Salida registrada para el registro ${idsProcesados[0]}`,
+      timestamp: new Date(),
     });
 
     return {
       success: true,
-      message: 'Salida registrada correctamente',
-      data: resultado,
+      message: 'Operación realizada con éxito',
+      ...resultado,
     };
   }
 }
