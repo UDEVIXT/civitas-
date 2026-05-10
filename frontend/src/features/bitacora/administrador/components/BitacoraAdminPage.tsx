@@ -13,7 +13,7 @@ export function BitacoraAdminPage() {
   // Estados de filtros
   const [propertyFilter, setPropertyFilter] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<string>("todos");
-  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>("desc");
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
 
   const loadData = async () => {
     setLoading(true);
@@ -40,18 +40,30 @@ export function BitacoraAdminPage() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Bitácora de Accesos (Administrador)</h1>
-        <p className="text-muted-foreground text-sm mt-1">Supervisa todas las entradas y salidas del recinto.</p>
+        <h1 className="text-2xl font-bold">
+          Bitácora de Accesos (Administrador)
+        </h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          Supervisa todas las entradas y salidas del recinto.
+        </p>
       </div>
-      
-      <FiltrosTablaAdmin 
+
+      <FiltrosTablaAdmin
         onSearchProperty={setPropertyFilter}
         onTypeChange={setTypeFilter}
         onSortChange={setSortOrder}
-        onClearFilters={() => { setPropertyFilter(""); setTypeFilter("todos"); setSortOrder("desc"); }}
+        onClearFilters={() => {
+          setPropertyFilter("");
+          setTypeFilter("todos");
+          setSortOrder("desc");
+        }}
       />
-      
-      <TablaAccesosAdmin data={records} loading={loading} onRefresh={loadData} />
+
+      <TablaAccesosAdmin
+        data={records}
+        loading={loading}
+        onRefresh={loadData}
+      />
     </div>
   );
 }
