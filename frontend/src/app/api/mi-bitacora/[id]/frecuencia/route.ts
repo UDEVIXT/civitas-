@@ -9,7 +9,7 @@ export async function PATCH(
   const { id } = await params;
   const body = await request.json();
   const searchParams = request.nextUrl.searchParams;
-  const upstreamUrl = `${BACKEND_URL}/bitacora/mi-bitacora/${id}/frecuencia?${searchParams.toString()}`;
+  const upstreamUrl = `${BACKEND_URL}/bitacora/${id}/frecuencia?${searchParams.toString()}`;
 
   try {
     const response = await fetch(upstreamUrl, {

@@ -7,7 +7,6 @@ import {
   Sse,
   MessageEvent,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 
 import { BitacoraService } from './bitacora.service';
@@ -16,8 +15,6 @@ import { CreateBitacoraDto } from './dto/create-bitacora.dto';
 import { Subject, Observable } from 'rxjs';
 import { Roles } from 'src/auth/decorators/roles/roles.decorator';
 import { map } from 'rxjs/operators';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth/jwt-auth.guard';
-import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
 
 const bitacoraUpdates$ = new Subject<any>();
 
@@ -113,6 +110,28 @@ export class BitacoraController {
     const result = await this.bitacoraService.obtenerDetalleRegistro(id);
     return {
       success: true,
+      data: result,
+    };
+  }
+
+  // ---------------------------------------------------------
+  // ACTUALIZAR FRECUENCIA
+  // ---------------------------------------------------------
+  //@UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Residente')
+  @Patch(':id/frecuencia')
+  async actualizarFrecuencia(
+    @Param('id') id: string,
+    @Body() body: { es_frecuente: boolean },
+  ) {
+    const result = await this.bitacoraService.actualizarFrecuenciaVisitante(
+      id,
+      body.es_frecuente,
+    );
+
+    return {
+      success: true,
+      message: 'Frecuencia actualizada correctamente',
       data: result,
     };
   }

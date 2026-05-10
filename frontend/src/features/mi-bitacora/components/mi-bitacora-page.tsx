@@ -2,13 +2,10 @@
 
 import * as React from "react";
 import {
-  RefreshCw,
   Search,
   AlertCircle,
   Star,
   X,
-  UserPlus,
-  SlidersHorizontal,
   QrCode,
 } from "lucide-react";
 
@@ -78,10 +75,14 @@ function formatDateTime(value: string | null) {
     return "Pendiente";
   }
 
-  return new Intl.DateTimeFormat("es-MX", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  const date = new Date(value);
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
 function toIsoDateRange(dateValue: string, range: "start" | "end") {
@@ -114,7 +115,6 @@ export function MiBitacoraPage({
 
   const [data, setData] = React.useState<MiBitacoraResponse | null>(null);
   const [loading, setLoading] = React.useState(false);
-  const [refreshing, setRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   const [selected, setSelected] = React.useState<MiBitacoraItem | null>(null);
@@ -142,9 +142,7 @@ export function MiBitacoraPage({
       }
 
       try {
-        if (isRefresh) {
-          setRefreshing(true);
-        } else {
+        if (!isRefresh) {
           setLoading(true);
         }
         setError(null);
@@ -175,7 +173,6 @@ export function MiBitacoraPage({
         setError(message);
       } finally {
         setLoading(false);
-        setRefreshing(false);
       }
     },
     [dateFrom, dateTo, page, personType, residentName, residentUserId, search, sort],
@@ -295,10 +292,6 @@ export function MiBitacoraPage({
             </div>
 
             <div className="mb-4 flex flex-wrap items-center gap-2">
-              <button type="button" onClick={() => setPage(1)} className="flex h-8 items-center gap-1 rounded-md border border-[#d2d2d2] bg-white px-3 text-xs font-medium text-[#2c2c2c]">
-                Nuevo <UserPlus className="size-3" />
-              </button>
-
               <Input
                 value={residentUserId}
                 onChange={(event) => {
@@ -313,10 +306,6 @@ export function MiBitacoraPage({
                 {residentTag} <X className="size-3" />
               </button>
 
-              <button type="button" className="flex h-8 items-center gap-2 rounded-md border border-[#d2d2d2] bg-white px-3 text-xs font-medium text-[#2c2c2c]">
-                <SlidersHorizontal className="size-3" /> Más filtros
-              </button>
-
               <select
                 value={personType}
                 onChange={(event) => {
@@ -329,17 +318,6 @@ export function MiBitacoraPage({
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
-
-              <select
-                value={sort}
-                onChange={(event) => {
-                  setSort(event.target.value as SortDirection);
-                  setPage(1);
-                }}
-                className="h-8 rounded-md border border-[#d2d2d2] bg-white px-2 text-xs text-[#2c2c2c]"
-              >
-                <option value="desc">Mas reciente</option>
-                <option value="asc">Mas antiguo</option>
               </select>
 
               <Input

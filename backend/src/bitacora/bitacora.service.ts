@@ -263,6 +263,33 @@ export class BitacoraService {
     return salidaRegistrada;
   }
 
+  async actualizarFrecuenciaVisitante(idBitacora: string, esFrecuente: boolean) {
+    const registro = await this.prisma.bitacora.findUnique({
+      where: { id_bitacora: idBitacora },
+      include: {
+        acceso: {
+          include: {
+            visitante: true,
+          },
+        },
+      },
+    });
+
+    if (!registro) {
+      throw new NotFoundException('Registro no encontrado.');
+    }
+
+    await this.prisma.visitante.update({
+      where: { id_visitante: registro.acceso.visitante.id_visitante },
+      data: { es_frecuente: esFrecuente },
+    });
+
+    return {
+      id_bitacora: registro.id_bitacora,
+      es_frecuente: esFrecuente,
+    };
+  }
+
   // Obtener bitácora de un residente específico con filtros
   async obtenerMiBitacora(filters: {
     residentUserId?: string;

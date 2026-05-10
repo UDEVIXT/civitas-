@@ -8,7 +8,7 @@ export async function GET(
 ) {
   const { id } = await context.params;
   const searchParams = request.nextUrl.searchParams;
-  const upstreamUrl = `${BACKEND_URL}/bitacora/mi-bitacora/${id}?${searchParams.toString()}`;
+  const upstreamUrl = `${BACKEND_URL}/bitacora/${id}?${searchParams.toString()}`;
 
   try {
     const response = await fetch(upstreamUrl, {
