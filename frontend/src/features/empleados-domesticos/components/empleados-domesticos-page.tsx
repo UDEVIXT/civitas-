@@ -32,6 +32,7 @@ const statusOptions = ["Todos", "Activos"] as const;
 
 type StatusFilter = (typeof statusOptions)[number];
 
+<<<<<<< Updated upstream
 const avatarPalette = [
   "bg-amber-100 text-amber-700",
   "bg-rose-100 text-rose-700",
@@ -57,6 +58,19 @@ export function EmpleadosDomesticosPage({
 }: {
   empleados: EmpleadoDomestico[];
 }) {
+=======
+export interface EmpleadosDomesticosPageProps {
+  initialData: EmpleadoDomestico[];
+  initialMeta: EmpleadosMeta;
+}
+
+export function EmpleadosDomesticosPage({
+  initialData,
+  initialMeta,
+}: EmpleadosDomesticosPageProps) {
+  const [items, setItems] = React.useState(initialData);
+  const [meta, setMeta] = React.useState<EmpleadosMeta>(initialMeta);
+>>>>>>> Stashed changes
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("Todos");
   const [page, setPage] = React.useState(1);
