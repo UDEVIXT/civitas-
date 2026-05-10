@@ -65,7 +65,7 @@ import apiClient from "@/api/axios";
 export async function obtenerBitacoraHistorica(
   filtros: BitacoraFiltro = {},
 ): Promise<BitacoraResponse> {
-  const response = await apiClient.get("/bitacora-guardia", {
+  const response = await apiClient.get("/bitacora", {
     params: filtros,
   });
   return response.data;
@@ -74,6 +74,6 @@ export async function obtenerBitacoraHistorica(
 export async function obtenerDetalleRegistro(
   id: string,
 ): Promise<BitacoraDetalleResponse> {
-  const response = await apiClient.get(`/bitacora-guardia/${id}`);
+  const response = await apiClient.get(`/bitacora/${id}`);
   return response.data;
 }
