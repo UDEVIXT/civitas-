@@ -17,6 +17,7 @@ export class BitacoraService {
     fecha_inicio?: string;
     fecha_fin?: string;
     ordenar?: string;
+    estado?: 'dentro' | 'fuera' | 'todos';
     page: number;
     limit: number;
   }) {
@@ -27,21 +28,22 @@ export class BitacoraService {
       fecha_inicio,
       fecha_fin,
       ordenar,
+      estado,
       page,
       limit,
     } = filters;
 
     const where: any = {
-      fecha_hora_salida: null,
-
       acceso: {
-        visitante: {
-          id_servicio: {
-            not: null,
-          },
-        },
+        visitante: {},
       },
     };
+
+    if (estado === 'dentro') {
+      where.fecha_hora_salida = null;
+    } else if (estado === 'fuera') {
+      where.fecha_hora_salida = { not: null };
+    }
 
     // SEARCH
     if (search) {
@@ -147,6 +149,7 @@ export class BitacoraService {
     }
 
     const [data, total] = await Promise.all([
+
       this.prisma.bitacora.findMany({
         where,
 
@@ -154,6 +157,7 @@ export class BitacoraService {
           acceso: {
             select: {
               codigo_qr: true,
+              fecha_expiracion: true,
 
               visitante: {
                 select: {
@@ -209,8 +213,31 @@ export class BitacoraService {
       }),
     ]);
 
+    // =========================
+    // CALCULAR TIEMPO EXCEDIDO
+    // =========================
+    const ahora = new Date();
+    const dataConEstado = data.map((registro) => {
+      const tiempo_excedido =
+        !registro.fecha_hora_salida && registro.acceso.fecha_expiracion < ahora;
+
+      let estado_registro: 'dentro' | 'fuera' | 'excedido' = 'dentro';
+
+      if (registro.fecha_hora_salida) {
+        estado_registro = 'fuera';
+      } else if (tiempo_excedido) {
+        estado_registro = 'excedido';
+      }
+
+      return {
+        ...registro,
+        tiempo_excedido,
+        estado_registro,
+      };
+    });
+
     return {
-      data,
+      data: dataConEstado,
 
       meta: {
         total,
@@ -221,49 +248,60 @@ export class BitacoraService {
     };
   }
 
-  // HU-1.9.1: Registrar salida y validar
-  async registrarSalidaProveedor(
-    id_bitacora: string,
+  // HU-1.9.1: Registrar salida (Individual o Masiva)
+  async registrarSalida(
+    id_bitacora: string | string[],
     id_guardia: string,
     comentario_salida?: string,
   ) {
-    const guardiaInfo = await this.prisma.guardia.findUnique({
-      where: { id_guardia: id_guardia },
-    });
+    try {
+      const guardiaInfo = await this.prisma.guardia.findUnique({
+        where: { id_guardia: id_guardia },
+      });
 
-    if (!guardiaInfo) {
-      throw new NotFoundException('El guardia no existe en la base de datos.');
+      if (!guardiaInfo) {
+        throw new NotFoundException('El guardia no existe.');
+      }
+
+      const ids = Array.isArray(id_bitacora) ? id_bitacora : [id_bitacora];
+
+      const auditoria = ` (Registrado por: ${guardiaInfo.nombre})`;
+      const textoSalida = comentario_salida
+        ? `${comentario_salida}${auditoria}`
+        : `Salida verificada por: ${guardiaInfo.nombre}`;
+
+      const resultado = await this.prisma.bitacora.updateMany({
+        where: {
+          id_bitacora: { in: ids },
+          fecha_hora_salida: null,
+        },
+        data: {
+          fecha_hora_salida: new Date(),
+          comentario_salida: textoSalida,
+        },
+      });
+
+      if (resultado.count === 0) {
+        throw new ConflictException(
+          'No se encontraron registros pendientes de salida, o ya han sido registrados previamente.',
+        );
+      }
+
+      return {
+        mensaje: `Se registraron ${resultado.count} salidas exitosamente.`,
+        cantidad: resultado.count,
+      };
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ConflictException
+      ) {
+        throw error;
+      }
+      throw new Error('Error interno del servidor al registrar salida.');
     }
-
-    const registroActual = await this.prisma.bitacora.findUnique({
-      where: { id_bitacora },
-    });
-
-    if (!registroActual) {
-      throw new NotFoundException('No se encontró el registro de entrada.');
-    }
-
-    if (registroActual.fecha_hora_salida !== null) {
-      throw new ConflictException(
-        'Este proveedor ya tiene una salida registrada.',
-      );
-    }
-
-    const textoSalida =
-      comentario_salida || `Salida verificada por: ${guardiaInfo.nombre}`;
-
-    const salidaRegistrada = await this.prisma.bitacora.update({
-      where: { id_bitacora },
-      data: {
-        fecha_hora_salida: new Date(),
-        comentario_salida: textoSalida,
-      },
-    });
-
-    return salidaRegistrada;
   }
 
-  // Detalle de registro en bitácora a partir de su ID
   async obtenerDetalleRegistro(id: string) {
     const registro = await this.prisma.bitacora.findUnique({
       where: { id_bitacora: id },
