@@ -41,7 +41,7 @@ export class BitacoraController {
   // ---------------------------------------------------------
   // GET BITACORA
   // ---------------------------------------------------------
-  //@UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('Guardia', 'Residente', 'Administrador')
   @Get()
   async getBitacora(
