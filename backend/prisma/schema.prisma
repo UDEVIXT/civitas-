@@ -7,9 +7,9 @@ datasource db {
   provider = "postgresql"
 }
 
-enum EstatusAcceso {
-  Activo
-  Inactivo
+enum Cargo {
+  Gobierno
+  Comite
 }
 
 enum Rol {
@@ -28,9 +28,28 @@ enum DiaSemana {
   DOMINGO
 }
 
-enum Cargo {
-  Gobierno
-  Comite
+enum EstatusAcceso {
+  Activo
+  Inactivo
+}
+
+enum TipoReporte {
+  QUEJA
+  SUGERENCIA
+  INCIDENCIA
+}
+
+enum PrioridadReporte {
+  BAJA
+  MEDIA
+  ALTA
+}
+
+enum EstadoIncidencia {
+  PENDIENTE
+  EN_PROCESO
+  RESUELTA
+  CANCELADA
 }
 
 model Persona {
@@ -40,55 +59,52 @@ model Persona {
   fecha_nacimiento DateTime
   telefono         String?
   url_imagen       String?
-
-  usuario Usuario?
+  usuario          Usuario?
 }
 
 model Vivienda {
-  id_vivienda     String @id @default(uuid())
-  numero_vivienda String @unique
-
-  residentes Residente[]
+  id_vivienda     String      @id @default(uuid())
+  numero_vivienda String      @unique
+  residentes      Residente[]
 }
 
 model Usuario {
-  id_usuario String @id @default(uuid())
-  nombre_usuario String @unique
-  correo         String @unique
-  password       String
-  rol            Rol
-  id_persona     String @unique
-
-  persona    Persona     @relation(fields: [id_persona], references: [id_persona])
-  accesos    Acceso[]
-  residentes Residente[]
-  guardias   Guardia?
-  administradores Administrador[]
+  id_usuario      String         @id @default(uuid())
+  nombre_usuario  String         @unique
+  correo          String         @unique
+  rol             Rol
+  id_persona      String         @unique
+  password        String
+  accesos         Acceso[]
+  administradores Administrador?
+  guardias        Guardia?
+  residentes      Residente[]
+  persona         Persona        @relation(fields: [id_persona], references: [id_persona])
 }
 
 model Residente {
-  id_residente String @id @default(uuid())
+  id_residente String      @id @default(uuid())
   id_usuario   String
   id_vivienda  String
 
   usuario    Usuario     @relation(fields: [id_usuario], references: [id_usuario])
   vivienda   Vivienda    @relation(fields: [id_vivienda], references: [id_vivienda])
   visitantes Visitante[]
+  incidencias Incidencia[]
 }
 
 model Visitante {
-  id_visitante String  @id @default(uuid())
+  id_visitante String    @id @default(uuid())
   nombre       String
-  es_frecuente Boolean @default(false)
+  es_frecuente Boolean   @default(false)
   telefono     String?
   url_imagen   String?
   motivo       String?
   id_residente String
   id_servicio  String?
-
-  residente Residente @relation(fields: [id_residente], references: [id_residente])
-  servicio  Servicio? @relation(fields: [id_servicio], references: [id_servicio])
-  accesos   Acceso[]
+  accesos      Acceso[]
+  residente    Residente @relation(fields: [id_residente], references: [id_residente])
+  servicio     Servicio? @relation(fields: [id_servicio], references: [id_servicio])
 }
 
 model Acceso {
@@ -100,10 +116,9 @@ model Acceso {
   fecha_expiracion DateTime
   estatus          EstatusAcceso @default(Activo)
   comentario_admin String?
-
-  usuario   Usuario   @relation(fields: [id_usuario], references: [id_usuario])
-  visitante Visitante @relation(fields: [id_visitante], references: [id_visitante])
-  bitacora  Bitacora?
+  usuario          Usuario       @relation(fields: [id_usuario], references: [id_usuario])
+  visitante        Visitante     @relation(fields: [id_visitante], references: [id_visitante], onDelete: Cascade)
+  bitacora         Bitacora?
 }
 
 model Bitacora {
@@ -114,64 +129,112 @@ model Bitacora {
   fecha_hora_salida  DateTime?
   comentario         String?
   comentario_salida  String?
-
-  acceso       Acceso  @relation(fields: [id_acceso], references: [id_acceso])
-  guardia      Guardia  @relation(fields: [id_guardia], references: [id_guardia])
+  acceso             Acceso    @relation(fields: [id_acceso], references: [id_acceso], onDelete: Cascade)
+  guardia            Guardia   @relation(fields: [id_guardia], references: [id_guardia])
 }
 
 model Servicio {
-  id_servicio     String  @id @default(uuid())
-  nombre_servicio String
-  cargo           String?
-  nombre_empresa  String?
-  tipo_carro      String?
-  placas          String? @unique
-  rfc             String? @unique
-  activo          Boolean @default(true)
-
+  id_servicio      String                   @id @default(uuid())
+  nombre_servicio  String
+  cargo            String?
+  nombre_empresa   String?
+  tipo_carro       String?
+  placas           String?                  @unique
+  rfc              String?                  @unique
+  activo           Boolean                  @default(true)
   id_tipo_servicio String?
-  tipo_servicio    TipoServicio? @relation(fields: [id_tipo_servicio], references: [id_tipo_servicio])
-  visitantes Visitante[]
-  horarios   HorarioAccesoServicios[]
+  horarios         HorarioAccesoServicios[]
+  tipo_servicio    TipoServicio?            @relation(fields: [id_tipo_servicio], references: [id_tipo_servicio])
+  visitantes       Visitante[]
 }
 
 model HorarioAccesoServicios {
   id_horario  String    @id @default(uuid())
-  dia_semana  DiaSemana
-  hora_inicio DateTime  @db.Time
-  hora_fin    DateTime  @db.Time
-  id_servicio String
+  hora_inicio DateTime  @db.Time(6)
+  hora_fin    DateTime  @db.Time(6)
   activo      Boolean   @default(true)
-
-  servicio Servicio @relation(fields: [id_servicio], references: [id_servicio])
+  dia_semana  DiaSemana
+  id_servicio String
+  servicio    Servicio  @relation(fields: [id_servicio], references: [id_servicio])
 
   @@index([dia_semana, activo])
 }
 
 model Guardia {
-  id_guardia  String     @id @default(uuid())
-  id_usuario  String     @unique
-  nombre      String     @db.VarChar(128)
-  turno       String
-
-  usuario     Usuario    @relation(fields: [id_usuario], references: [id_usuario])
-  bitacoras   Bitacora[]
+  id_guardia String     @id @default(uuid())
+  id_usuario String     @unique
+  nombre     String     @db.VarChar(128)
+  turno      String
+  bitacoras  Bitacora[]
+  usuario    Usuario    @relation(fields: [id_usuario], references: [id_usuario])
 }
 
 model TipoServicio {
-  id_tipo_servicio String @id @default(uuid())
-  categoria        String  // "Limpieza", "Repartidor", "Mantenimiento", "Proveedor"
-  nombre           String @unique
+  id_tipo_servicio String     @id @default(uuid())
+  nombre           String     @unique
   descripcion      String?
-
-  servicios Servicio[]
+  categoria        String
+  servicios        Servicio[]
 }
 
 model Administrador {
-  id_administrador String    @id @default(uuid())
-  id_usuario       String    @unique
-  nombre           String    @db.VarChar(128)
-  apellidos        String    @db.VarChar(128)
+  id_administrador String  @id @default(uuid())
+  id_usuario       String  @unique
+  nombre           String  @db.VarChar(128)
+  apellidos        String  @db.VarChar(128)
   cargo            Cargo
   usuario          Usuario @relation(fields: [id_usuario], references: [id_usuario])
+}
+
+model Incidencia {
+  id_incidencia    String           @id @default(uuid())
+  titulo           String
+  descripcion      String
+  estado           EstadoIncidencia @default(PENDIENTE)
+  prioridad        String?          @default("MEDIA") 
+  es_anonimo       Boolean          @default(false)   
+  fecha_creacion   DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt        
+
+  id_residente     String
+  residente        Residente        @relation(fields: [id_residente], references: [id_residente])
+  historial        HistorialIncidencia[]
+}
+
+model HistorialIncidencia {
+  id_historial     String           @id @default(uuid())
+  estado_anterior  EstadoIncidencia 
+  nuevo_estado     EstadoIncidencia 
+  comentario       String?
+  fecha            DateTime         @default(now())
+  actualizado_por  String?          @default("Sistema") 
+
+  id_incidencia    String
+  incidencia       Incidencia       @relation(fields: [id_incidencia], references: [id_incidencia])
+}
+
+model EvidenciaReporte {
+  id_evidencia      String   @id @default(uuid()) @db.Uuid
+  id_reporte        String   @db.Uuid
+  reporte           Reporte  @relation(fields: [id_reporte], references: [id_reporte])
+  url_archivo       String   @db.Text
+  nombre_archivo    String   @db.VarChar(256)
+  createdAt         DateTime @default(now()) @db.Timestamp()
+}
+
+model Reporte {
+  id_reporte         String                @id @default(uuid()) @db.Uuid
+  id_usuario         String                @db.Uuid
+  motivo             String                @db.VarChar(100)
+  descripcion        String                @db.Text
+  tipo               TipoReporte
+  latitud            Decimal
+  longitud           Decimal
+  estado             EstadoIncidencia
+  prioridad          PrioridadReporte
+  es_anonimo         Boolean
+  resultado_esperado String?               @db.Text
+  resultado_solucion String?               @db.Text
+
+  evidencias         EvidenciaIncidencia[]
 }

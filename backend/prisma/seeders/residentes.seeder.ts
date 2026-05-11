@@ -1,38 +1,31 @@
-import { PrismaClient } from '@prisma/client';
-
-const residentesViviendas = [
-  { correo: 'karla@civitas.com', numeroVivienda: 'A-01' },
-  { correo: 'jared@civitas.com', numeroVivienda: 'A-02' },
-  { correo: 'alexandra@civitas.com', numeroVivienda: 'B-01' },
-];
+import { PrismaClient, Rol } from '@prisma/client';
+import { faker } from '@faker-js/faker';
 
 export async function seedResidentes(prisma: PrismaClient) {
-  for (const item of residentesViviendas) {
-    const usuario = await prisma.usuario.findUnique({
-      where: { correo: item.correo },
-    });
-    const vivienda = await prisma.vivienda.findUnique({
-      where: { numero_vivienda: item.numeroVivienda },
-    });
+  const usuariosResidentes = await prisma.usuario.findMany({
+    where: { rol: Rol.Residente },
+  });
 
-    if (!usuario || !vivienda) {
-      throw new Error(
-        `No se puede crear residente para ${item.correo} en ${item.numeroVivienda}.`,
-      );
-    }
+  const viviendas = await prisma.vivienda.findMany();
 
+  if (viviendas.length === 0) {
+    console.error('No hay viviendas para asignar residentes.');
+    return;
+  }
+
+  for (const usuario of usuariosResidentes) {
+    // Asignar a cada usuario residente una vivienda aleatoria si no tiene una
     const residenteExistente = await prisma.residente.findFirst({
-      where: {
-        id_usuario: usuario.id_usuario,
-        id_vivienda: vivienda.id_vivienda,
-      },
+      where: { id_usuario: usuario.id_usuario },
     });
 
     if (!residenteExistente) {
+      const viviendaAleatoria = faker.helpers.arrayElement(viviendas);
+      
       await prisma.residente.create({
         data: {
           id_usuario: usuario.id_usuario,
-          id_vivienda: vivienda.id_vivienda,
+          id_vivienda: viviendaAleatoria.id_vivienda,
         },
       });
     }

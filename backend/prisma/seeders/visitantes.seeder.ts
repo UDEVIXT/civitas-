@@ -1,86 +1,75 @@
 import { PrismaClient } from '@prisma/client';
-
-type VisitanteSeed = {
-  nombre: string;
-  motivo: string;
-  es_frecuente: boolean;
-  correoResidente: string;
-  nombreServicio?: string;
-};
-
-const visitantesData: VisitanteSeed[] = [
-  {
-    nombre: 'Pablo',
-    motivo: 'Visita familiar',
-    es_frecuente: true,
-    correoResidente: 'karla@civitas.com',
-  },
-  {
-    nombre: 'Denilson',
-    motivo: 'Entrega de paquete',
-    es_frecuente: false,
-    correoResidente: 'jared@civitas.com',
-    nombreServicio: 'Comida',
-  },
-  {
-    nombre: 'Jeycson',
-    motivo: 'Reparación de tubería',
-    es_frecuente: true,
-    correoResidente: 'alexandra@civitas.com',
-    nombreServicio: 'Plomería',
-  },
-  {
-    nombre: 'Carlos',
-    motivo: 'Visita de cortesía',
-    es_frecuente: false,
-    correoResidente: 'karla@civitas.com',
-  },
-  {
-    nombre: 'Ana',
-    motivo: 'Mantenimiento de red',
-    es_frecuente: true,
-    correoResidente: 'jared@civitas.com',
-    nombreServicio: 'Internet',
-  },
-];
+import { faker } from '@faker-js/faker';
 
 export async function seedVisitantes(prisma: PrismaClient) {
-  for (const visitante of visitantesData) {
-    const usuario = await prisma.usuario.findUnique({
-      where: { correo: visitante.correoResidente },
-    });
+  const residentes = await prisma.residente.findMany();
+  const tiposServicio = await prisma.tipoServicio.findMany();
 
-    if (!usuario) {
-      throw new Error(`No se encontró el usuario residente ${visitante.correoResidente}.`);
+  if (residentes.length === 0) {
+    console.error('No hay residentes para asignar visitantes.');
+    return;
+  }
+
+  if (tiposServicio.length === 0) {
+    console.error('No hay tipos de servicio para asignar a visitantes.');
+    return;
+  }
+
+  const motivos = [
+    'Visita familiar',
+    'Entrega de paquete',
+    'Reparación',
+    'Servicio técnico',
+    'Cita médica',
+    'Mudanza',
+    'Limpieza',
+    'Jardinería',
+  ];
+
+  for (let i = 0; i < 200; i++) {
+    const residente = faker.helpers.arrayElement(residentes);
+    const nombre = faker.person.fullName();
+    const telefono = faker.phone.number({ style: 'national' });
+    const url_imagen = faker.image.url();
+    const motivo = faker.helpers.arrayElement(motivos);
+    const es_frecuente = faker.datatype.boolean();
+
+    // 50% de probabilidad de tener un servicio asociado
+    const requiereServicio = faker.datatype.boolean();
+    let servicioId: string | null = null;
+
+    if (requiereServicio) {
+      const tipoServicio = faker.helpers.arrayElement(tiposServicio);
+      const servicio = await prisma.servicio.create({
+        data: {
+          nombre_servicio: faker.commerce.department(),
+          cargo: faker.person.jobTitle(),
+          nombre_empresa: faker.company.name(),
+          tipo_carro: faker.vehicle.type(),
+          placas: null,
+          rfc: null,
+          id_tipo_servicio: tipoServicio.id_tipo_servicio,
+          activo: true,
+        },
+      });
+      servicioId = servicio.id_servicio;
     }
-
-    const residente = await prisma.residente.findFirst({
-      where: { id_usuario: usuario.id_usuario },
-    });
-
-    if (!residente) {
-      throw new Error(`No se encontró residente para ${visitante.correoResidente}.`);
-    }
-
-    const servicio = visitante.nombreServicio
-      ? await prisma.servicio.findFirst({
-          where: { nombre_servicio: visitante.nombreServicio },
-        })
-      : null;
 
     const existente = await prisma.visitante.findFirst({
       where: {
-        nombre: visitante.nombre,
+        nombre: nombre,
         id_residente: residente.id_residente,
       },
     });
 
     const data = {
-      nombre: visitante.nombre,
-      motivo: visitante.motivo,
-      es_frecuente: visitante.es_frecuente,
+      nombre: nombre,
+      motivo: motivo,
+      telefono: telefono,
+      url_imagen: url_imagen,
+      es_frecuente: es_frecuente,
       id_residente: residente.id_residente,
-      id_servicio: servicio?.id_servicio ?? null,
+      id_servicio: servicioId,
     };
 
     if (existente) {
