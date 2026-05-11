@@ -8,7 +8,7 @@ import {
   MessageEvent,
   Query,
   UseGuards,
-  Req,
+  BadRequestException,
 } from '@nestjs/common';
 
 import { BitacoraService } from './bitacora.service';
@@ -26,23 +26,6 @@ const bitacoraUpdates$ = new Subject<any>();
 export class BitacoraController {
   constructor(private readonly bitacoraService: BitacoraService) {}
 
-  private resolveResidentUserId(
-    request: { headers?: Record<string, unknown>; user?: Record<string, unknown> },
-    residentUserIdFromQuery?: string,
-  ) {
-    const userIdFromRequest =
-      typeof request.user?.id_usuario === 'string'
-        ? request.user.id_usuario
-        : undefined;
-
-    const userIdFromHeader =
-      typeof request.headers?.['x-resident-user-id'] === 'string'
-        ? request.headers['x-resident-user-id']
-        : undefined;
-
-    return userIdFromRequest ?? residentUserIdFromQuery ?? userIdFromHeader;
-  }
-
   // ---------------------------------------------------------
   // SSE
   // ---------------------------------------------------------
@@ -55,154 +38,103 @@ export class BitacoraController {
     );
   }
 
-  @Get('mi-bitacora')
-  async getMiBitacora(
-    @Req() req: { headers?: Record<string, unknown>; user?: Record<string, unknown> },
-    @Query('residentUserId') residentUserId?: string,
-    @Query('residentName') residentName?: string,
-    @Query('search') search?: string,
-    @Query('personType') personType?: string,
-    @Query('dateFrom') dateFrom?: string,
-    @Query('dateTo') dateTo?: string,
-    @Query('sort') sort?: 'asc' | 'desc',
-    @Query('page') page = '1',
-    @Query('limit') limit = '10',
-  ) {
-    const resolvedResidentUserId = this.resolveResidentUserId(
-      req,
-      residentUserId,
-    );
-
-    const data = await this.bitacoraService.obtenerMiBitacora({ 
-      residentUserId: resolvedResidentUserId,
-      residentName,
-      search,
-      personType,
-      dateFrom,
-      dateTo,
-      sort,
-      page: Number(page),
-      limit: Number(limit),
-    });
-
-    return {
-      success: true,
-      ...data,
-    };
-  }
-
-  @Get('mi-bitacora/:id_bitacora')
-  async getDetalleMiBitacora(
-    @Req() req: { headers?: Record<string, unknown>; user?: Record<string, unknown> },
-    @Param('id_bitacora') id_bitacora: string,
-    @Query('residentUserId') residentUserId?: string,
-    @Query('residentName') residentName?: string,
-  ) {
-    const resolvedResidentUserId = this.resolveResidentUserId(
-      req,
-      residentUserId,
-    );
-    const data = await this.bitacoraService.obtenerDetalleMiBitacora(
-      id_bitacora,
-      resolvedResidentUserId,
-      residentName,
-    );
-
-    return {
-      success: true,
-      data,
-    };
-  }
-
-  // ---------------------------------------------------------
-  // CA012: Actualizar Frecuencia de Visitante
-  // ---------------------------------------------------------
-  @Patch('mi-bitacora/:id_bitacora/frecuencia')
-  async actualizarFrecuencia(
-    @Body() body: { es_frecuente: boolean },
-    @Req() req: { headers?: Record<string, unknown>; user?: Record<string, unknown> },
-    @Param('id_bitacora') id_bitacora: string,
-    @Query('residentUserId') residentUserId?: string,
-    @Query('residentName') residentName?: string,
-  ) {
-    const resolvedResidentUserId = this.resolveResidentUserId(
-      req,
-      residentUserId,
-    );
-    const resultado = await this.bitacoraService.actualizarFrecuenciaVisitante(
-      id_bitacora,
-      body.es_frecuente,
-      resolvedResidentUserId,
-      residentName,
-    );
-
-    bitacoraUpdates$.next({
-      tipo_evento: 'FRECUENCIA_ACTUALIZADA',
-      id_bitacora,
-      es_frecuente: body.es_frecuente,
-      timestamp: new Date().toISOString(),
-      mensaje: resultado.message,
-    });
-
-    return {
-      success: true,
-      ...resultado,
-    };
-  }
-
   // ---------------------------------------------------------
   // GET BITACORA
   // ---------------------------------------------------------
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Guardia', 'Residente', 'Administrador')
   @Get()
   async getBitacora(
     @Query('search') search?: string,
     @Query('tipo') tipo?: string,
+    @Query('residencia') residencia?: string,
+    @Query('fecha_inicio') fecha_inicio?: string,
+    @Query('fecha_fin') fecha_fin?: string,
+    @Query('ordenar') ordenar?: string,
+    @Query('estado') estado?: 'dentro' | 'fuera' | 'todos',
     @Query('page') page = '1',
     @Query('limit') limit = '10',
   ) {
-    const data = await this.bitacoraService.obtenerProveedoresActivos({
+    const data = await this.bitacoraService.obtenerBitacora({
       search,
       tipo,
+      residencia,
+      fecha_inicio,
+      fecha_fin,
+      ordenar,
+      estado,
       page: Number(page),
       limit: Number(limit),
     });
 
     return {
       success: true,
-      ...data,
+      data: data.data,
+
+      meta: data.meta,
     };
   }
 
   // ---------------------------------------------------------
-  // REGISTRAR SALIDA
+  // GET ID DETALLE REGISTRO
+  // ---------------------------------------------------------
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Guardia', 'Residente', 'Administrador')
+  @Get(':id')
+  async obtenerDetalleRegistro(@Param('id') id: string) {
+    const result = await this.bitacoraService.obtenerDetalleRegistro(id);
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
+  // ---------------------------------------------------------
+  // REGISTRAR SALIDA A -> (Todos) POR ROL (GUARDIA)
   // ---------------------------------------------------------
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('Guardia')
-  @Patch('proveedores/:id_bitacora/salida')
+  @Patch('registrar-salida')
   async registrarSalida(
-    @Param('id_bitacora') id_bitacora: string,
-    @Body() createBitacoraDto: CreateBitacoraDto,
+    @Body()
+    dto: {
+      id_bitacora?: string | string[];
+      id_guardia: string;
+      comentario_salida?: string;
+    },
   ) {
-    const { id_guardia, comentario_salida } = createBitacoraDto;
+    const { id_bitacora, id_guardia, comentario_salida } = dto;
 
-    const resultado = await this.bitacoraService.registrarSalidaProveedor(
+    if (
+      !id_bitacora ||
+      (Array.isArray(id_bitacora) && id_bitacora.length === 0)
+    ) {
+      throw new BadRequestException(
+        'Debes proporcionar al menos un ID de bitácora.',
+      );
+    }
+
+    const resultado = await this.bitacoraService.registrarSalida(
       id_bitacora,
       id_guardia,
       comentario_salida,
     );
 
-    // SSE EVENT
+    const idsProcesados = Array.isArray(id_bitacora) ? id_bitacora : [id_bitacora];
     bitacoraUpdates$.next({
       tipo_evento: 'PROVEEDOR_SALIDA',
-      id_bitacora: resultado.id_bitacora,
-      fecha: resultado.fecha_hora_salida,
-      mensaje: `Salida registrada para el registro ${id_bitacora}`,
+      ids_afectados: idsProcesados,
+      mensaje:
+        idsProcesados.length > 1
+          ? `${idsProcesados.length} salidas registradas masivamente`
+          : `Salida registrada para el registro ${idsProcesados[0]}`,
+      timestamp: new Date(),
     });
 
     return {
       success: true,
-      message: 'Salida registrada correctamente',
-      data: resultado,
+      message: 'Operación realizada con éxito',
+      ...resultado,
     };
   }
 }

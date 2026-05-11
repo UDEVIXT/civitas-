@@ -37,7 +37,7 @@ export async function seedServicios(prisma: PrismaClient) {
       placas: placas,
       rfc: faker.datatype.boolean() ? rfc : null,
       id_tipo_servicio: tipoServicio.id_tipo_servicio,
-      activo: true
+      activo: true,
     };
 
     if (servicioExistente) {
@@ -65,7 +65,7 @@ export async function seedServicios(prisma: PrismaClient) {
         tipo_carro: faker.vehicle.type(),
         placas: faker.vehicle.vrm(),
         id_tipo_servicio: tipoServicio.id_tipo_servicio,
-        activo: true
+        activo: true,
       },
     });
   }

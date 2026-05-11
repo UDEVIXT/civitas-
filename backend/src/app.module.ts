@@ -6,10 +6,10 @@ import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { BitacoraModule } from './bitacora/bitacora.module';
 import { ReportesModule } from './reportes/reportes.module';
-import { EvidenciaIncidenciaModule } from './evidencia-incidencia/evidencia-incidencia.module';
+import { EvidenciaReporteModule } from './evidencia-reporte/evidencia-incidencia.module';
 import { EmpleadoModule } from './empleado/empleado.module';
 import { AuthModule } from './auth/auth.module';
-import { BitacoraGuardiaModule } from './bitacora-guardia/bitacora-guardia.module';
+import { IncidenciasModule } from './incidencias/incidencias.module';
 
 @Module({
   imports: [
@@ -19,10 +19,10 @@ import { BitacoraGuardiaModule } from './bitacora-guardia/bitacora-guardia.modul
     PrismaModule,
     BitacoraModule,
     ReportesModule,
-    EvidenciaIncidenciaModule,
+    EvidenciaReporteModule,
     EmpleadoModule,
     AuthModule,
-    BitacoraGuardiaModule,
+    IncidenciasModule,
   ],
   controllers: [AppController],
   providers: [AppService],
