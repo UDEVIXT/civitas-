@@ -7,6 +7,51 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Cargo {
+  Gobierno
+  Comite
+}
+
+enum Rol {
+  Administrador
+  Guardia
+  Residente
+}
+
+enum DiaSemana {
+  LUNES
+  MARTES
+  MIERCOLES
+  JUEVES
+  VIERNES
+  SABADO
+  DOMINGO
+}
+
+enum EstatusAcceso {
+  Activo
+  Inactivo
+}
+
+enum TipoReporte {
+  QUEJA
+  SUGERENCIA
+  INCIDENCIA
+}
+
+enum PrioridadReporte {
+  BAJA
+  MEDIA
+  ALTA
+}
+
+enum EstadoIncidencia {
+  PENDIENTE
+  EN_PROCESO
+  RESUELTA
+  CANCELADA
+}
+
 model Persona {
   id_persona       String   @id @default(uuid())
   nombre           String
@@ -141,13 +186,6 @@ model Administrador {
   usuario          Usuario @relation(fields: [id_usuario], references: [id_usuario])
 }
 
-enum EstadoIncidencia {
-  PENDIENTE
-  EN_PROCESO
-  RESUELTA
-  CANCELADA
-}
-
 model Incidencia {
   id_incidencia    String           @id @default(uuid())
   titulo           String
@@ -173,4 +211,30 @@ model HistorialIncidencia {
 
   id_incidencia    String
   incidencia       Incidencia       @relation(fields: [id_incidencia], references: [id_incidencia])
+}
+
+model EvidenciaIncidencia {
+  id_evidencia      String   @id @default(uuid()) @db.Uuid
+  id_reporte        String   @db.Uuid
+  reporte           Reporte  @relation(fields: [id_reporte], references: [id_reporte])
+  url_archivo       String   @db.Text
+  nombre_archivo    String   @db.VarChar(256)
+  createdAt         DateTime @default(now()) @db.Timestamp()
+}
+
+model Reporte {
+  id_reporte         String                @id @default(uuid()) @db.Uuid
+  id_usuario         String                @db.Uuid
+  motivo             String                @db.VarChar(100)
+  descripcion        String                @db.Text
+  tipo               TipoReporte
+  latitud            Decimal
+  longitud           Decimal
+  estado             EstadoIncidencia
+  prioridad          PrioridadReporte
+  es_anonimo         Boolean
+  resultado_esperado String?               @db.Text
+  resultado_solucion String?               @db.Text
+
+  evidencias         EvidenciaIncidencia[]
 }
