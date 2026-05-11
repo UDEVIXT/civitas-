@@ -288,6 +288,65 @@ export class EmpleadoService {
     };
   }
 
+  async actualizarEmpleado(id: string, data: any) {
+  try {
+    return await this.prisma.$transaction(async (tx) => {
+      // 1. Buscamos el registro para obtener la conexión con la tabla Servicio
+      const visitante = await tx.visitante.findUnique({
+        where: { id_visitante: id },
+        select: { id_servicio: true },
+      });
+
+      if (!visitante) throw new NotFoundException('Empleado no encontrado');
+
+      // 2. Actualizamos los datos personales en la tabla Visitante
+      await tx.visitante.update({
+        where: { id_visitante: id },
+        data: {
+          nombre: data.nombre,
+          telefono: data.telefono,
+          url_imagen: data.url_imagen,
+        },
+      });
+
+      // 3. Si tiene un servicio, actualizamos el tipo y los horarios
+      if (visitante.id_servicio) {
+        await tx.servicio.update({
+          where: { id_servicio: visitante.id_servicio },
+          data: {
+            id_tipo_servicio: data.id_tipo_servicio,
+            horarios: {
+              // Borramos horarios actuales para evitar duplicados (CA005)
+              deleteMany: {}, 
+              create: data.horarios.map((h: any) => ({
+                dia_semana: h.dia_semana,
+                // Formato ISO para el tipo @db.Time(6) de tu esquema
+                hora_inicio: new Date(`1970-01-01T${h.hora_inicio}:00.000Z`),
+                hora_fin: new Date(`1970-01-01T${h.hora_fin}:00.000Z`),
+                activo: true,
+              })),
+            },
+          },
+        });
+      }
+
+      // 4. Actualizar bitácora en la tabla Acceso (CA007/008)
+      await tx.acceso.updateMany({
+        where: { id_visitante: id, estatus: 'Activo' },
+        data: { comentario_admin: 'Información actualizada por residente' },
+      });
+
+      return { statusCode: 200, message: 'Empleado actualizado con éxito' };
+    });
+  } catch (error: any) {
+    console.error('Error en actualizarEmpleado:', error);
+    throw new InternalServerErrorException({
+      message: 'No se pudo actualizar el registro',
+      error: error.message
+    });
+  }
+}
+
   async eliminarEmpleado(id: string, motivo?: string) {
     try {
       const servicio = await this.obtenerServicio(id);
