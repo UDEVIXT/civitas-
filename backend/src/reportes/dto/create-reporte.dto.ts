@@ -1,5 +1,5 @@
 import { IsString, IsNotEmpty, IsBoolean, IsOptional, IsEnum, IsNumber } from 'class-validator';
-import { TipoReporte, EstadoReporte, PrioridadReporte } from '@prisma/client';
+import { TipoReporte, EstadoIncidencia, PrioridadReporte, EstadoReporte } from '@prisma/client';
 
 export class CreateReporteDto {
   @IsString()

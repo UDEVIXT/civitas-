@@ -60,6 +60,7 @@ export function BitacoraAdminPage() {
         total_pages: response.meta.total_pages,
         total: response.meta.total,
       });
+      console.log("Bitácora cargada:", response.data);
     } catch (error) {
       console.error("Error cargando bitácora:", error);
     } finally {

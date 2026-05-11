@@ -11,7 +11,7 @@ const apiClient: AxiosInstance = axios.create({
   baseURL:
     process.env.NEXT_PUBLIC_API_URL ||
     process.env.REACT_APP_API_URL ||
-    "http://localhost:3001/",
+    "http://localhost:3001/api/",
   timeout: 10000, // Tiempo de espera (10 segundos)
   headers: {
     "Content-Type": "application/json",

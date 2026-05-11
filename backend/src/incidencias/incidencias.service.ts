@@ -30,29 +30,42 @@ export class IncidenciasService {
     });
   }
 
-  async updateEstado(id: string, nuevoEstado: EstadoIncidencia) {
-    const incidencia = await this.prisma.incidencia.update({
-      where: { id_incidencia: id }, 
-      data: { 
-        estado: nuevoEstado,
-        historial: { 
-          create: { 
-            estado: nuevoEstado, 
-            comentario: 'Cambio de estado automático' 
-          } 
-        }
-      },
-    });
-
-    this.emitChange(incidencia);
-    return incidencia;
-  }
-
   emitChange(data: any) {
     this.updates$.next(data);
   }
 
   getStream(): Observable<any> {
     return this.updates$.asObservable();
+  }
+
+  async updateEstado(id: string, nuevoEstado: EstadoIncidencia) {
+    const incidenciaActual = await this.prisma.incidencia.findUnique({
+      where: { id_incidencia: id },
+    });
+
+    if (!incidenciaActual) {
+      throw new Error('Incidencia no encontrada');
+    }
+
+    const incidencia = await this.prisma.incidencia.update({
+      where: { id_incidencia: id },
+
+      data: {
+        estado: nuevoEstado,
+      },
+    });
+
+    await this.prisma.historialIncidencia.create({
+      data: {
+        estado_anterior: incidenciaActual.estado,
+        nuevo_estado: nuevoEstado,
+        comentario: 'Cambio de estado automático',
+        id_incidencia: id,
+      },
+    });
+
+    this.emitChange(incidencia);
+
+    return incidencia;
   }
 }
