@@ -73,7 +73,6 @@ export class BitacoraController {
       residentUserId,
     );
 
-// @ts-ignore
     const data = await this.bitacoraService.obtenerMiBitacora({ 
       residentUserId: resolvedResidentUserId,
       residentName,
@@ -103,7 +102,6 @@ export class BitacoraController {
       req,
       residentUserId,
     );
-// @ts-ignore
     const data = await this.bitacoraService.obtenerDetalleMiBitacora(
       id_bitacora,
       resolvedResidentUserId,
@@ -131,7 +129,6 @@ export class BitacoraController {
       req,
       residentUserId,
     );
-// @ts-ignore
     const resultado = await this.bitacoraService.actualizarFrecuenciaVisitante(
       id_bitacora,
       body.es_frecuente,
