@@ -1,5 +1,5 @@
 import { IsString, IsNotEmpty, IsBoolean, IsOptional, IsEnum, IsNumber } from 'class-validator';
-import { TipoReporte, EstadoIncidencia, PrioridadReporte } from '@prisma/client';
+import { TipoReporte, EstadoIncidencia, PrioridadReporte, EstadoReporte } from '@prisma/client';
 
 export class CreateReporteDto {
   @IsString()
@@ -23,8 +23,8 @@ export class CreateReporteDto {
   @IsNumber()
   longitud!: number;
 
-  @IsEnum(EstadoIncidencia)
-  estado!: EstadoIncidencia;
+  @IsEnum(EstadoReporte)
+  estado!: EstadoReporte;
 
   @IsEnum(PrioridadReporte)
   prioridad!: PrioridadReporte;

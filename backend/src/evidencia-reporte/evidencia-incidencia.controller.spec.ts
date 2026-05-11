@@ -1,16 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { EvidenciaIncidenciaController } from './evidencia-incidencia.controller';
-import { EvidenciaIncidenciaService } from './evidencia-incidencia.service';
+import { EvidenciaReporteController } from './evidencia-incidencia.controller';
+import { EvidenciaReporteService } from './evidencia-incidencia.service';
 import { PrismaService } from '../prisma/prisma.service';
 
-describe('EvidenciaIncidenciaController', () => {
-  let controller: EvidenciaIncidenciaController;
+describe('EvidenciaReporteController', () => {
+  let controller: EvidenciaReporteController;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [EvidenciaIncidenciaController],
+      controllers: [EvidenciaReporteController],
       providers: [
-              EvidenciaIncidenciaService,
+              EvidenciaReporteService,
             {
                       provide: PrismaService,
                       useValue: {},
@@ -18,7 +18,7 @@ describe('EvidenciaIncidenciaController', () => {
                   ]
     }).compile();
 
-    controller = module.get<EvidenciaIncidenciaController>(EvidenciaIncidenciaController);
+    controller = module.get<EvidenciaReporteController>(EvidenciaReporteController);
   });
 
   it('should be defined', () => {

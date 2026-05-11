@@ -213,7 +213,7 @@ model HistorialIncidencia {
   incidencia       Incidencia       @relation(fields: [id_incidencia], references: [id_incidencia])
 }
 
-model EvidenciaIncidencia {
+model EvidenciaReporte {
   id_evidencia      String   @id @default(uuid()) @db.Uuid
   id_reporte        String   @db.Uuid
   reporte           Reporte  @relation(fields: [id_reporte], references: [id_reporte])

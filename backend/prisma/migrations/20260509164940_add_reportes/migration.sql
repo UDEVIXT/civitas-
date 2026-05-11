@@ -26,15 +26,15 @@ CREATE TABLE "Reporte" (
 );
 
 -- CreateTable
-CREATE TABLE "EvidenciaIncidencia" (
+CREATE TABLE "EvidenciaReporte" (
     "id_evidencia" UUID NOT NULL,
     "id_reporte" UUID NOT NULL,
     "url_archivo" TEXT NOT NULL,
     "nombre_archivo" VARCHAR(256) NOT NULL,
     "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "EvidenciaIncidencia_pkey" PRIMARY KEY ("id_evidencia")
+    CONSTRAINT "EvidenciaReporte_pkey" PRIMARY KEY ("id_evidencia")
 );
 
 -- AddForeignKey
-ALTER TABLE "EvidenciaIncidencia" ADD CONSTRAINT "EvidenciaIncidencia_id_reporte_fkey" FOREIGN KEY ("id_reporte") REFERENCES "Reporte"("id_reporte") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "EvidenciaReporte" ADD CONSTRAINT "EvidenciaReporte_id_reporte_fkey" FOREIGN KEY ("id_reporte") REFERENCES "Reporte"("id_reporte") ON DELETE RESTRICT ON UPDATE CASCADE;

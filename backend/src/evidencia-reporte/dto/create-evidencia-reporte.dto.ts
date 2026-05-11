@@ -1,6 +1,6 @@
 import { IsString, IsNotEmpty, IsUUID, MaxLength } from 'class-validator';
 
-export class CreateEvidenciaIncidenciaDto {
+export class CreateEvidenciaReporteDto {
   @IsUUID()
   @IsNotEmpty()
   id_reporte!: string;
