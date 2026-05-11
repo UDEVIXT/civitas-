@@ -56,6 +56,7 @@ export class EmpleadoController {
   create() {
     return { message: 'Empleado creado' };
   }
+  /*
   @Put(':id')
   async update(
     @Param('id') id: string,
