@@ -71,7 +71,8 @@ export function EmpleadosDeleteDialog({
             </DialogHeader>
             {selectedEmpleado && (
               <p className="mt-3 text-sm text-muted-foreground">
-                {selectedEmpleado.nombre} - {selectedEmpleado.destino}
+                {selectedEmpleado.nombre} -{" "}
+                {selectedEmpleado.residente.vivienda.numero_vivienda}
               </p>
             )}
             {isDeactivate && (
@@ -95,40 +96,28 @@ export function EmpleadosDeleteDialog({
               <p className="mt-3 text-sm text-red-600">{deleteError}</p>
             )}
           </div>
-          <DialogClose asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="-mt-1"
-              disabled={isDeleting}
-            >
-              <X className="size-4" />
-            </Button>
-          </DialogClose>
+          <DialogClose asChild />
         </div>
-        <DialogFooter className="border-t border-border bg-muted/20 px-6 py-4">
+        <DialogFooter className="border-t bg-zinc-50/50 px-6 py-4">
           <DialogClose asChild>
-            <Button type="button" variant="outline" disabled={isDeleting}>
+            <Button type="button" variant="outline" className="rounded-xl">
               Cancelar
             </Button>
           </DialogClose>
           <Button
             type="button"
-            onClick={onConfirm}
-            disabled={isDeleting || motivoError}
             className={
               isDeactivate
-                ? "bg-red-500 text-white hover:bg-red-600"
-                : "bg-amber-500 text-amber-950 hover:bg-amber-600"
+                ? "rounded-xl bg-red-500 hover:bg-red-600"
+                : "rounded-xl bg-amber-400 text-amber-950 hover:bg-amber-500"
             }
+            onClick={onConfirm}
+            disabled={isDeleting || (isDeactivate && !motivo.trim())}
           >
             {isDeleting
-              ? isDeactivate
-                ? "Dando de baja..."
-                : "Reincorporando..."
+              ? "Procesando..."
               : isDeactivate
-                ? "Confirmar baja"
+                ? "Dar de baja"
                 : "Reincorporar"}
           </Button>
         </DialogFooter>

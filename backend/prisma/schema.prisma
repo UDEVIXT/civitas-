@@ -111,19 +111,19 @@ model Acceso {
   id_acceso        String        @id @default(uuid())
   id_usuario       String
   id_visitante     String
-  codigo_qr        String        @unique
+  codigo_qr        String?        @unique
   fecha_creacion   DateTime      @default(now())
   fecha_expiracion DateTime
   estatus          EstatusAcceso @default(Activo)
   comentario_admin String?
   usuario          Usuario       @relation(fields: [id_usuario], references: [id_usuario])
   visitante        Visitante     @relation(fields: [id_visitante], references: [id_visitante], onDelete: Cascade)
-  bitacora         Bitacora?
+  bitacora         Bitacora[]
 }
 
 model Bitacora {
   id_bitacora        String    @id @default(uuid())
-  id_acceso          String    @unique
+  id_acceso          String  
   id_guardia         String
   fecha_hora_entrada DateTime  @default(now())
   fecha_hora_salida  DateTime?
