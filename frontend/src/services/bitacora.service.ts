@@ -1,3 +1,5 @@
+// bitacora.service.ts
+
 import apiClient from "../api/axios";
 
 // DETALLE
@@ -48,6 +50,17 @@ class BitacoraService {
   async obtenerDetalleRegistro(id: string): Promise<BitacoraDetalleResponse> {
     const response = await apiClient.get(`/bitacora/${id}`);
 
+    return response.data;
+  }
+
+  async registrarSalida(id_bitacora: string, notas?: string) {
+    // TODO: Reemplazar este ID con el ID real del guardia que tiene la sesión iniciada
+    const id_guardia = "30e0c5c3-5f4f-4d65-9d2c-1b22a5de333c"; 
+    const response = await apiClient.patch('/bitacora/registrar-salida', {
+      id_bitacora,
+      id_guardia,
+      notas,
+    });
     return response.data;
   }
 }

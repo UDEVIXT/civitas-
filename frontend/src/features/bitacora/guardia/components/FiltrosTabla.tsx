@@ -25,13 +25,24 @@ export function FiltrosTabla({
   filters,
   onChange,
   onClear,
+  selectedIds,
+  onMassExitClick,
 }: {
   filters: BitacoraFiltro;
   onChange: (f: Partial<BitacoraFiltro>) => void;
   onClear: () => void;
+  selectedIds: string[];
+  onMassExitClick: () => void;
 }) {
-  const [localDate, setLocalDate] = React.useState<any>(null);
-
+  // Convertimos las fechas del filtro en un objeto DateRange controlable
+  const dateRange = React.useMemo(() => {
+    if (!filters.fecha_inicio) return undefined;
+    return {
+      from: new Date(`${filters.fecha_inicio}T12:00:00`), // Evitamos desfase de huso horario
+      to: filters.fecha_fin ? new Date(`${filters.fecha_fin}T12:00:00`) : undefined,
+    };
+  }, [filters.fecha_inicio, filters.fecha_fin]);
+  
   const tipos = [
     { value: "todos", label: "Todos los tipos" },
     { value: "visitante", label: "Visitante" },
@@ -93,11 +104,11 @@ export function FiltrosTabla({
 
         {/* CA003 - Filtro por rango de fechas */}
         <DatePickerWithRange
+          date={dateRange}
           onChangeDate={(from, to) => {
-            setLocalDate({ from, to });
             onChange({
-              fecha_inicio: from ? from.toISOString().split("T")[0] : undefined,
-              fecha_fin: to ? to.toISOString().split("T")[0] : undefined,
+              fecha_inicio: from ? format(from, "yyyy-MM-dd") : undefined,
+              fecha_fin: to ? format(to, "yyyy-MM-dd") : undefined,
             });
           }}
         />
@@ -122,6 +133,14 @@ export function FiltrosTabla({
           </SelectContent>
         </Select>
 
+        <Button
+          variant="destructive"
+          disabled={selectedIds.length === 0}
+          onClick={onMassExitClick}
+        >
+          Salida Masiva ({selectedIds.length})
+        </Button>
+
         {/* Botón limpiar filtros */}
         <Button
           variant="outline"
@@ -137,12 +156,12 @@ export function FiltrosTabla({
 }
 
 function DatePickerWithRange({
+  date,
   onChangeDate,
 }: {
+  date?: DateRange;
   onChangeDate: (from: Date | null, to: Date | null) => void;
 }) {
-  const [date, setDate] = React.useState<DateRange | undefined>(undefined);
-
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -171,7 +190,6 @@ function DatePickerWithRange({
           defaultMonth={date?.from}
           selected={date}
           onSelect={(d) => {
-            setDate(d);
             const from = (d as any)?.from ?? null;
             const to = (d as any)?.to ?? null;
             onChangeDate(from, to);

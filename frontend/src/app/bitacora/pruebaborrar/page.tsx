@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { ModalSalidaProveedor } from "../../../components/layout/modals/guardia/registrosalida";
-import { Button } from "@/components/ui/button"; // Ajusta la ruta si es necesario
+import { Button } from "@/components/ui/button"; 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export interface RegistroAcceso {
