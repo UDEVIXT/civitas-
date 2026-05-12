@@ -10,9 +10,10 @@ interface Props {
     onSuccess: () => void;
     accesoId?: number | null;
     visitorName?: string;
+    accesoDetails?: Record<string, any> | null;
 }
 
-export function ModalSalidaProveedor({ isOpen, onClose, onSuccess, accesoId, visitorName }: Props) {
+export function ModalSalidaProveedor({ isOpen, onClose, onSuccess, accesoId, visitorName, accesoDetails }: Props) {
     // Asumiendo que el guardia ingresa el ID del acceso o escanea el QR
     const [inputId, setInputId] = useState("");
     const [notes, setNotes] = useState("");
@@ -29,8 +30,12 @@ export function ModalSalidaProveedor({ isOpen, onClose, onSuccess, accesoId, vis
         setLoading(true);
         setError("");
         try {
-            // Llamamos a nuestro servicio de Axios
-            await bitacoraService.registerExit(targetId, notes);
+            // SIMULACIÓN LOCAL: Comentamos la llamada real temporalmente
+            // await bitacoraService.registerExit(targetId, notes);
+            
+            // Simulamos un retraso de 1 segundo para ver el estado "Registrando..."
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
             onSuccess(); // Cerramos el modal y actualizamos tabla
             setInputId("");
             setNotes("");
@@ -75,6 +80,16 @@ export function ModalSalidaProveedor({ isOpen, onClose, onSuccess, accesoId, vis
                         <div className="p-3 bg-muted rounded-md border">
                             <p className="text-sm text-muted-foreground">Se registrará la salida para:</p>
                             <p className="font-semibold text-lg">{visitorName || `Registro #${accesoId}`}</p>
+                            {accesoDetails && (
+                                <div className="mt-2 text-sm grid grid-cols-2 gap-2 text-left bg-white p-2 rounded border">
+                                    <p><span className="font-medium">Empresa:</span> {accesoDetails.empresa}</p>
+                                    <p><span className="font-medium">Técnico:</span> {accesoDetails.tecnico}</p>
+                                    <p><span className="font-medium">Servicio:</span> {accesoDetails.tipoServicio}</p>
+                                    <p><span className="font-medium">Propiedad:</span> {accesoDetails.propiedad}</p>
+                                    <p><span className="font-medium">Hora Entrada:</span> {accesoDetails.horaEntrada}</p>
+                                    <p><span className="font-medium">Método:</span> {accesoDetails.metodoAcceso}</p>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="space-y-2">

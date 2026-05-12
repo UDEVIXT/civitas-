@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
 // Icons
 import {
@@ -24,7 +25,6 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { format } from "date-fns";
-import { useBitacoraHistorica } from "../hooks/useBitacora";
 import { BitacoraFiltro, BitacoraRegistro } from "../api/bitacora";
 import { PaginacionTabla } from "./PaginacionTabla";
 import { ModalDetalleRegistro } from "./ModalDetalleRegistro";
@@ -32,6 +32,14 @@ import { ModalDetalleRegistro } from "./ModalDetalleRegistro";
 interface TablaAccesosGuardiaProps {
   filtros: BitacoraFiltro;
   onPageChange?: (page: number) => void;
+  // Nuevas props para manejar estado desde el padre
+  bitacoraData: any;
+  isLoading: boolean;
+  error: Error | null;
+  refetch: () => void;
+  selectedIds: string[];
+  onToggleSelection: (id: string) => void;
+  onRegisterExitClick: (registro: BitacoraRegistro) => void;
 }
 
 const getTipoPersonaColor = (tipo: string) => {
@@ -63,20 +71,19 @@ const getEstadoBadge = (estado: string) => {
 };
 
 export function TablaAccesosGuardia({
-  filtros,
   onPageChange,
+  bitacoraData,
+  isLoading,
+  error,
+  refetch,
+  selectedIds,
+  onToggleSelection,
+  onRegisterExitClick,
 }: TablaAccesosGuardiaProps) {
   const [modalOpen, setModalOpen] = React.useState(false);
   const [selectedRegistroId, setSelectedRegistroId] = React.useState<
     string | null
   >(null);
-
-  const {
-    data: bitacoraData,
-    isLoading,
-    error,
-    refetch,
-  } = useBitacoraHistorica(filtros);
 
   const handleRowClick = (registroId: string) => {
     setSelectedRegistroId(registroId);
@@ -140,18 +147,15 @@ export function TablaAccesosGuardia({
       <Table className="border rounded-lg">
         <TableHeader className="bg-muted">
           <TableRow>
+            <TableHead className="text-center">✓</TableHead>
             <TableHead>Nombre</TableHead>
             <TableHead className="text-center">Tipo</TableHead>
             <TableHead className="text-center">Residente asociado</TableHead>
-            <TableHead className="text-center">
-              Fecha y hora de entrada
-            </TableHead>
-            <TableHead className="text-center">
-              Fecha y hora de salida
-            </TableHead>
             <TableHead className="text-center">Método de acceso</TableHead>
             <TableHead className="text-center">Guardia que registró</TableHead>
             <TableHead className="text-center">Estado</TableHead>
+            <TableHead className="text-center"> Fecha y hora de entrada </TableHead>
+            <TableHead className="text-center"> Fecha y hora de salida </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -169,6 +173,18 @@ export function TablaAccesosGuardia({
                 className="py-8 cursor-pointer hover:bg-muted/50"
                 onClick={() => handleRowClick(registro.id)}
               >
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 cursor-pointer"
+                    disabled={!!fechaSalida}
+                    checked={selectedIds.includes(registro.id)}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      onToggleSelection(registro.id);
+                    }}
+                  />
+                </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar>
@@ -199,7 +215,7 @@ export function TablaAccesosGuardia({
                 </TableCell>
                 <TableCell>
                   {registro.residente_asociado?.nombre &&
-                  registro.residente_asociado.nombre !== "-" ? (
+                    registro.residente_asociado.nombre !== "-" ? (
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
                         {registro.residente_asociado.avatar_url ? (
@@ -225,38 +241,6 @@ export function TablaAccesosGuardia({
                     </div>
                   ) : (
                     <span className="text-muted-foreground">-</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-center">
-                  {fechaEntrada ? (
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <Calendar className="h-3.5 w-3.5" />
-                        <span>{format(fechaEntrada, "dd/MM/yyyy")}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>{format(fechaEntrada, "HH:mm")}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground text-sm">-</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-center">
-                  {fechaSalida ? (
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>{format(fechaSalida, "dd/MM/yyyy")}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>{format(fechaSalida, "HH:mm")}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground text-sm">-</span>
                   )}
                 </TableCell>
                 <TableCell className="text-center text-muted-foreground">
@@ -289,6 +273,49 @@ export function TablaAccesosGuardia({
                   <Badge className={getEstadoBadge(registro.estado)}>
                     {registro.estado}
                   </Badge>
+                </TableCell>
+                <TableCell className="text-center">
+                  {fechaEntrada ? (
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span>{format(fechaEntrada, "dd/MM/yyyy")}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span>{format(fechaEntrada, "HH:mm")}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">-</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                  {fechaSalida ? (
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span>{format(fechaSalida, "dd/MM/yyyy")}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span>{format(fechaSalida, "HH:mm")}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRegisterExitClick(registro);
+                        }}
+                      >
+                        Registrar Salida
+                      </Button>
+                    </span>
+                  )}
                 </TableCell>
               </TableRow>
             );
