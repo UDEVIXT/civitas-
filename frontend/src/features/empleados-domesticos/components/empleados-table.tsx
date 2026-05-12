@@ -1,3 +1,4 @@
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,23 +9,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
 
 import type { EmpleadoDomestico } from "../types";
-
-const avatarPalette = [
-  "bg-amber-100 text-amber-700",
-  "bg-rose-100 text-rose-700",
-  "bg-emerald-100 text-emerald-700",
-  "bg-sky-100 text-sky-700",
-  "bg-indigo-100 text-indigo-700",
-  "bg-violet-100 text-violet-700",
-];
-
-const statusStyles: Record<EmpleadoDomestico["estado"], string> = {
-  Activo: "border-emerald-200 bg-emerald-100 text-emerald-700",
-  Inactivo: "border-zinc-200 bg-zinc-100 text-zinc-500",
-};
 
 function getInitials(name: string) {
   const parts = name.split(" ").filter(Boolean);
@@ -39,10 +25,23 @@ type EmpleadosTableProps = {
 };
 
 export function EmpleadosTable({
-  items,
+  items = [],
   isLoading,
   onActionClick,
 }: EmpleadosTableProps) {
+  console.log("TABLE DEBUG - Items:", items);
+
+  if (isLoading && items.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="size-8 animate-spin rounded-full border-4 border-amber-400 border-t-transparent" />
+        <p className="mt-4 text-sm text-muted-foreground">
+          Cargando empleados...
+        </p>
+      </div>
+    );
+  }
+
   return (
     <Table>
       <TableHeader>
@@ -55,66 +54,77 @@ export function EmpleadosTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {items.map((empleado, index) => (
-          <TableRow key={empleado.id}>
-            <TableCell>
-              <div className="flex items-center gap-3">
-                <div
-                  className={cn(
-                    "flex size-10 items-center justify-center rounded-full text-sm font-semibold",
-                    avatarPalette[index % avatarPalette.length],
-                  )}
+        {items.length > 0
+          ? items.map((empleado) => (
+              <TableRow key={empleado.id_visitante}>
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="size-10 border border-border">
+                      <AvatarImage
+                        src={empleado.url_imagen}
+                        alt={empleado.nombre}
+                      />
+                      <AvatarFallback className="bg-amber-100 text-amber-700 font-semibold">
+                        {getInitials(empleado.nombre || "")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        {empleado.nombre || "Sin nombre"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {empleado.telefono || "Sin teléfono"}
+                      </p>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    variant="outline"
+                    className={
+                      empleado.servicio?.activo
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-zinc-200 bg-zinc-50 text-zinc-500"
+                    }
+                  >
+                    {empleado.servicio?.activo ? "Activo" : "Inactivo"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-sm font-medium">
+                  {empleado.residente?.vivienda?.numero_vivienda || "N/A"}
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {empleado.servicio?.horario_texto || "Sin horario"}
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className={
+                      !empleado.servicio?.activo
+                        ? "h-8 rounded-lg border-amber-200 bg-white text-amber-900 hover:bg-amber-50"
+                        : "h-8 rounded-lg bg-amber-400 text-amber-950 hover:bg-amber-500 border-none"
+                    }
+                    onClick={() => onActionClick(empleado)}
+                  >
+                    {!empleado.servicio?.activo
+                      ? "Reincorporar"
+                      : "Dar de baja"}
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))
+          : !isLoading && (
+              <TableRow>
+                <TableCell
+                  colSpan={5}
+                  className="py-6 text-center text-sm text-muted-foreground"
                 >
-                  {getInitials(empleado.nombre)}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    {empleado.nombre}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {empleado.telefono}
-                  </p>
-                </div>
-              </div>
-            </TableCell>
-            <TableCell>
-              <Badge className={statusStyles[empleado.estado]}>
-                {empleado.estado}
-              </Badge>
-            </TableCell>
-            <TableCell className="text-sm font-medium">
-              {empleado.destino}
-            </TableCell>
-            <TableCell className="text-sm text-muted-foreground">
-              {empleado.horarioAutorizado}
-            </TableCell>
-            <TableCell className="text-right">
-              <Button
-                type="button"
-                className={
-                  empleado.estado === "Inactivo"
-                    ? "h-8 rounded-lg border border-amber-200 bg-white px-4 text-xs font-semibold text-amber-900 hover:bg-amber-50"
-                    : "h-8 rounded-lg bg-amber-400 px-4 text-xs font-semibold text-amber-950 hover:bg-amber-500"
-                }
-                onClick={() => onActionClick(empleado)}
-              >
-                {empleado.estado === "Inactivo"
-                  ? "Reincorporar empleado"
-                  : "Dar de baja"}
-              </Button>
-            </TableCell>
-          </TableRow>
-        ))}
-        {!isLoading && items.length === 0 && (
-          <TableRow>
-            <TableCell
-              colSpan={5}
-              className="py-6 text-center text-sm text-muted-foreground"
-            >
-              No se encontraron empleados.
-            </TableCell>
-          </TableRow>
-        )}
+                  No se encontraron empleados.
+                </TableCell>
+              </TableRow>
+            )}
       </TableBody>
     </Table>
   );

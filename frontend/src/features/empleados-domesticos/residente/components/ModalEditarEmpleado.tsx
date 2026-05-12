@@ -33,18 +33,24 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import type { EmpleadoDomestico } from "@/features/empleados-domesticos/types";
-import { updateEmpleadoDomestico } from "@/features/empleados-domesticos/data/empleados";
+import {
+  eliminarEmpleadoDomestico,
+  activarEmpleadoDomestico,
+} from "@/features/empleados-domesticos/api/empleados";
 
 // Definimos el esquema de validación con Zod
 const formSchema = z.object({
   estado: z.enum(["Activo", "Inactivo"], {
     required_error: "Debes seleccionar un estado.",
   }),
-  motivo: z.string().min(5, {
-    message: "El motivo debe tener al menos 5 caracteres.",
-  }).max(200, {
-    message: "El motivo no puede exceder los 200 caracteres.",
-  }),
+  motivo: z
+    .string()
+    .min(5, {
+      message: "El motivo debe tener al menos 5 caracteres.",
+    })
+    .max(200, {
+      message: "El motivo no puede exceder los 200 caracteres.",
+    }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -77,7 +83,7 @@ export function ModalEditarEmpleado({
   React.useEffect(() => {
     if (empleado) {
       form.reset({
-        estado: empleado.estado as "Activo" | "Inactivo",
+        estado: empleado.servicio?.activo ? "Activo" : "Inactivo",
         motivo: "", // Reiniciamos el motivo cada vez que se abre
       });
     }
@@ -88,15 +94,17 @@ export function ModalEditarEmpleado({
 
     try {
       setIsSubmitting(true);
-      
-      // Llamamos a la función del backend que ya tienes en empleados.ts
-      await updateEmpleadoDomestico(empleado.id, {
-        activo: values.estado === "Activo",
-        motivo: values.motivo,
-      });
+
+      const isReactivating = values.estado === "Activo";
+
+      if (isReactivating) {
+        await activarEmpleadoDomestico(empleado.id_visitante, values.motivo);
+      } else {
+        await eliminarEmpleadoDomestico(empleado.id_visitante, values.motivo);
+      }
 
       onSuccess(); // Refrescar la tabla
-      onClose();   // Cerrar el modal
+      onClose(); // Cerrar el modal
     } catch (error) {
       console.error("Error al actualizar empleado:", error);
     } finally {
@@ -110,7 +118,8 @@ export function ModalEditarEmpleado({
         <DialogHeader>
           <DialogTitle>Editar Empleado Doméstico</DialogTitle>
           <DialogDescription>
-            Actualiza el estado de acceso para <strong>{empleado?.nombre}</strong>.
+            Actualiza el estado de acceso para{" "}
+            <strong>{empleado?.nombre}</strong>.
           </DialogDescription>
         </DialogHeader>
 
@@ -119,7 +128,11 @@ export function ModalEditarEmpleado({
             {/* Campo de Nombre (Solo lectura) */}
             <div className="space-y-2">
               <FormLabel>Empleado</FormLabel>
-              <Input value={empleado?.nombre || ""} disabled className="bg-muted" />
+              <Input
+                value={empleado?.nombre || ""}
+                disabled
+                className="bg-muted"
+              />
             </div>
 
             {/* Campo de Estado */}
@@ -129,15 +142,22 @@ export function ModalEditarEmpleado({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Estado de Acceso</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecciona un estado" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Activo">Activo (Permitir acceso)</SelectItem>
-                      <SelectItem value="Inactivo">Inactivo (Bloquear acceso)</SelectItem>
+                      <SelectItem value="Activo">
+                        Activo (Permitir acceso)
+                      </SelectItem>
+                      <SelectItem value="Inactivo">
+                        Inactivo (Bloquear acceso)
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -168,8 +188,14 @@ export function ModalEditarEmpleado({
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="bg-amber-600 hover:bg-amber-700">
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-amber-600 hover:bg-amber-700"
+              >
+                {isSubmitting && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
                 Guardar Cambios
               </Button>
             </DialogFooter>
