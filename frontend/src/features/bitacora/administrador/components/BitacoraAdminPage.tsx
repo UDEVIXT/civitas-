@@ -3,12 +3,16 @@
 import React, { useEffect, useState } from "react";
 import { FiltrosTablaAdmin } from "./FiltrosTablaAdmin";
 import { TablaAccesosAdmin } from "./TablaAccesosAdmin";
-import {
-  bitacoraService,
-  BitacoraRegistro,
-} from "@/services/bitacora.service";
+import { bitacoraService } from "@/services/bitacora.service";
+import { BitacoraRegistro } from "../../guardia/api/bitacora";
 
 export function BitacoraAdminPage() {
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // DATOS
   const [records, setRecords] = useState<BitacoraRegistro[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -78,6 +82,10 @@ export function BitacoraAdminPage() {
     fechaFin,
     page,
   ]);
+
+  if (!isMounted) {
+    return null; // Evita el error de hidratación con las fechas del administrador
+  }
 
   return (
     <div className="container mx-auto p-10 space-y-6">
