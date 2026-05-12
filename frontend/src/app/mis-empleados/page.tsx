@@ -15,8 +15,10 @@ export default function MisEmpleadosPage() {
     React.useState<EmpleadoDomestico | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
 
+  
+
   // Función para cargar los datos del backend
-  const fetchEmpleados = React.useCallback(async () => {
+/*  const fetchEmpleados = React.useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await obtenerEmpleadosDomesticos();
@@ -27,7 +29,28 @@ export default function MisEmpleadosPage() {
       setIsLoading(false);
     }
   }, []);
+*/
+const fetchEmpleados = React.useCallback(async () => {
+  try {
+    setIsLoading(true);
+    
+    // 1. Ejecutamos tu función tal cual la tienes
+    const response = await getEmpleadosDomesticos();
+    
+    console.log("Lo que llega del back:", response.data); // <--- Agrega esto
+    // 2. IMPORTANTE: Tu función devuelve { data, meta }
+    // Guardamos solo 'data' en el estado de empleados
+    setEmpleados(response.data); 
 
+    
+
+    
+  } catch (error) {
+    console.error("Error al cargar empleados:", error);
+  } finally {
+    setIsLoading(false);
+  }
+}, []);
   // Cargar datos al entrar a la página
   React.useEffect(() => {
     fetchEmpleados();
