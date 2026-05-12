@@ -182,6 +182,7 @@ export class BitacoraService {
                     select: {
                       nombre_empresa: true,
                       nombre_servicio: true,
+                      cargo: true,
                       placas: true,
 
                       tipo_servicio: {
@@ -228,7 +229,11 @@ export class BitacoraService {
         id: item.id_bitacora,
 
         nombre: item.acceso.visitante.nombre,
-
+        empresa: item.acceso.visitante.servicio?.nombre_empresa ?? 'N/A',
+        servicio_nombre:
+          item.acceso.visitante.servicio?.nombre_servicio ?? 'N/A',
+        cargo_empleado: item.acceso.visitante.servicio?.cargo ?? 'Sin cargo',
+        placas: item.acceso.visitante.servicio?.placas ?? 'Sin placas',
         motivo: item.acceso.visitante.motivo ?? 'Sin motivo especificado',
 
         tipo_persona:
