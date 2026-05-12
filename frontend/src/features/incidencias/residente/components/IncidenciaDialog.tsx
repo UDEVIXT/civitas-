@@ -18,6 +18,8 @@ interface IncidenciaDialogProps {
   onFieldChange: (field: string, value: any) => void;
   onFileChange: (files: File[]) => void;
   onMapClick: (lng: number, lat: number) => void;
+  onLocationSelect?: (coords: { longitude: number; latitude: number }) => void;
+  selectedCoords?: { longitude: number; latitude: number };
   onSubmit: (e: React.FormEvent) => void;
 }
 
@@ -31,6 +33,8 @@ export function IncidenciaDialog({
   onFieldChange,
   onFileChange,
   onMapClick,
+  onLocationSelect,
+  selectedCoords,
   onSubmit
 }: IncidenciaDialogProps) {
   return (
@@ -58,6 +62,8 @@ export function IncidenciaDialog({
             onFieldChange={onFieldChange}
             onFileChange={onFileChange}
             onMapClick={onMapClick}
+            onLocationSelect={onLocationSelect}
+            selectedCoords={selectedCoords}
           />
           
           <DialogFooter>
