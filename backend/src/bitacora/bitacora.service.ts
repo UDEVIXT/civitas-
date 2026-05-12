@@ -229,6 +229,8 @@ export class BitacoraService {
 
         nombre: item.acceso.visitante.nombre,
 
+        motivo: item.acceso.visitante.motivo ?? 'Sin motivo especificado',
+
         tipo_persona:
           item.acceso.visitante.servicio?.tipo_servicio?.categoria ??
           'Visitante',
