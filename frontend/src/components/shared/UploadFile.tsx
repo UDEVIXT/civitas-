@@ -132,11 +132,18 @@ export function ImageUpload({ type, onDataChange, label }: ImageUploadProps) {
                           type="file"
                           className="absolute inset-0 cursor-pointer opacity-0"
                           accept={config.accept}
-                          multiple={type === "both"}
+
+                          multiple={type === "image" || type === "both" || type === "file" }
                           onChange={(e) => {
-                              const files = Array.from(e.target.files || []);
-                              files.forEach(file => handleProcessFile(file));
-                              e.target.value = "";
+                            const selectedFiles = Array.from(e.target.files || []);
+                                
+                            if (items.length + selectedFiles.length > MAX_ITEMS) {
+                                setError(`No puedes subir más de ${MAX_ITEMS} imágenes en total.`);
+                                return;
+                            }
+
+                            selectedFiles.forEach(file => handleProcessFile(file));
+                            e.target.value = "";
                           }}
                         />
                     </div>
