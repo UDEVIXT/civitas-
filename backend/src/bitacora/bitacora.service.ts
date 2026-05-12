@@ -244,7 +244,7 @@ export class BitacoraService {
 
         fecha_salida: item.fecha_hora_salida,
 
-        metodo_acceso: 'QR',
+        metodo_acceso: item.acceso.codigo_qr ? 'QR' : 'Manual',
 
         guardia_registro: item.guardia.nombre,
 
