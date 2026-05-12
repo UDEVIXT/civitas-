@@ -3,7 +3,7 @@
 import * as React from "react";
 import { TablaMisEmpleados } from "@/features/empleados-domesticos/residente/components/TablaMisEmpleados";
 import { ModalEditarEmpleado } from "@/features/empleados-domesticos/residente/components/ModalEditarEmpleado";
-import { getEmpleadosDomesticos } from "@/features/empleados-domesticos/data/empleados";
+import { obtenerEmpleadosDomesticos } from "@/features/empleados-domesticos/api/empleados";
 import type { EmpleadoDomestico } from "@/features/empleados-domesticos/types";
 import { Loader2 } from "lucide-react";
 
@@ -11,15 +11,15 @@ export default function MisEmpleadosPage() {
   // Estados para la lógica de la página
   const [empleados, setEmpleados] = React.useState<EmpleadoDomestico[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
-  const [selectedEmpleado, setSelectedEmpleado] = React.useState<EmpleadoDomestico | null>(null);
+  const [selectedEmpleado, setSelectedEmpleado] =
+    React.useState<EmpleadoDomestico | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
 
   // Función para cargar los datos del backend
   const fetchEmpleados = React.useCallback(async () => {
     try {
       setIsLoading(true);
-      // Aquí el backend ya debería filtrar por tu ID de residente gracias al token
-      const response = await getEmpleadosDomesticos();
+      const response = await obtenerEmpleadosDomesticos();
       setEmpleados(response.data);
     } catch (error) {
       console.error("Error al cargar empleados:", error);
@@ -63,14 +63,13 @@ export default function MisEmpleadosPage() {
           <div className="flex h-[400px] items-center justify-center rounded-2xl border border-dashed">
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
-              <p className="text-sm text-muted-foreground">Cargando tu personal...</p>
+              <p className="text-sm text-muted-foreground">
+                Cargando tu personal...
+              </p>
             </div>
           </div>
         ) : (
-          <TablaMisEmpleados 
-            items={empleados} 
-            onEditClick={handleEditClick} 
-          />
+          <TablaMisEmpleados items={empleados} onEditClick={handleEditClick} />
         )}
       </div>
 
