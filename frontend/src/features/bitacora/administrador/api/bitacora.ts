@@ -14,6 +14,7 @@ export interface BitacoraRegistroAdmin {
   id: string;
   nombre: string;
   tipo_persona: string;
+  qr_utilizado: string;
   residente_asociado?: { nombre: string; avatar_url?: string };
   fecha_entrada: string;
   fecha_salida?: string;
@@ -22,6 +23,7 @@ export interface BitacoraRegistroAdmin {
   estado: string;
   avatar_url?: string;
   notas_guardia?: string;
+  notas?: string;
 }
 
 export interface BitacoraResponseAdmin {
@@ -40,12 +42,20 @@ export interface BitacoraDetalleResponseAdmin {
   data: BitacoraRegistroAdmin;
 }
 
-export const obtenerBitacoraAdmin = async (filtros: BitacoraFiltroAdmin): Promise<BitacoraResponseAdmin> => {
-  const response = await apiClient.get<BitacoraResponseAdmin>("/bitacora", { params: filtros });
+export const obtenerBitacoraAdmin = async (
+  filtros: BitacoraFiltroAdmin,
+): Promise<BitacoraResponseAdmin> => {
+  const response = await apiClient.get<BitacoraResponseAdmin>("/bitacora", {
+    params: filtros,
+  });
   return response.data;
 };
 
-export const obtenerDetalleRegistroAdmin = async (id: string): Promise<BitacoraDetalleResponseAdmin> => {
-  const response = await apiClient.get<BitacoraDetalleResponseAdmin>(`/bitacora/${id}`);
+export const obtenerDetalleRegistroAdmin = async (
+  id: string,
+): Promise<BitacoraDetalleResponseAdmin> => {
+  const response = await apiClient.get<BitacoraDetalleResponseAdmin>(
+    `/bitacora/${id}`,
+  );
   return response.data;
 };

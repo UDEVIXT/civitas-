@@ -40,9 +40,7 @@ import {
 
 // Definimos el esquema de validación con Zod
 const formSchema = z.object({
-  estado: z.enum(["Activo", "Inactivo"], {
-    required_error: "Debes seleccionar un estado.",
-  }),
+  estado: z.enum(["Activo", "Inactivo"]),
   motivo: z
     .string()
     .min(5, {
