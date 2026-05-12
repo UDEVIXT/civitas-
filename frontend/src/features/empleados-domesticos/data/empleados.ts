@@ -137,6 +137,7 @@ export async function deleteEmpleadoDomestico(id: string) {
   return response.json();
 }
 
+/*
 export async function updateEmpleadoDomestico(
   id: string,
   payload: { activo: boolean; motivo?: string },
@@ -151,6 +152,25 @@ export async function updateEmpleadoDomestico(
 
   if (!response.ok) {
     throw new Error("No se pudo actualizar el empleado.");
+  }
+
+  return response.json();
+}
+*/
+
+export async function updateEmpleadoDomestico(
+  id: string,
+  payload: any 
+) {
+  const response = await fetch(`${API_BASE_URL}/empleado/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || "No se pudo actualizar el empleado.");
   }
 
   return response.json();

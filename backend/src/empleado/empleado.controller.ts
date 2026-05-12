@@ -56,6 +56,7 @@ export class EmpleadoController {
   create() {
     return { message: 'Empleado creado' };
   }
+  /*
   @Put(':id')
   async update(
     @Param('id') id: string,
@@ -76,6 +77,32 @@ export class EmpleadoController {
 
     return this.empleadoService.reactivarEmpleado(id);
   }
+*/
+
+@Put(':id')
+async update(
+  @Param('id') id: string,
+  @Body() body: any
+) {
+  const { activo, motivo, nombre, horarios } = body;
+
+  // Escenario A: Solo cambio de estado (Baja/Reactivación)
+  if (activo !== undefined && !nombre) {
+    if (activo === false) {
+      if (!motivo?.trim()) throw new BadRequestException('El motivo es requerido');
+      return this.empleadoService.eliminarEmpleado(id, motivo);
+    }
+    return this.empleadoService.reactivarEmpleado(id);
+  }
+
+  // Escenario B: Edición completa (HU-1.5.4)
+  if (!nombre || !horarios || !Array.isArray(horarios)) {
+    throw new BadRequestException('El nombre y los horarios son obligatorios para editar');
+  }
+
+  return this.empleadoService.actualizarEmpleado(id, body);
+}
+
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.empleadoService.eliminarEmpleado(id);
