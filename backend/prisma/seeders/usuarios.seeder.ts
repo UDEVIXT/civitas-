@@ -1,7 +1,11 @@
 import { PrismaClient, Rol } from '@prisma/client';
 import { faker } from '@faker-js/faker';
+import * as bcrypt from 'bcrypt';
 
 export async function seedUsuarios(prisma: PrismaClient) {
+  const saltRounds = 10;
+  const passwordPlanaPruebas = 'password123';
+  const hashedDefaultPassword = await bcrypt.hash(passwordPlanaPruebas, saltRounds);
   // Crear usuarios fijos para desarrollo
   const adminFijo = {
     nombre: 'Admin',
@@ -36,7 +40,7 @@ export async function seedUsuarios(prisma: PrismaClient) {
         data: {
           nombre_usuario: perfil.nombre.toLowerCase(),
           correo: perfil.correo,
-          password: 'hashed_password_123',
+          password: hashedDefaultPassword,
           rol: perfil.rol,
           id_persona: persona.id_persona,
         },
@@ -76,7 +80,7 @@ export async function seedUsuarios(prisma: PrismaClient) {
       data: {
         nombre_usuario: faker.internet.username({ firstName, lastName }),
         correo: email,
-        password: 'hashed_password_123',
+        password: hashedDefaultPassword,
         rol: rol,
         id_persona: persona.id_persona,
       },
@@ -108,7 +112,7 @@ export async function seedUsuarios(prisma: PrismaClient) {
       data: {
         nombre_usuario: `guardia_${i}_${faker.string.alphanumeric(4)}`,
         correo: email,
-        password: 'hashed_password_123',
+        password: hashedDefaultPassword,
         rol: Rol.Guardia,
         id_persona: persona.id_persona,
       },
@@ -133,7 +137,7 @@ export async function seedUsuarios(prisma: PrismaClient) {
       data: {
         nombre_usuario: `residente_${i}_${faker.string.alphanumeric(4)}`,
         correo: email,
-        password: 'hashed_password_123',
+        password: hashedDefaultPassword,
         rol: Rol.Residente,
         id_persona: persona.id_persona,
       },
