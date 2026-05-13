@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { useDebounce } from "@/hooks/use-debounce";
+import { useToast } from "@/hooks/use-toast";
 import {
   obtenerEmpleadosDomesticos,
   activarEmpleadoDomestico,
@@ -15,6 +16,7 @@ import {
 
 export function useEmpleadoDomesticos() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // Filtros locales
   const [search, setSearch] = useState<string>("");
@@ -76,17 +78,38 @@ export function useEmpleadoDomesticos() {
       isReactivating
         ? activarEmpleadoDomestico(id, motivo)
         : eliminarEmpleadoDomestico(id, motivo),
-    onSuccess: (res) => {
+    onSuccess: (res, variables) => {
       if (res.success) {
         setError(null);
         queryClient.invalidateQueries({ queryKey: ["empleados-domesticos"] });
         setIsModalOpen(false);
+        toast({
+          title: variables.isReactivating
+            ? "Empleado activado"
+            : "Empleado dado de baja",
+          description: variables.isReactivating
+            ? "El empleado ha sido activado correctamente"
+            : "El empleado ha sido dado de baja correctamente",
+        });
       } else {
-        setError(res.message || "Error al procesar la solicitud");
+        const errorMsg = res.message || "Error al procesar la solicitud";
+        setError(errorMsg);
+        toast({
+          title: "Error",
+          description: errorMsg,
+          variant: "destructive",
+        });
       }
     },
     onError: (err: any) => {
-      setError(err.response?.data?.message || "Error de red o del servidor");
+      const errorMsg =
+        err.response?.data?.message || "Error de red o del servidor";
+      setError(errorMsg);
+      toast({
+        title: "Error",
+        description: errorMsg,
+        variant: "destructive",
+      });
     },
   });
 
