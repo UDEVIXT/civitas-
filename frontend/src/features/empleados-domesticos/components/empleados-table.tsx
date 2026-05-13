@@ -94,7 +94,7 @@ export function EmpleadosTable({
                   {empleado.residente?.vivienda?.numero_vivienda || "N/A"}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {empleado.servicio?.horario_texto || "Sin horario"}
+                  {"Horario pendiente"}
                 </TableCell>
                 <TableCell className="text-right">
                   <Button
