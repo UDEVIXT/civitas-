@@ -10,7 +10,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async login(nombre_usuario: string, password: string) {
+  async login(nombre_usuario: string, password: string, recordarme = false) {
     const user = await this.prisma.usuario.findUnique({
       where: {
         nombre_usuario,
@@ -33,21 +33,28 @@ export class AuthService {
       role: user.rol,
     };
 
-    const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(payload, {
-        secret: process.env.JWT_ACCESS_SECRET,
-        expiresIn: '15m',
-      }),
+    const refreshExpiresIn = recordarme ? '30d' : '7d';
 
-      this.jwtService.signAsync(payload, {
-        secret: process.env.JWT_REFRESH_SECRET,
-        expiresIn: '7d',
-      }),
-    ]);
+    const [accessToken, refreshToken] = await Promise.all([
+        this.jwtService.signAsync(payload, {
+          secret:
+            process.env.JWT_ACCESS_SECRET,
+
+          expiresIn: '15m',
+        }),
+
+        this.jwtService.signAsync(payload, {
+          secret:
+            process.env.JWT_REFRESH_SECRET,
+
+          expiresIn: refreshExpiresIn,
+        }),
+      ]);
 
     return {
       accessToken,
       refreshToken,
+      refreshExpiresIn,
 
       user: {
         id: user.id_usuario,
@@ -57,45 +64,42 @@ export class AuthService {
     };
   }
 
-    async refresh(refreshToken: string) {
+  async refresh(refreshToken: string) {
     if (!refreshToken) {
-        throw new UnauthorizedException(
-        'Refresh token requerido',
-        );
+      throw new UnauthorizedException('Refresh token requerido');
     }
 
     try {
-        const payload =
+      const payload =
         await this.jwtService.verifyAsync(
-            refreshToken,
-            {
+          refreshToken,
+          {
             secret:
-                process.env.JWT_REFRESH_SECRET,
-            },
+              process.env.JWT_REFRESH_SECRET},
         );
 
       const newPayload = {
         sub: payload.sub,
         username: payload.username,
         role: payload.role,
-        };
+      };
 
-        const accessToken =
+      const accessToken =
         await this.jwtService.signAsync(
-            newPayload,
-            {
+          newPayload,
+          {
             secret:
-                process.env.JWT_ACCESS_SECRET,
+              process.env.JWT_ACCESS_SECRET,
 
             expiresIn: '15m',
-            },
+          },
         );
 
-      return { accessToken };
+      return {
+        accessToken,
+      };
     } catch {
-        throw new UnauthorizedException(
-        'Refresh token inválido',
-        );
+      throw new UnauthorizedException('Refresh token inválido');
     }
   }
 }

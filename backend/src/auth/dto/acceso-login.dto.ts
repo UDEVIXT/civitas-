@@ -4,6 +4,7 @@ import {
   IsNotEmpty,
   MinLength,
   MaxLength,
+  IsBoolean,
 } from 'class-validator';
 
 export class AccesoLoginDto {
@@ -29,4 +30,8 @@ export class AccesoLoginDto {
     message: 'La contraseña debe tener al menos 8 caracteres',
   })
   password?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  recordarme?: boolean;
 }

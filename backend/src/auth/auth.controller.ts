@@ -25,20 +25,24 @@ export class AuthController {
     const data = await this.authService.login(
       accesoLoginDto.usuario,
       accesoLoginDto.password || '',
+      accesoLoginDto.recordarme,
     );
+    const refreshMaxAge = accesoLoginDto.recordarme
+      ? 1000 * 60 * 60 * 24 * 30
+      : 1000 * 60 * 60 * 24 * 7;
 
     res.cookie('access_token', data.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 1000 * 60 * 15,
+      maxAge: refreshMaxAge,
     });
 
     res.cookie('refresh_token', data.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 1000 * 60 * 60 * 24 * 7,
+      maxAge: refreshMaxAge,
     });
 
     return {
