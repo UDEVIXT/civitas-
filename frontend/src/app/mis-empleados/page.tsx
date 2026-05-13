@@ -1,8 +1,9 @@
 "use client";
 
+//Vista para mostrar los empleados domésticos del residente, con un modal para editar permisos.
 import * as React from "react";
-import { TablaMisEmpleados } from "@/features/empleados-domesticos/residente/components/TablaMisEmpleados";
-import { ModalEditarEmpleado } from "@/features/empleados-domesticos/residente/components/ModalEditarEmpleado";
+import { TablaMisEmpleados } from "@/features/residente_empleados/residente/components/TablaMisEmpleados";
+import { ModalEditarEmpleado } from "@/features/residente_empleados/residente/components/ModalEditarEmpleado";
 import { useEmpleadoDomesticos } from "@/features/empleados-domesticos/hooks/useEmpleadoDomestico";
 import type { EmpleadoDomestico } from "@/features/empleados-domesticos/types";
 
