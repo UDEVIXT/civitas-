@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -30,7 +31,8 @@ export function useEmpleadoDomesticos() {
   const debouncedSearch = useDebounce(search, 300);
 
   // UI State para el modal
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isHorarioModalOpen, setIsHorarioModalOpen] = useState(false);
   const [selectedEmpleado, setSelectedEmpleado] =
     useState<EmpleadoDomestico | null>(null);
   const [motivo, setMotivo] = useState("");
@@ -82,7 +84,7 @@ export function useEmpleadoDomesticos() {
       if (res.success) {
         setError(null);
         queryClient.invalidateQueries({ queryKey: ["empleados-domesticos"] });
-        setIsModalOpen(false);
+        setIsEditModalOpen(false);
         toast({
           title: variables.isReactivating
             ? "Empleado activado"
@@ -116,7 +118,12 @@ export function useEmpleadoDomesticos() {
   const handleActionClick = (empleado: EmpleadoDomestico) => {
     setSelectedEmpleado(empleado);
     setMotivo("");
-    setIsModalOpen(true);
+    setIsEditModalOpen(true);
+  };
+
+  const handleVerHorario = (empleado: EmpleadoDomestico) => {
+    setSelectedEmpleado(empleado);
+    setIsHorarioModalOpen(true);
   };
 
   const confirmAction = () => {
@@ -154,9 +161,9 @@ export function useEmpleadoDomesticos() {
     page,
     setPage,
     totalPages: response?.meta?.total_pages || 1,
-    modal: {
-      isOpen: isModalOpen,
-      setIsOpen: setIsModalOpen,
+    modalEdit: {
+      isOpen: isEditModalOpen,
+      setIsEditModalOpen,
       selectedEmpleado,
       motivo,
       setMotivo,
@@ -164,6 +171,14 @@ export function useEmpleadoDomesticos() {
       deleteError: error,
       handleActionClick,
       confirmAction,
+    },
+    modalHorario: {
+      nombreEmpleado: selectedEmpleado?.nombre || "",
+      horarios: selectedEmpleado?.servicio.horarios || [],
+      isOpen: isHorarioModalOpen,
+      setIsHorarioModalOpen,
+      selectedEmpleado,
+      handleVerHorario,
     },
   };
 }
