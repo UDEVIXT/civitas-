@@ -5,9 +5,10 @@ import {
   HttpStatus,
   Post,
   Res,
+  Req,
 } from '@nestjs/common';
 
-import type { Response } from 'express';
+import type { Response, Request } from 'express';
 import { AuthService } from './auth.service';
 import { AccesoLoginDto } from './dto/acceso-login.dto';
 
@@ -42,6 +43,31 @@ export class AuthController {
 
     return {
       user: data.user,
+    };
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const refreshToken =
+      req.cookies?.refresh_token;
+
+    const data = await this.authService.refresh(
+      refreshToken,
+    );
+
+    res.cookie('access_token', data.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 1000 * 60 * 15,
+    });
+
+    return {
+      success: true,
     };
   }
 }

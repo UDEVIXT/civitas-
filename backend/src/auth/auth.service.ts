@@ -56,4 +56,46 @@ export class AuthService {
       },
     };
   }
+
+    async refresh(refreshToken: string) {
+    if (!refreshToken) {
+        throw new UnauthorizedException(
+        'Refresh token requerido',
+        );
+    }
+
+    try {
+        const payload =
+        await this.jwtService.verifyAsync(
+            refreshToken,
+            {
+            secret:
+                process.env.JWT_REFRESH_SECRET,
+            },
+        );
+
+      const newPayload = {
+        sub: payload.sub,
+        username: payload.username,
+        role: payload.role,
+        };
+
+        const accessToken =
+        await this.jwtService.signAsync(
+            newPayload,
+            {
+            secret:
+                process.env.JWT_ACCESS_SECRET,
+
+            expiresIn: '15m',
+            },
+        );
+
+      return { accessToken };
+    } catch {
+        throw new UnauthorizedException(
+        'Refresh token inválido',
+        );
+    }
+  }
 }
