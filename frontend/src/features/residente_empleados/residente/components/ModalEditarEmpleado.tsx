@@ -4,15 +4,13 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, Save, X } from "lucide-react";
-//import { toast } from "sonner"; // O la librería de notificaciones que usen
+import { Loader2, Save } from "lucide-react";
 
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -30,27 +28,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { EmpleadoDomestico } from "@/features/residente_empleados/types";
 
-// Esquema de validación robusto (CA004 y CA005)
 const formSchema = z.object({
-  nombre: z.string().min(3, "El nombre es obligatorio."),
-  tipo: z.enum(["Limpieza", "Chofer", "Cuidador", "Jardinería", "Otros"], {
-    required_error: "Selecciona el tipo de empleado.",
-  }),
-  telefono: z.string().regex(/^\d{10}$/, "Deben ser 10 dígitos."),
-  horario_inicio: z.string().min(1, "Requerido"),
-  horario_fin: z.string().min(1, "Requerido"),
-  notas: z.string().max(200, "Máximo 200 caracteres").optional(),
-  estado: z.enum(["Activo", "Inactivo"]),
-}).refine((data) => {
-  // Validación de consistencia de horario (CA005)
-  return data.horario_inicio < data.horario_fin;
-}, {
-  message: "El horario de fin debe ser posterior al de inicio",
-  path: ["horario_fin"],
+  nombre: z.string().min(1, "El nombre es obligatorio"),
+  telefono: z.string().length(10, "Deben ser exactamente 10 dígitos"),
+  hora_entrada: z.string().min(1, "Requerido"),
+  hora_salida: z.string().min(1, "Requerido"),
+  cargo: z.string().min(1, "Selecciona un cargo"),
+  foto: z.string().optional(),
+}).refine((data) => data.hora_entrada < data.hora_salida, {
+  message: "La salida debe ser después de la entrada",
+  path: ["hora_salida"],
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -69,160 +60,173 @@ export function ModalEditarEmpleado({ empleado, isOpen, onClose, onSuccess }: Mo
     resolver: zodResolver(formSchema),
     defaultValues: {
       nombre: "",
-      tipo: "Limpieza",
       telefono: "",
-      horario_inicio: "08:00",
-      horario_fin: "16:00",
-      notas: "",
-      estado: "Activo",
+      hora_entrada: "08:00",
+      hora_salida: "16:00",
+      cargo: "",
+      foto: "",
     },
   });
 
-  // Cargar datos registrados (CA002)
   React.useEffect(() => {
     if (empleado) {
       form.reset({
-        nombre: empleado.nombre,
-        tipo: (empleado as any).tipo || "Limpieza",
+        nombre: empleado.nombre || "",
         telefono: empleado.telefono || "",
-        horario_inicio: (empleado as any).horario_inicio || "08:00",
-        horario_fin: (empleado as any).horario_fin || "16:00",
-        notas: (empleado as any).notas || "",
-        estado: empleado.estado === "Activo" ? "Activo" : "Inactivo",
+        hora_entrada: (empleado as any).hora_entrada || "08:00",
+        hora_salida: (empleado as any).hora_salida || "16:00",
+        cargo: (empleado as any).cargo || "Nana",
+        foto: (empleado as any).fotoUrl || "",
       });
     }
   }, [empleado, form]);
 
-  async function onSubmit(values: FormValues) {
+  // Filtro para aceptar solo números en el teléfono
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>, onChange: (val: string) => void) => {
+    const value = e.target.value.replace(/\D/g, "").slice(0, 10);
+    onChange(value);
+  };
+
+  const onSubmit = async (values: FormValues) => {
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
-      // Aquí iría tu fetch al back (CA006, CA007, CA009)
-      console.log("Enviando a Bitácora y API:", values);
-      
-      // Simulación de éxito
+      console.log("Enviando datos validados:", values);
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast.success("Información actualizada correctamente"); // CA006
-      onSuccess?.(); 
+      onSuccess?.();
       onClose();
     } catch (error) {
-      toast.error("Error técnico al guardar los cambios"); // CA011
+      console.error(error);
     } finally {
       setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">Editar Perfil de Empleado</DialogTitle>
-          <p className="text-sm text-muted-foreground">CA003: Modifica la información detallada del personal.</p>
+      <DialogContent className="sm:max-w-[450px] p-6 max-h-[95vh] overflow-y-auto">
+        <DialogHeader className="flex flex-col items-center border-b pb-4 mb-4">
+          <DialogTitle className="text-xl font-semibold text-gray-800">
+            Editar Información del Empleado
+          </DialogTitle>
+          
+          <div className="flex flex-col items-center mt-4 space-y-2">
+            <Avatar className="h-20 w-20 border-2 border-gray-100 shadow-sm">
+              <AvatarImage src={form.watch("foto") || "/placeholder-user.jpg"} />
+              <AvatarFallback className="bg-amber-100 text-amber-700 font-bold">
+                {empleado?.nombre?.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+            <p className="text-sm text-gray-500 font-medium">
+              {form.watch("nombre") || "Nuevo Empleado"} - {form.watch("cargo") || "Sin Cargo"}
+            </p>
+          </div>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             
-            {/* Nombre Completo */}
             <FormField
               control={form.control}
               name="nombre"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nombre Completo</FormLabel>
+                  <FormLabel className="text-gray-700 font-semibold">Nombre Completo :</FormLabel>
                   <FormControl><Input {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              {/* Tipo de Empleado */}
-              <FormField
-                control={form.control}
-                name="tipo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tipo de Personal</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        <SelectItem value="Limpieza">Limpieza</SelectItem>
-                        <SelectItem value="Chofer">Chofer</SelectItem>
-                        <SelectItem value="Cuidador">Cuidador</SelectItem>
-                        <SelectItem value="Jardinería">Jardinería</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Teléfono */}
-              <FormField
-                control={form.control}
-                name="telefono"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Teléfono (10 dígitos)</FormLabel>
-                    <FormControl><Input placeholder="971..." {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              {/* Horario Inicio */}
-              <FormField
-                control={form.control}
-                name="horario_inicio"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Entrada</FormLabel>
-                    <FormControl><Input type="time" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {/* Horario Fin */}
-              <FormField
-                control={form.control}
-                name="horario_fin"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Salida</FormLabel>
-                    <FormControl><Input type="time" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Notas Adicionales */}
             <FormField
               control={form.control}
-              name="notas"
+              name="telefono"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notas / Observaciones</FormLabel>
+                  <FormLabel className="text-gray-700 font-semibold">Número telefónico:</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Indicaciones especiales para el guardia..." className="resize-none" {...field} />
+                    <Input 
+                      {...field} 
+                      type="tel"
+                      placeholder="Solo números"
+                      onChange={(e) => handlePhoneChange(e, field.onChange)} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
-                <X className="w-4 h-4 mr-2" /> Cancelar
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="hora_entrada"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 font-semibold">Hora Entrada</FormLabel>
+                    <FormControl><Input type="time" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="hora_salida"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 font-semibold">Hora Salida</FormLabel>
+                    <FormControl><Input type="time" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="cargo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-gray-700 font-semibold">Cargo:</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger><SelectValue placeholder="Selecciona un cargo" /></SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Nana">Nana</SelectItem>
+                      <SelectItem value="Limpieza">Limpieza</SelectItem>
+                      <SelectItem value="Chofer">Chofer</SelectItem>
+                      <SelectItem value="Cuidador">Cuidador</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="foto"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-gray-700 font-semibold">Foto (URL):</FormLabel>
+                  <FormControl><Input placeholder="https://..." {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex gap-3 pt-6">
+              <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+                Cancelar
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="bg-amber-600 hover:bg-amber-700">
-                {isSubmitting ? <Loader2 className="animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                Guardar Cambios
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="flex-1 bg-[#F1B111] hover:bg-[#D49B0D] text-white font-bold"
+              >
+                {isSubmitting ? <Loader2 className="animate-spin" /> : "Guardar"}
               </Button>
-            </DialogFooter>
+            </div>
           </form>
         </Form>
       </DialogContent>
