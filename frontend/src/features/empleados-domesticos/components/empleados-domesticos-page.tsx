@@ -5,6 +5,7 @@ import { EmpleadosFilters } from "@/features/empleados-domesticos/components/emp
 import { EmpleadosPagination } from "@/features/empleados-domesticos/components/empleados-pagination";
 import { EmpleadosDeleteDialog } from "@/features/empleados-domesticos/components/empleados-delete-dialog";
 import type { EmpleadoDomestico } from "@/features/empleados-domesticos/types";
+import { EmpleadosHorarioDialog } from "./horarios-empleado-domestico";
 
 export function EmpleadosDomesticosPage() {
   const {
@@ -17,7 +18,8 @@ export function EmpleadosDomesticosPage() {
     page,
     setPage,
     totalPages,
-    modal,
+    modalEdit,
+    modalHorario,
   } = useEmpleadoDomesticos();
 
   return (
@@ -40,7 +42,8 @@ export function EmpleadosDomesticosPage() {
           <EmpleadosTable
             items={empleados}
             isLoading={loading}
-            onActionClick={modal.handleActionClick}
+            onEdit={modalEdit.handleActionClick}
+            onVerHorario={modalHorario.handleVerHorario}
           />
 
           <div className="flex flex-col items-center justify-between gap-3 border-t border-border px-4 py-3 sm:flex-row sm:justify-end">
@@ -53,20 +56,27 @@ export function EmpleadosDomesticosPage() {
           </div>
         </section>
 
+        <EmpleadosHorarioDialog
+          open={modalHorario.isOpen}
+          onOpenChange={modalHorario.setIsHorarioModalOpen}
+          nombre={modalHorario.nombreEmpleado}
+          horarios={modalHorario.horarios}
+        />
+
         <EmpleadosDeleteDialog
-          open={modal.isOpen}
-          onOpenChange={modal.setIsOpen}
-          selectedEmpleado={modal.selectedEmpleado}
+          open={modalEdit.isOpen}
+          onOpenChange={modalEdit.setIsEditModalOpen}
+          selectedEmpleado={modalEdit.selectedEmpleado}
           mode={
-            modal.selectedEmpleado?.servicio.activo === true
+            modalEdit.selectedEmpleado?.servicio.activo === true
               ? "deactivate"
               : "reactivate"
           }
-          motivo={modal.motivo}
-          onMotivoChange={modal.setMotivo}
-          isDeleting={modal.isDeleting}
-          deleteError={modal.deleteError}
-          onConfirm={modal.confirmAction}
+          motivo={modalEdit.motivo}
+          onMotivoChange={modalEdit.setMotivo}
+          isDeleting={modalEdit.isDeleting}
+          deleteError={modalEdit.deleteError}
+          onConfirm={modalEdit.confirmAction}
         />
       </main>
     </div>

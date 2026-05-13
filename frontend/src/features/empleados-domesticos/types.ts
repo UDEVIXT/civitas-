@@ -5,6 +5,12 @@ export interface FiltroEmpleado {
   byViviendaId?: string | undefined;
 }
 
+export interface HorarioServicio {
+  dia_semana: string;
+  hora_inicio: Date;
+  hora_fin: Date;
+}
+
 export interface EmpleadoDomestico {
   id_visitante: string;
   nombre: string;
@@ -12,7 +18,8 @@ export interface EmpleadoDomestico {
   url_imagen?: string;
   servicio: {
     activo: boolean;
-    horario_texto: string;
+    fecha_registro: Date;
+    horarios: HorarioServicio[];
     tipo_servicio: {
       nombre: string;
       categoria: string;
