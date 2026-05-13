@@ -1,28 +1,42 @@
 "use client";
 
-//Vista para mostrar los empleados domésticos del residente, con un modal para editar permisos.
 import * as React from "react";
+// Importaciones a tu nueva carpeta (ya en minúsculas)
 import { TablaMisEmpleados } from "@/features/residente_empleados/residente/components/TablaMisEmpleados";
 import { ModalEditarEmpleado } from "@/features/residente_empleados/residente/components/ModalEditarEmpleado";
-import { useEmpleadoDomesticos } from "@/features/empleados-domesticos/hooks/useEmpleadoDomestico";
 import type { EmpleadoDomestico } from "@/features/empleados-domesticos/types";
 
 export default function MisEmpleadosPage() {
-  // Usamos nuestro nuevo hook centralizado
-  const { empleados, loading } = useEmpleadoDomesticos();
-
-  // Estados locales solo para la UI del modal
-  const [selectedEmpleado, setSelectedEmpleado] =
-    React.useState<EmpleadoDomestico | null>(null);
+  // 1. Dejamos los estados de la UI
+  const [selectedEmpleado, setSelectedEmpleado] = React.useState<EmpleadoDomestico | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
 
-  // Manejador para cuando se hace clic en editar
+  // 2. Tus datos de prueba (Mock Data)
+  // Nota: Les agregué campos extras que suelen venir del back para que TS no chille
+  const datosDePrueba: EmpleadoDomestico[] = [
+    { 
+      id: "1", 
+      nombre: "Juan Pérez", 
+      estado: "Activo", 
+      horarioAutorizado: "08:00 - 16:00", 
+      telefono: "9711234567",
+      activo: true 
+    },
+    { 
+      id: "2", 
+      nombre: "María Sosa", 
+      estado: "Inactivo", 
+      horarioAutorizado: "10:00 - 18:00", 
+      telefono: "9719876543",
+      activo: false 
+    }
+  ];
+
   const handleEditClick = (empleado: EmpleadoDomestico) => {
     setSelectedEmpleado(empleado);
     setIsModalOpen(true);
   };
 
-  // Manejador para cerrar el modal y limpiar el seleccionado
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedEmpleado(null);
@@ -36,34 +50,29 @@ export default function MisEmpleadosPage() {
             Mis Empleados Domésticos
           </h2>
           <p className="text-muted-foreground">
-            Gestiona y actualiza los permisos de acceso de tu personal de apoyo.
+            Gestión de personal para Residentes (Vista de Prueba)
           </p>
         </div>
       </div>
 
       <div className="space-y-4">
-        {loading ? (
-          <div className="flex h-[400px] items-center justify-center rounded-2xl border border-dashed">
-            <div className="flex flex-col items-center gap-2">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-600/30 border-t-amber-600" />
-              <p className="text-sm text-muted-foreground">
-                Cargando tu personal...
-              </p>
-            </div>
-          </div>
-        ) : (
-          <TablaMisEmpleados
-            items={empleados}
-            isLoading={loading}
-            onEditClick={handleEditClick}
-          />
-        )}
+        {/* Mostramos directamente la tabla con los datos de prueba */}
+        <TablaMisEmpleados
+          items={datosDePrueba}
+          isLoading={false} 
+          onEditClick={handleEditClick}
+        />
       </div>
 
+      {/* El modal ahora recibirá los datos de Juan o María al hacer clic */}
       <ModalEditarEmpleado
         empleado={selectedEmpleado}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
+        onSuccess={() => {
+          console.log("¡Simulación de guardado exitosa!");
+          handleCloseModal();
+        }}
       />
     </div>
   );
