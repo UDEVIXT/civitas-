@@ -1,12 +1,10 @@
 "use client";
-import { useEmpleadoDomesticos } from "../hooks/useEmpleadoDomestico";
-import { EmpleadosTable } from "./empleados-table";
-import { EmpleadosFilters } from "./empleados-filters";
-import { EmpleadosPagination } from "./empleados-pagination";
-import { EmpleadosDeleteDialog } from "./empleados-delete-dialog";
-import type { EmpleadoDomestico } from "../types";
-
-const statusOptions = ["Todos", "Activos"] as const;
+import { useEmpleadoDomesticos } from "@/features/empleados-domesticos/hooks/useEmpleadoDomestico";
+import { EmpleadosTable } from "@/features/empleados-domesticos/components/empleados-table";
+import { EmpleadosFilters } from "@/features/empleados-domesticos/components/empleados-filters";
+import { EmpleadosPagination } from "@/features/empleados-domesticos/components/empleados-pagination";
+import { EmpleadosDeleteDialog } from "@/features/empleados-domesticos/components/empleados-delete-dialog";
+import type { EmpleadoDomestico } from "@/features/empleados-domesticos/types";
 
 export function EmpleadosDomesticosPage() {
   const {
@@ -28,7 +26,6 @@ export function EmpleadosDomesticosPage() {
         <EmpleadosFilters
           search={search}
           onSearchChange={setSearch}
-          statusOptions={statusOptions}
           statusFilter={statusFilter}
           onStatusChange={setStatusFilter}
         />

@@ -47,7 +47,9 @@ export function TablaMisEmpleados({
   if (isLoading) {
     return (
       <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed">
-        <p className="text-sm text-muted-foreground italic">Cargando tus empleados...</p>
+        <p className="text-sm text-muted-foreground italic">
+          Cargando tus empleados...
+        </p>
       </div>
     );
   }
@@ -77,7 +79,10 @@ export function TablaMisEmpleados({
             items.map((empleado, index) => {
               const isActive = empleado.servicio?.activo;
               return (
-                <TableRow key={empleado.id_visitante} className="hover:bg-muted/10 transition-colors">
+                <TableRow
+                  key={empleado.id_visitante}
+                  className="hover:bg-muted/10 transition-colors"
+                >
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <div
@@ -103,16 +108,16 @@ export function TablaMisEmpleados({
                       variant="outline"
                       className={cn(
                         "rounded-full px-2 py-0 border",
-                        isActive 
-                          ? "border-emerald-200 bg-emerald-50 text-emerald-700" 
-                          : "border-zinc-200 bg-zinc-50 text-zinc-500"
+                        isActive
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : "border-zinc-200 bg-zinc-50 text-zinc-500",
                       )}
                     >
                       {isActive ? "Activo" : "Inactivo"}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {empleado.servicio?.horario?.[0]?.dia || "Lunes a Viernes"} • {empleado.servicio?.horario?.[0]?.hora_inicio || "08:00"} - {empleado.servicio?.horario?.[0]?.hora_fin || "18:00"}
+                    {empleado.servicio?.horario_texto || "Sin horario"}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button

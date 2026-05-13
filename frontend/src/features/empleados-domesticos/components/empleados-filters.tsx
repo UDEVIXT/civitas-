@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 type EmpleadosFiltersProps = {
   search: string;
   onSearchChange: (value: string) => void;
-  statusFilter: boolean;
+  statusFilter: boolean | undefined;
   onStatusChange: (value: boolean | undefined) => void;
 };
 
