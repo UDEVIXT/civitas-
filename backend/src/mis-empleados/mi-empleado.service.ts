@@ -37,12 +37,12 @@ export class EmpleadoService {
       return { hours: value.getUTCHours(), minutes: value.getUTCMinutes() };
     }
 
-    if (value.includes('T')) {
+    if (typeof value === 'string' && value.includes('T')) {
       const date = new Date(value);
       return { hours: date.getUTCHours(), minutes: date.getUTCMinutes() };
     }
 
-    const [hours, minutes] = value.split(':');
+    const [hours, minutes] = String(value).split(':');
     return { hours: Number(hours), minutes: Number(minutes) };
   }
 
@@ -321,7 +321,7 @@ export class EmpleadoService {
                 deleteMany: {},
                 create: data.horarios.map((h: any) => ({
                   dia_semana: h.dia_semana,
-                  // Formato ISO para el tipo @db.Time(6) de tu esquema
+                  // Guardamos como Date completo para preservar UTC y que el front maneje la zona
                   hora_inicio: new Date(`1970-01-01T${h.hora_inicio}:00.000Z`),
                   hora_fin: new Date(`1970-01-01T${h.hora_fin}:00.000Z`),
                   activo: true,
