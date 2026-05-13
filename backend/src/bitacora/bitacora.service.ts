@@ -182,6 +182,7 @@ export class BitacoraService {
                     select: {
                       nombre_empresa: true,
                       nombre_servicio: true,
+                      cargo: true,
                       placas: true,
 
                       tipo_servicio: {
@@ -228,6 +229,12 @@ export class BitacoraService {
         id: item.id_bitacora,
 
         nombre: item.acceso.visitante.nombre,
+        empresa: item.acceso.visitante.servicio?.nombre_empresa ?? 'N/A',
+        servicio_nombre:
+          item.acceso.visitante.servicio?.nombre_servicio ?? 'N/A',
+        cargo_empleado: item.acceso.visitante.servicio?.cargo ?? 'Sin cargo',
+        placas: item.acceso.visitante.servicio?.placas ?? 'Sin placas',
+        motivo: item.acceso.visitante.motivo ?? 'Sin motivo especificado',
 
         tipo_persona:
           item.acceso.visitante.servicio?.tipo_servicio?.categoria ??
@@ -244,7 +251,7 @@ export class BitacoraService {
 
         fecha_salida: item.fecha_hora_salida,
 
-        metodo_acceso: 'QR',
+        metodo_acceso: item.acceso.codigo_qr ? 'QR' : 'Manual',
 
         guardia_registro: item.guardia.nombre,
 

@@ -1,45 +1,42 @@
 "use client";
 
 import * as React from "react";
-import { TablaMisEmpleados } from "@/features/empleados-domesticos/residente/components/TablaMisEmpleados";
-import { ModalEditarEmpleado } from "@/features/empleados-domesticos/residente/components/ModalEditarEmpleado";
-import { getEmpleadosDomesticos } from "@/features/empleados-domesticos/data/empleados";
+// Importaciones a tu nueva carpeta (ya en minúsculas)
+import { TablaMisEmpleados } from "@/features/residente_empleados/residente/components/TablaMisEmpleados";
+import { ModalEditarEmpleado } from "@/features/residente_empleados/residente/components/ModalEditarEmpleado";
 import type { EmpleadoDomestico } from "@/features/empleados-domesticos/types";
-import { Loader2 } from "lucide-react";
 
 export default function MisEmpleadosPage() {
-  // Estados para la lógica de la página
-  const [empleados, setEmpleados] = React.useState<EmpleadoDomestico[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
+  // 1. Dejamos los estados de la UI
   const [selectedEmpleado, setSelectedEmpleado] = React.useState<EmpleadoDomestico | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
 
-  // Función para cargar los datos del backend
-  const fetchEmpleados = React.useCallback(async () => {
-    try {
-      setIsLoading(true);
-      // Aquí el backend ya debería filtrar por tu ID de residente gracias al token
-      const response = await getEmpleadosDomesticos();
-      setEmpleados(response.data);
-    } catch (error) {
-      console.error("Error al cargar empleados:", error);
-    } finally {
-      setIsLoading(false);
+  // 2. Tus datos de prueba (Mock Data)
+  // Nota: Les agregué campos extras que suelen venir del back para que TS no chille
+  const datosDePrueba: EmpleadoDomestico[] = [
+    { 
+      id: "1", 
+      nombre: "Juan Pérez", 
+      estado: "Activo", 
+      horarioAutorizado: "08:00 - 16:00", 
+      telefono: "9711234567",
+      activo: true 
+    },
+    { 
+      id: "2", 
+      nombre: "María Sosa", 
+      estado: "Inactivo", 
+      horarioAutorizado: "10:00 - 18:00", 
+      telefono: "9719876543",
+      activo: false 
     }
-  }, []);
+  ];
 
-  // Cargar datos al entrar a la página
-  React.useEffect(() => {
-    fetchEmpleados();
-  }, [fetchEmpleados]);
-
-  // Manejador para cuando se hace clic en editar
   const handleEditClick = (empleado: EmpleadoDomestico) => {
     setSelectedEmpleado(empleado);
     setIsModalOpen(true);
   };
 
-  // Manejador para cerrar el modal y limpiar el seleccionado
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedEmpleado(null);
@@ -53,33 +50,29 @@ export default function MisEmpleadosPage() {
             Mis Empleados Domésticos
           </h2>
           <p className="text-muted-foreground">
-            Gestiona y actualiza los permisos de acceso de tu personal de apoyo.
+            Gestión de personal para Residentes (Vista de Prueba)
           </p>
         </div>
       </div>
 
       <div className="space-y-4">
-        {isLoading ? (
-          <div className="flex h-[400px] items-center justify-center rounded-2xl border border-dashed">
-            <div className="flex flex-col items-center gap-2">
-              <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
-              <p className="text-sm text-muted-foreground">Cargando tu personal...</p>
-            </div>
-          </div>
-        ) : (
-          <TablaMisEmpleados 
-            items={empleados} 
-            onEditClick={handleEditClick} 
-          />
-        )}
+        {/* Mostramos directamente la tabla con los datos de prueba */}
+        <TablaMisEmpleados
+          items={datosDePrueba}
+          isLoading={false} 
+          onEditClick={handleEditClick}
+        />
       </div>
 
-      {/* Tu Modal de Edición */}
+      {/* El modal ahora recibirá los datos de Juan o María al hacer clic */}
       <ModalEditarEmpleado
         empleado={selectedEmpleado}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        onSuccess={fetchEmpleados} // Si se edita con éxito, refrescamos la tabla
+        onSuccess={() => {
+          console.log("¡Simulación de guardado exitosa!");
+          handleCloseModal();
+        }}
       />
     </div>
   );

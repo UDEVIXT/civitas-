@@ -227,7 +227,7 @@ export function ModalDetalleRegistro({
                     <ReactQRCode value={registro.qr_utilizado} size={200} />
                   </div>
                   <div className="font-mono text-xs bg-background p-2 rounded border mt-2 text-center">
-                    {registro.qr_utilizado}
+                    {registro?.qr_utilizado}
                   </div>
                 </div>
               )}
