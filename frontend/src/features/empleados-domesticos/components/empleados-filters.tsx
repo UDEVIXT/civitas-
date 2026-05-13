@@ -7,15 +7,13 @@ import { cn } from "@/lib/utils";
 type EmpleadosFiltersProps = {
   search: string;
   onSearchChange: (value: string) => void;
-  statusOptions: readonly string[];
-  statusFilter: string;
-  onStatusChange: (value: string) => void;
+  statusFilter: boolean;
+  onStatusChange: (value: boolean | undefined) => void;
 };
 
 export function EmpleadosFilters({
   search,
   onSearchChange,
-  statusOptions,
   statusFilter,
   onStatusChange,
 }: EmpleadosFiltersProps) {
@@ -37,22 +35,54 @@ export function EmpleadosFilters({
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {statusOptions.map((status) => (
+        {
           <Button
-            key={status}
+            key="Todos"
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => onStatusChange(status)}
+            onClick={() => onStatusChange(undefined)}
             className={cn(
               "rounded-full",
-              statusFilter === status &&
+              statusFilter == undefined &&
                 "border-amber-300 bg-amber-50 text-amber-900",
             )}
           >
-            {status}
+            Todos
           </Button>
-        ))}
+        }
+        {
+          <Button
+            key="Activos"
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onStatusChange(true)}
+            className={cn(
+              "rounded-full",
+              statusFilter === true &&
+                "border-amber-300 bg-amber-50 text-amber-900",
+            )}
+          >
+            Activos
+          </Button>
+        }
+        {
+          <Button
+            key="Inactivos"
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onStatusChange(false)}
+            className={cn(
+              "rounded-full",
+              statusFilter === false &&
+                "border-amber-300 bg-amber-50 text-amber-900",
+            )}
+          >
+            Inactivos
+          </Button>
+        }
         <Button
           type="button"
           variant="outline"

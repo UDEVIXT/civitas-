@@ -23,11 +23,6 @@ const avatarPalette = [
   "bg-violet-100 text-violet-700",
 ];
 
-const statusStyles: Record<string, string> = {
-  Activo: "border-emerald-200 bg-emerald-100 text-emerald-700",
-  Inactivo: "border-zinc-200 bg-zinc-100 text-zinc-500",
-};
-
 function getInitials(name: string) {
   if (!name) return "";
   const parts = name.split(" ").filter(Boolean);
@@ -40,13 +35,23 @@ function getInitials(name: string) {
 
 type MisEmpleadosTableProps = {
   items: EmpleadoDomestico[];
+  isLoading: boolean;
   onEditClick: (empleado: EmpleadoDomestico) => void;
 };
 
 export function TablaMisEmpleados({
   items,
+  isLoading,
   onEditClick,
 }: MisEmpleadosTableProps) {
+  if (isLoading) {
+    return (
+      <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed">
+        <p className="text-sm text-muted-foreground italic">Cargando tus empleados...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden">
       <Table>
@@ -63,18 +68,16 @@ export function TablaMisEmpleados({
             <TableRow>
               <TableCell
                 colSpan={4}
-                className="py-6 text-center text-sm text-muted-foreground"
+                className="py-10 text-center text-sm text-muted-foreground"
               >
                 No tienes empleados domésticos registrados.
               </TableCell>
             </TableRow>
           ) : (
             items.map((empleado, index) => {
-              const statusLabel = empleado.servicio?.activo
-                ? "Activo"
-                : "Inactivo";
+              const isActive = empleado.servicio?.activo;
               return (
-                <TableRow key={empleado.id_visitante}>
+                <TableRow key={empleado.id_visitante} className="hover:bg-muted/10 transition-colors">
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <div
@@ -90,33 +93,35 @@ export function TablaMisEmpleados({
                           {empleado.nombre}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {empleado.telefono}
+                          {empleado.telefono || "Sin teléfono"}
                         </p>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <Badge
-                      className={
-                        statusStyles[statusLabel] || statusStyles.Inactivo
-                      }
+                      variant="outline"
+                      className={cn(
+                        "rounded-full px-2 py-0 border",
+                        isActive 
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700" 
+                          : "border-zinc-200 bg-zinc-50 text-zinc-500"
+                      )}
                     >
-                      {statusLabel}
+                      {isActive ? "Activo" : "Inactivo"}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {empleado.servicio?.horario_texto || "Sin horario"}
+                    {empleado.servicio?.horario?.[0]?.dia || "Lunes a Viernes"} • {empleado.servicio?.horario?.[0]?.hora_inicio || "08:00"} - {empleado.servicio?.horario?.[0]?.hora_fin || "18:00"}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button
-                      type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-amber-600 hover:bg-amber-50"
                       onClick={() => onEditClick(empleado)}
+                      className="rounded-full hover:bg-amber-50 hover:text-amber-600"
                     >
-                      <Pencil className="h-4 w-4" />
-                      <span className="sr-only">Editar</span>
+                      <Pencil className="size-4" />
                     </Button>
                   </TableCell>
                 </TableRow>

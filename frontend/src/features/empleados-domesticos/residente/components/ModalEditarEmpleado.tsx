@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2 } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import {
   Dialog,
@@ -38,7 +39,6 @@ import {
   activarEmpleadoDomestico,
 } from "@/features/empleados-domesticos/api/empleados";
 
-// Definimos el esquema de validación con Zod
 const formSchema = z.object({
   estado: z.enum(["Activo", "Inactivo"]),
   motivo: z
@@ -57,7 +57,7 @@ interface ModalEditarEmpleadoProps {
   empleado: EmpleadoDomestico | null;
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
 export function ModalEditarEmpleado({
@@ -66,9 +66,24 @@ export function ModalEditarEmpleado({
   onClose,
   onSuccess,
 }: ModalEditarEmpleadoProps) {
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const queryClient = useQueryClient();
 
-  // Configuramos el formulario
+  const { mutate: updateStatus, isPending } = useMutation({
+    mutationFn: async (values: FormValues) => {
+      if (!empleado) return;
+      const isReactivating = values.estado === "Activo";
+
+      return isReactivating
+        ? activarEmpleadoDomestico(empleado.id_visitante, values.motivo)
+        : eliminarEmpleadoDomestico(empleado.id_visitante, values.motivo);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["empleados-domesticos"] });
+      onSuccess?.();
+      onClose();
+    },
+  });
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -77,37 +92,17 @@ export function ModalEditarEmpleado({
     },
   });
 
-  // Actualizamos los valores del formulario cuando cambia el empleado seleccionado
   React.useEffect(() => {
     if (empleado) {
       form.reset({
         estado: empleado.servicio?.activo ? "Activo" : "Inactivo",
-        motivo: "", // Reiniciamos el motivo cada vez que se abre
+        motivo: "",
       });
     }
   }, [empleado, form]);
 
   async function onSubmit(values: FormValues) {
-    if (!empleado) return;
-
-    try {
-      setIsSubmitting(true);
-
-      const isReactivating = values.estado === "Activo";
-
-      if (isReactivating) {
-        await activarEmpleadoDomestico(empleado.id_visitante, values.motivo);
-      } else {
-        await eliminarEmpleadoDomestico(empleado.id_visitante, values.motivo);
-      }
-
-      onSuccess(); // Refrescar la tabla
-      onClose(); // Cerrar el modal
-    } catch (error) {
-      console.error("Error al actualizar empleado:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
+    updateStatus(values);
   }
 
   return (
@@ -123,7 +118,6 @@ export function ModalEditarEmpleado({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Campo de Nombre (Solo lectura) */}
             <div className="space-y-2">
               <FormLabel>Empleado</FormLabel>
               <Input
@@ -133,7 +127,6 @@ export function ModalEditarEmpleado({
               />
             </div>
 
-            {/* Campo de Estado */}
             <FormField
               control={form.control}
               name="estado"
@@ -143,6 +136,7 @@ export function ModalEditarEmpleado({
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
+                    value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -163,7 +157,6 @@ export function ModalEditarEmpleado({
               )}
             />
 
-            {/* Campo de Motivo */}
             <FormField
               control={form.control}
               name="motivo"
@@ -183,17 +176,20 @@ export function ModalEditarEmpleado({
             />
 
             <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={isPending}
+              >
                 Cancelar
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isPending}
                 className="bg-amber-600 hover:bg-amber-700"
               >
-                {isSubmitting && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
+                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Guardar Cambios
               </Button>
             </DialogFooter>

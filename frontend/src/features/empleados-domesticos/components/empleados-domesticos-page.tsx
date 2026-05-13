@@ -8,11 +8,7 @@ import type { EmpleadoDomestico } from "../types";
 
 const statusOptions = ["Todos", "Activos"] as const;
 
-export function EmpleadosDomesticosPage({
-  initialData,
-}: {
-  initialData: EmpleadoDomestico[];
-}) {
+export function EmpleadosDomesticosPage() {
   const {
     empleados,
     loading,
@@ -24,7 +20,7 @@ export function EmpleadosDomesticosPage({
     setPage,
     totalPages,
     modal,
-  } = useEmpleadoDomesticos(initialData);
+  } = useEmpleadoDomesticos();
 
   return (
     <div className="min-h-screen bg-amber-50/30 text-foreground">

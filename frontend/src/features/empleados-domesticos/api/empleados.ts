@@ -6,16 +6,15 @@ import type {
 } from "@/features/empleados-domesticos/types";
 
 export const obtenerEmpleadosDomesticos = async (
-  filtro?: FiltroEmpleado,
+  filtros?: FiltroEmpleado,
   search?: string,
   page?: number,
 ) => {
-  const filters = filtro ? { filtro: filtro.filtro, valor: filtro.valor } : {};
   const response = await apiClient.get<EmpleadoDomesticoResponse>("/empleado", {
     params: {
       page: page || 1,
       search: search ? search.trim() : undefined,
-      ...filters,
+      ...filtros,
     },
   });
   console.log("Response from API:", response.data);

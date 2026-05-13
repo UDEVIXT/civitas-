@@ -1,14 +1,8 @@
 export type EmpleadoEstado = "Activo" | "Inactivo";
-
-export type OpcionFiltroEmpleado =
-  | undefined
-  | "isActive"
-  | "byResidenteId"
-  | "byViviendaId";
-
 export interface FiltroEmpleado {
-  filtro: OpcionFiltroEmpleado;
-  valor: string | number | boolean;
+  isActive?: boolean | undefined;
+  byResidenteId?: string | undefined;
+  byViviendaId?: string | undefined;
 }
 
 export interface EmpleadoDomestico {
