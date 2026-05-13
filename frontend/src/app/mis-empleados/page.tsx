@@ -3,14 +3,14 @@
 import * as React from "react";
 import { TablaMisEmpleados } from "@/features/empleados-domesticos/residente/components/TablaMisEmpleados";
 import { ModalEditarEmpleado } from "@/features/empleados-domesticos/residente/components/ModalEditarEmpleado";
-import { obtenerEmpleadosDomesticos } from "@/features/empleados-domesticos/api/empleados";
+import { useEmpleadoDomesticos } from "@/features/empleados-domesticos/hooks/useEmpleadoDomestico";
 import type { EmpleadoDomestico } from "@/features/empleados-domesticos/types";
-import { Loader2 } from "lucide-react";
 
 export default function MisEmpleadosPage() {
-  // Estados para la lógica de la página
-  const [empleados, setEmpleados] = React.useState<EmpleadoDomestico[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
+  // Usamos nuestro nuevo hook centralizado
+  const { empleados, loading } = useEmpleadoDomesticos();
+
+  // Estados locales solo para la UI del modal
   const [selectedEmpleado, setSelectedEmpleado] =
     React.useState<EmpleadoDomestico | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -82,26 +82,28 @@ const fetchEmpleados = React.useCallback(async () => {
       </div>
 
       <div className="space-y-4">
-        {isLoading ? (
+        {loading ? (
           <div className="flex h-[400px] items-center justify-center rounded-2xl border border-dashed">
             <div className="flex flex-col items-center gap-2">
-              <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-600/30 border-t-amber-600" />
               <p className="text-sm text-muted-foreground">
                 Cargando tu personal...
               </p>
             </div>
           </div>
         ) : (
-          <TablaMisEmpleados items={empleados} onEditClick={handleEditClick} />
+          <TablaMisEmpleados
+            items={empleados}
+            isLoading={loading}
+            onEditClick={handleEditClick}
+          />
         )}
       </div>
 
-      {/* Tu Modal de Edición */}
       <ModalEditarEmpleado
         empleado={selectedEmpleado}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        onSuccess={fetchEmpleados} // Si se edita con éxito, refrescamos la tabla
       />
     </div>
   );
