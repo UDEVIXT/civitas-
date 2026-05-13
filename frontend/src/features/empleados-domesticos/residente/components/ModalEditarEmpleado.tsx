@@ -67,20 +67,30 @@ export function ModalEditarEmpleado({
   onSuccess,
 }: ModalEditarEmpleadoProps) {
   const queryClient = useQueryClient();
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
   const { mutate: updateStatus, isPending } = useMutation({
     mutationFn: async (values: FormValues) => {
       if (!empleado) return;
       const isReactivating = values.estado === "Activo";
 
-      return isReactivating
-        ? activarEmpleadoDomestico(empleado.id_visitante, values.motivo)
-        : eliminarEmpleadoDomestico(empleado.id_visitante, values.motivo);
+      const res = isReactivating
+        ? await activarEmpleadoDomestico(empleado.id_visitante, values.motivo)
+        : await eliminarEmpleadoDomestico(empleado.id_visitante, values.motivo);
+
+      if (res && !res.success) {
+        throw new Error(res.message || "Error al actualizar");
+      }
+      return res;
     },
     onSuccess: () => {
+      setErrorMessage(null);
       queryClient.invalidateQueries({ queryKey: ["empleados-domesticos"] });
       onSuccess?.();
       onClose();
+    },
+    onError: (err: any) => {
+      setErrorMessage(err.message || "Ocurrió un error inesperado");
     },
   });
 
@@ -94,6 +104,7 @@ export function ModalEditarEmpleado({
 
   React.useEffect(() => {
     if (empleado) {
+      setErrorMessage(null);
       form.reset({
         estado: empleado.servicio?.activo ? "Activo" : "Inactivo",
         motivo: "",
@@ -118,6 +129,11 @@ export function ModalEditarEmpleado({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {errorMessage && (
+              <div className="rounded-lg bg-red-50 p-3 text-xs text-red-600 border border-red-100">
+                {errorMessage}
+              </div>
+            )}
             <div className="space-y-2">
               <FormLabel>Empleado</FormLabel>
               <Input

@@ -35,4 +35,7 @@ export interface EmpleadoDomesticoResponse {
   success: boolean;
   data: EmpleadoDomestico[];
   meta: EmpleadoDomesticoMetadata;
+  message?: string;
+  error?: string;
+  statusCode?: number;
 }

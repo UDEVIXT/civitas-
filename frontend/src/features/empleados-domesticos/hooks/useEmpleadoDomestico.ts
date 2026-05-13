@@ -33,6 +33,8 @@ export function useEmpleadoDomesticos() {
     useState<EmpleadoDomestico | null>(null);
   const [motivo, setMotivo] = useState("");
 
+  const [error, setError] = useState<string | null>(null);
+
   // 1. QUERY: Obtener datos
   const {
     data: response,
@@ -61,11 +63,7 @@ export function useEmpleadoDomesticos() {
   });
 
   // 2. MUTATION: Ejecutar acciones (Activar/Eliminar)
-  const {
-    mutate: executeAction,
-    isPending: isDeleting,
-    error: mutationError,
-  } = useMutation({
+  const { mutate: executeAction, isPending: isDeleting } = useMutation({
     mutationFn: ({
       id,
       motivo,
@@ -80,9 +78,15 @@ export function useEmpleadoDomesticos() {
         : eliminarEmpleadoDomestico(id, motivo),
     onSuccess: (res) => {
       if (res.success) {
+        setError(null);
         queryClient.invalidateQueries({ queryKey: ["empleados-domesticos"] });
         setIsModalOpen(false);
+      } else {
+        setError(res.message || "Error al procesar la solicitud");
       }
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.message || "Error de red o del servidor");
     },
   });
 
@@ -134,7 +138,7 @@ export function useEmpleadoDomesticos() {
       motivo,
       setMotivo,
       isDeleting,
-      deleteError: mutationError ? "Error al procesar la solicitud" : null,
+      deleteError: error,
       handleActionClick,
       confirmAction,
     },

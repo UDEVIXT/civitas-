@@ -24,6 +24,7 @@ export const obtenerEmpleadosDomesticos = async (
 export const activarEmpleadoDomestico = async (id: string, motivo?: string) => {
   try {
     await apiClient.put(`/empleado/${id}`, {
+      accion: "reactivacion",
       data: {
         motivo: motivo,
         activo: true,
@@ -47,6 +48,7 @@ export const eliminarEmpleadoDomestico = async (
 ) => {
   try {
     await apiClient.put(`/empleado/${id}`, {
+      accion: "baja",
       data: {
         motivo: motivo,
         activo: false,
