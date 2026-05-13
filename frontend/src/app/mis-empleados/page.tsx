@@ -35,7 +35,7 @@ const fetchEmpleados = React.useCallback(async () => {
     setIsLoading(true);
     
     // 1. Ejecutamos tu función tal cual la tienes
-    const response = await getEmpleadosDomesticos();
+    const response = await obtenerEmpleadosDomesticos();
     
     console.log("Lo que llega del back:", response.data); // <--- Agrega esto
     // 2. IMPORTANTE: Tu función devuelve { data, meta }

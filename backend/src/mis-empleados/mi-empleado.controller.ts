@@ -10,7 +10,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 
-import { EmpleadoService } from './empleado.service';
+import { EmpleadoService } from './mi-empleado.service';
 
 @Controller('empleado')
 export class EmpleadoController {
@@ -79,6 +79,31 @@ export class EmpleadoController {
   }
 
 
+/*
+  @Put(':id')
+  async update(@Param('id') id: string, @Body() body: any) {
+    const { data } = body;
+
+    // Escenario A: Solo cambio de estado (Baja/Reactivación)
+    if (data.activo !== undefined && !data.nombre) {
+      if (data.activo === false) {
+        if (!data.motivo?.trim())
+          throw new BadRequestException('El motivo es requerido');
+        return this.empleadoService.eliminarEmpleado(id, data.motivo);
+      }
+      return this.empleadoService.reactivarEmpleado(id);
+    }
+
+    // Escenario B: Edición completa (HU-1.5.4)
+    if (!data.nombre || !data.horarios || !Array.isArray(data.horarios)) {
+      throw new BadRequestException(
+        'El nombre y los horarios son obligatorios para editar',
+      );
+    }
+
+    return this.empleadoService.actualizarEmpleado(id, body);
+  }
+*/
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.empleadoService.eliminarEmpleado(id);
