@@ -1,6 +1,5 @@
 "use client";
-
-import { Pencil } from "lucide-react";
+import { Pencil, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,13 +35,15 @@ function getInitials(name: string) {
 type MisEmpleadosTableProps = {
   items: EmpleadoDomestico[];
   isLoading: boolean;
-  onEditClick: (empleado: EmpleadoDomestico) => void;
+  onEdit: (empleado: EmpleadoDomestico) => void;
+  onVerHorario: (empleado: EmpleadoDomestico) => void;
 };
 
 export function TablaMisEmpleados({
   items,
   isLoading,
-  onEditClick,
+  onEdit,
+  onVerHorario,
 }: MisEmpleadosTableProps) {
   if (isLoading) {
     return (
@@ -117,13 +118,20 @@ export function TablaMisEmpleados({
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {empleado.servicio?.horario_texto || "Sin horario"}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onVerHorario(empleado)}
+                    >
+                      <Clock className="size-4" />
+                      <span className="ml-2">Ver horario</span>
+                    </Button>
                   </TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => onEditClick(empleado)}
+                      onClick={() => onEdit(empleado)}
                       className="rounded-full hover:bg-amber-50 hover:text-amber-600"
                     >
                       <Pencil className="size-4" />
