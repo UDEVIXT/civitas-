@@ -1,44 +1,46 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateReporteDto } from './dto/create-reporte.dto';
-import { UpdateReporteDto } from './dto/update-reporte.dto';
+// 2. EL SERVICIO (reportes.service.ts)
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class ReportesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) {}
 
-  async create(createReporteDto: CreateReporteDto) {
-    return await this.prisma.reporte.create({
-      data: createReporteDto,
-    });
-  }
+  async crearConEvidencia(datos: any, urlArchivo?: string | null, nombreArchivo?: string | null) {
+    // IMPORTANTE: En peticiones multipart, todo llega como texto (String).
+    // Debemos convertir los números y booleanos a su tipo real antes de guardarlos.
+    const latitud = parseFloat(datos.latitud);
+    const longitud = parseFloat(datos.longitud);
+    const es_anonimo = datos.es_anonimo === 'true' || datos.es_anonimo === true;
 
-  async findAll() {
-    return await this.prisma.reporte.findMany();
-  }
-
-  async findOne(id: string) {
-    const reporte = await this.prisma.reporte.findUnique({
-      where: { id_reporte: id },
-    });
-
-    if (!reporte) {
-      throw new NotFoundException(`El reporte con ID ${id} no existe`);
-    }
-
-    return reporte;
-  }
-
-  async update(id: string, updateReporteDto: UpdateReporteDto) {
-    return await this.prisma.reporte.update({
-      where: { id_reporte: id },
-      data: updateReporteDto,
-    });
-  }
-
-  async remove(id: string) {
-    return await this.prisma.reporte.delete({
-      where: { id_reporte: id },
+    return this.prisma.reporte.create({
+      data: {
+        id_usuario: datos.id_usuario,
+        motivo: datos.motivo,
+        descripcion: datos.descripcion,
+        tipo: datos.tipo,
+        latitud: latitud,
+        longitud: longitud,
+        estado: datos.estado || 'PENDIENTE',
+        prioridad: datos.prioridad || 'MEDIA',
+        es_anonimo: es_anonimo,
+        
+        // Aquí ocurre la magia de Prisma: Crea la Evidencia conectada a este Reporte automáticamente
+        ...(urlArchivo && nombreArchivo && {
+          evidencias: {
+            create: [
+              {
+                url_archivo: urlArchivo,
+                nombre_archivo: nombreArchivo,
+              },
+            ],
+          },
+        }),
+      },
+      // Le pedimos a Prisma que en su respuesta nos incluya las evidencias creadas
+      include: {
+        evidencias: true, 
+      },
     });
   }
 }
