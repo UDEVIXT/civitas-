@@ -39,7 +39,7 @@ export function EmpleadosDeleteDialog({
   onConfirm,
 }: EmpleadosDeleteDialogProps) {
   const isDeactivate = mode === "deactivate";
-  const motivoError = isDeactivate && !motivo.trim();
+  const motivoError = isDeactivate && motivo.length < 5;
   const title = isDeactivate
     ? "Dar de baja a empleado domestico"
     : "Reincorporar empleado domestico";
