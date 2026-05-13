@@ -66,31 +66,11 @@ export class EmpleadoController {
   create() {
     return { message: 'Empleado creado' };
   }
-<<<<<<< Updated upstream
-  
-=======
->>>>>>> Stashed changes
   @Put(':id')
   @UsePipes(new ValidationPipe())
   async update(@Param('id') id: string, @Body() body: UpdateEmpleadoDto) {
     const requestData: EmpleadoEditRequest = body;
 
-<<<<<<< Updated upstream
-    if (activo === undefined) {
-      throw new BadRequestException('El campo "activo" es requerido');
-    }
-
-    if (activo === false) {
-      if (!motivo || !motivo.trim()) {
-        throw new BadRequestException('El motivo es requerido');
-      }
-      return this.empleadoService.eliminarEmpleado(id, motivo);
-    }
-
-    return this.empleadoService.reactivarEmpleado(id);
-  }
-
-=======
     const accion = requestData.accion || 'edicion';
     const data = requestData.data;
 
@@ -110,7 +90,6 @@ export class EmpleadoController {
 
     return this.empleadoService.actualizarEmpleado(id, body);
   }
->>>>>>> Stashed changes
 
   @Delete(':id')
   @UsePipes(new ValidationPipe())
