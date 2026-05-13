@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Query,
   Controller,
@@ -8,9 +9,18 @@ import {
   Delete,
   Body,
   BadRequestException,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 
+//Services
 import { EmpleadoService } from './empleado.service';
+
+//DTOs
+import { UpdateEmpleadoDto } from './dto/update-empleado.dto';
+
+//types
+import { EmpleadoEditRequest } from './types';
 
 @Controller('empleado')
 export class EmpleadoController {
@@ -56,14 +66,16 @@ export class EmpleadoController {
   create() {
     return { message: 'Empleado creado' };
   }
+<<<<<<< Updated upstream
   
+=======
+>>>>>>> Stashed changes
   @Put(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() body: { activo?: boolean; motivo?: string },
-  ) {
-    const { activo, motivo } = body;
+  @UsePipes(new ValidationPipe())
+  async update(@Param('id') id: string, @Body() body: UpdateEmpleadoDto) {
+    const requestData: EmpleadoEditRequest = body;
 
+<<<<<<< Updated upstream
     if (activo === undefined) {
       throw new BadRequestException('El campo "activo" es requerido');
     }
@@ -78,8 +90,30 @@ export class EmpleadoController {
     return this.empleadoService.reactivarEmpleado(id);
   }
 
+=======
+    const accion = requestData.accion || 'edicion';
+    const data = requestData.data;
+
+    // Escenario A: Solo cambio de estado (Baja/Reactivación)
+    if (accion === 'baja' || accion === 'reactivacion') {
+      return accion == 'baja'
+        ? this.empleadoService.eliminarEmpleado(id, data?.motivo)
+        : this.empleadoService.reactivarEmpleado(id);
+    }
+
+    // Escenario B: Edición completa (HU-1.5.4)
+    if (!data.nombre || !data.horarios || !Array.isArray(data.horarios)) {
+      throw new BadRequestException(
+        'El nombre y los horarios son obligatorios para editar',
+      );
+    }
+
+    return this.empleadoService.actualizarEmpleado(id, body);
+  }
+>>>>>>> Stashed changes
 
   @Delete(':id')
+  @UsePipes(new ValidationPipe())
   remove(@Param('id') id: string) {
     return this.empleadoService.eliminarEmpleado(id);
   }
