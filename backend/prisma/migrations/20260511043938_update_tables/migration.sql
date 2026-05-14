@@ -24,5 +24,3 @@ ADD COLUMN     "prioridad" TEXT DEFAULT 'MEDIA';
 ALTER TABLE "Reporte" DROP COLUMN "estado",
 ADD COLUMN     "estado" "EstadoIncidencia" NOT NULL;
 
--- DropEnum
-DROP TYPE "EstadoReporte";

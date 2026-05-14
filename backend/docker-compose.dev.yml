@@ -9,11 +9,17 @@ services:
       - .:/usr/src/app
     networks:
       - civitas_network
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://civitas:civitas123@postgres:5432/civitas?schema=public
 
   postgres:
     image: postgres:17
     ports:
-      - '5432:5432'
+      - '5454:5432'
     env_file:
       - .env
     volumes:
