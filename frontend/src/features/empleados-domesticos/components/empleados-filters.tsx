@@ -3,6 +3,11 @@ import { Search, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 
 type EmpleadosFiltersProps = {
   search: string;
@@ -83,15 +88,31 @@ export function EmpleadosFilters({
             Inactivos
           </Button>
         }
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="rounded-full"
-        >
-          <SlidersHorizontal className="size-4" />
-          Mas filtros
-        </Button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+            >
+              <SlidersHorizontal className="size-4" />
+              Mas filtros
+            </Button>
+          </PopoverTrigger>
+
+          <PopoverContent className="w-80" align="start">
+            <div className="flex flex-col gap-4">
+              <p className="text-sm font-medium">Filtros adicionales</p>
+              {/* Filtro por empleado*/}
+
+              {/* Limpieza de filtros */}
+              <Button variant="outline" size="sm" className="w-full">
+                Limpiar filtros
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
     </header>
   );
