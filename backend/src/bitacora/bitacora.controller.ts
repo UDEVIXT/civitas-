@@ -42,8 +42,8 @@ export class BitacoraController {
   // GET BITACORA
   // ---------------------------------------------------------
   @Get()
- // @UseGuards(AuthGuard('jwt'), RolesGuard)
- // @Roles('Administrador', 'Guardia', 'Residente')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Administrador', 'Guardia', 'Residente')
   async getBitacora(
     @Query('search') search?: string,
     @Query('tipo') tipo?: string,
@@ -79,8 +79,8 @@ export class BitacoraController {
   // GET ID DETALLE REGISTRO
   // ---------------------------------------------------------
   @Get(':id')
-  //@UseGuards(AuthGuard('jwt'), RolesGuard)
-  //@Roles('Administrador', 'Guardia', 'Residente')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Administrador', 'Guardia', 'Residente')
   async obtenerDetalleRegistro(@Param('id') id: string) {
     const result = await this.bitacoraService.obtenerDetalleRegistro(id);
     return {
@@ -89,12 +89,14 @@ export class BitacoraController {
     };
   }
 
+  
+
   // ---------------------------------------------------------
   // REGISTRAR SALIDA A -> (Todos) POR ROL (GUARDIA)
   // ---------------------------------------------------------
   @Patch('registrar-salida')
-  //@UseGuards(AuthGuard('jwt'), RolesGuard)
-  //@Roles('Guardia')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Guardia')
   async registrarSalida(
     @Body()
     dto: {
