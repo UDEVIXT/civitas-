@@ -7,7 +7,7 @@ import {
   Res,
   Req,
 } from '@nestjs/common';
-
+import { Throttle } from '@nestjs/throttler';
 import type { Response, Request } from 'express';
 import { AuthService } from './auth.service';
 import { AccesoLoginDto } from './dto/acceso-login.dto';
@@ -16,6 +16,7 @@ import { AccesoLoginDto } from './dto/acceso-login.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(

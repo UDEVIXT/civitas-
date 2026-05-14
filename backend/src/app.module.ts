@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -10,7 +10,7 @@ import { EvidenciaReporteModule } from './evidencia-reporte/evidencia-incidencia
 import { EmpleadoModule } from './empleado/empleado.module';
 import { AuthModule } from './auth/auth.module';
 import { IncidenciasModule } from './incidencias/incidencias.module';
-
+import { APP_GUARD } from '@nestjs/core/constants';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -23,8 +23,21 @@ import { IncidenciasModule } from './incidencias/incidencias.module';
     EmpleadoModule,
     AuthModule,
     IncidenciasModule,
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 5,
+      },
+    ]),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

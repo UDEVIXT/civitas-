@@ -1,4 +1,4 @@
-import { PrismaClient, Rol } from '@prisma/client';
+import { PrismaClient, Rol, EstadoUsuario } from '@prisma/client';
 import { faker } from '@faker-js/faker';
 import * as bcrypt from 'bcrypt';
 
@@ -42,6 +42,8 @@ export async function seedUsuarios(prisma: PrismaClient) {
           correo: perfil.correo,
           password: hashedDefaultPassword,
           rol: perfil.rol,
+          estado: EstadoUsuario.ACTIVO,
+          correo_verificado: faker.datatype.boolean(),
           id_persona: persona.id_persona,
         },
       });
@@ -82,6 +84,8 @@ export async function seedUsuarios(prisma: PrismaClient) {
         correo: email,
         password: hashedDefaultPassword,
         rol: rol,
+        estado: EstadoUsuario.ACTIVO,
+        correo_verificado: faker.datatype.boolean(),
         id_persona: persona.id_persona,
       },
     });
@@ -114,6 +118,8 @@ export async function seedUsuarios(prisma: PrismaClient) {
         correo: email,
         password: hashedDefaultPassword,
         rol: Rol.Guardia,
+        estado: EstadoUsuario.ACTIVO,
+        correo_verificado: faker.datatype.boolean(),
         id_persona: persona.id_persona,
       },
     });
@@ -139,6 +145,8 @@ export async function seedUsuarios(prisma: PrismaClient) {
         correo: email,
         password: hashedDefaultPassword,
         rol: Rol.Residente,
+        estado: EstadoUsuario.ACTIVO,
+        correo_verificado: faker.datatype.boolean(),
         id_persona: persona.id_persona,
       },
     });
