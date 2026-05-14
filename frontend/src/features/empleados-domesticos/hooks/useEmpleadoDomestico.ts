@@ -1,136 +1,213 @@
-"use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
-import { useState, useCallback, useEffect } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
+import { useToast } from "@/hooks/use-toast";
 import {
   obtenerEmpleadosDomesticos,
-  eliminarEmpleadoDomestico,
   activarEmpleadoDomestico,
+  eliminarEmpleadoDomestico,
 } from "@/features/empleados-domesticos/api/empleados";
-import type {
+import {
   EmpleadoDomestico,
+  EmpleadoDomesticoResponse,
   FiltroEmpleado,
 } from "@/features/empleados-domesticos/types";
 
-/**
- * Hook para gestionar la lógica de empleados domésticos.
- * Centraliza el fetch, los filtros, la paginación y el estado del modal.
- */
-export function useEmpleadoDomesticos(initialData: EmpleadoDomestico[] = []) {
-  const [empleados, setEmpleados] = useState<EmpleadoDomestico[]>(
-    initialData || [],
-  );
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("Todos");
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+export function useEmpleadoDomesticos() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-  // Estados del modal
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Filtros locales
+  const [search, setSearch] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<boolean | undefined>(
+    undefined,
+  ); //por defecto empleados activos
+  const [residenciaFilter, setResidenciaFilter] = useState<string>("");
+  const [viviendaFilter, setViviendaFilter] = useState<string>("");
+  const [page, setPage] = useState<number>(1);
+
+  const debouncedSearch = useDebounce(search, 300);
+
+  // UI State para el modal
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isHorarioModalOpen, setIsHorarioModalOpen] = useState(false);
   const [selectedEmpleado, setSelectedEmpleado] =
     useState<EmpleadoDomestico | null>(null);
   const [motivo, setMotivo] = useState("");
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const fetchEmpleados = useCallback(async () => {
-    setLoading(true);
-    console.log("HOOK: Iniciando fetch...", { search, statusFilter, page });
-    try {
-      const filtro: FiltroEmpleado | undefined =
-        statusFilter === "Activos"
-          ? { filtro: "isActive", valor: true }
-          : undefined;
+  const [error, setError] = useState<string | null>(null);
 
-      const response = await obtenerEmpleadosDomesticos(filtro, search, page);
-      console.log("HOOK: Respuesta recibida", response);
+  // 1. QUERY: Obtener datos
+  const {
+    data: response,
+    isLoading: loading,
+    isPlaceholderData,
+  } = useQuery<EmpleadoDomesticoResponse>({
+    queryKey: [
+      "empleados-domesticos",
+      debouncedSearch,
+      statusFilter,
+      residenciaFilter,
+      viviendaFilter,
+      page,
+    ],
+    queryFn: () => {
+      // Mapeo dinámico de filtros para la API
+      const filtros: FiltroEmpleado = {};
+      if (statusFilter !== undefined) filtros.isActive = statusFilter;
+      if (residenciaFilter !== undefined)
+        filtros.byResidenteId = residenciaFilter;
+      if (viviendaFilter !== undefined) filtros.byViviendaId = viviendaFilter;
 
-      if (response && response.success) {
-        const data = response.data || [];
-        console.log(`HOOK: Actualizando estado con ${data.length} empleados`);
-        setEmpleados([...data]); // Creamos una nueva referencia de array
+      return obtenerEmpleadosDomesticos(filtros, debouncedSearch, page);
+    },
+    placeholderData: (prev) => prev,
+  });
 
-        if (response.meta) {
-          setTotalPages(
-            response.meta.total_pages || response.meta.total_pages || 1,
-          );
-        }
+  // 2. MUTATION: Ejecutar acciones (Activar/Eliminar)
+  const { mutate: executeAction, isPending: isDeleting } = useMutation({
+    mutationFn: ({
+      id,
+      motivo,
+      isReactivating,
+    }: {
+      id: string;
+      motivo: string;
+      isReactivating: boolean;
+    }) =>
+      isReactivating
+        ? activarEmpleadoDomestico(id, motivo)
+        : eliminarEmpleadoDomestico(id, motivo),
+    onSuccess: (res, variables) => {
+      if (res.success) {
+        setError(null);
+        queryClient.invalidateQueries({ queryKey: ["empleados-domesticos"] });
+        setIsEditModalOpen(false);
+        toast({
+          title: variables.isReactivating
+            ? "Empleado activado"
+            : "Empleado dado de baja",
+          description: variables.isReactivating
+            ? "El empleado ha sido activado correctamente"
+            : "El empleado ha sido dado de baja correctamente",
+        });
       } else {
-        console.warn("HOOK: La API falló o no devolvió éxito");
-        setEmpleados([]);
-        setTotalPages(1);
+        const errorMsg = res.message || "Error al procesar la solicitud";
+        setError(errorMsg);
+        toast({
+          title: "Error",
+          description: errorMsg,
+          variant: "destructive",
+        });
       }
-    } catch (error) {
-      console.error("HOOK ERROR:", error);
-      setEmpleados([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [search, statusFilter, page]);
-
-  useEffect(() => {
-    fetchEmpleados();
-  }, [fetchEmpleados]);
+    },
+    onError: (err: any) => {
+      const errorMsg =
+        err.response?.data?.message || "Error de red o del servidor";
+      setError(errorMsg);
+      toast({
+        title: "Error",
+        description: errorMsg,
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleActionClick = (empleado: EmpleadoDomestico) => {
     setSelectedEmpleado(empleado);
     setMotivo("");
-    setDeleteError(null);
-    setIsModalOpen(true);
+    setIsEditModalOpen(true);
   };
 
-  const confirmAction = async () => {
-    if (!selectedEmpleado) return;
-    setIsDeleting(true);
-    setDeleteError(null);
-    try {
-      const isReactivating = selectedEmpleado.servicio?.activo === false;
-      const res = isReactivating
-        ? await activarEmpleadoDomestico(selectedEmpleado.id_visitante, motivo)
-        : await eliminarEmpleadoDomestico(
-            selectedEmpleado.id_visitante,
-            motivo,
-          );
+  const handleVerHorario = (empleado: EmpleadoDomestico) => {
+    setSelectedEmpleado(empleado);
+    setIsHorarioModalOpen(true);
+  };
 
-      if (res.success) {
-        setIsModalOpen(false);
-        fetchEmpleados();
-      } else {
-        setDeleteError(res.message || "Error al procesar la solicitud");
-      }
-    } catch (e) {
-      setDeleteError("Error inesperado en la operación");
-    } finally {
-      setIsDeleting(false);
-    }
+  const confirmAction = () => {
+    if (!selectedEmpleado) return;
+    executeAction({
+      id: selectedEmpleado.id_visitante,
+      motivo,
+      isReactivating: selectedEmpleado.servicio?.activo === false,
+    });
   };
 
   return {
-    empleados,
-    loading,
+    empleados: response?.data || [],
+    loading: loading || isPlaceholderData,
     search,
-    setSearch: (val: string) => {
-      setSearch(val);
+    setSearch: (v: string) => {
+      setSearch(v);
       setPage(1);
     },
     statusFilter,
-    setStatusFilter: (val: string) => {
-      setStatusFilter(val);
+    setStatusFilter: (v: boolean | undefined) => {
+      setStatusFilter(v);
+      setPage(1);
+    },
+    residenciaFilter,
+    setResidenciaFilter: (v: string) => {
+      setResidenciaFilter(v);
+      setPage(1);
+    },
+    viviendaFilter,
+    setViviendaFilter: (v: string) => {
+      setViviendaFilter(v);
       setPage(1);
     },
     page,
     setPage,
-    totalPages,
-    modal: {
-      isOpen: isModalOpen,
-      setIsOpen: setIsModalOpen,
+    totalPages: response?.meta?.total_pages || 1,
+    modalEdit: {
+      isOpen: isEditModalOpen,
+      setIsEditModalOpen,
       selectedEmpleado,
       motivo,
       setMotivo,
       isDeleting,
-      deleteError,
+      deleteError: error,
       handleActionClick,
       confirmAction,
     },
+    modalHorario: {
+      nombreEmpleado: selectedEmpleado?.nombre || "",
+      horarios: selectedEmpleado?.servicio.horarios || [],
+      isOpen: isHorarioModalOpen,
+      setIsHorarioModalOpen,
+      selectedEmpleado,
+      handleVerHorario,
+    },
   };
+}
+
+// Estos hooks individuales son útiles si quieres usarlos por separado en otros componentes
+export function useActivarEmpleadoDomestico() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, motivo }: { id: string; motivo?: string }) => {
+      return activarEmpleadoDomestico(id, motivo);
+    },
+    onSuccess: (res) => {
+      if (res.success) {
+        queryClient.invalidateQueries({ queryKey: ["empleados-domesticos"] });
+      }
+    },
+  });
+}
+
+export function useEliminarEmpleadoDomestico() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, motivo }: { id: string; motivo?: string }) => {
+      return eliminarEmpleadoDomestico(id, motivo);
+    },
+    onSuccess: (res) => {
+      if (res.success) {
+        queryClient.invalidateQueries({ queryKey: ["empleados-domesticos"] });
+      }
+    },
+  });
 }

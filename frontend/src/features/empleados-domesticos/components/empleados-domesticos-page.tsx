@@ -1,18 +1,15 @@
 "use client";
-import { useEmpleadoDomesticos } from "../hooks/useEmpleadoDomestico";
-import { EmpleadosTable } from "./empleados-table";
-import { EmpleadosFilters } from "./empleados-filters";
-import { EmpleadosPagination } from "./empleados-pagination";
-import { EmpleadosDeleteDialog } from "./empleados-delete-dialog";
-import type { EmpleadoDomestico } from "../types";
+import { useEmpleadoDomesticos } from "@/features/empleados-domesticos/hooks/useEmpleadoDomestico";
+import { EmpleadosTable } from "@/features/empleados-domesticos/components/empleados-table";
+import { EmpleadosFilters } from "@/features/empleados-domesticos/components/empleados-filters";
+import { EmpleadosPagination } from "@/features/empleados-domesticos/components/empleados-pagination";
+import { EmpleadosDeleteDialog } from "@/features/empleados-domesticos/components/empleados-delete-dialog";
+import { EmpleadosHorarioDialog } from "./horarios-empleado-domestico";
 
-const statusOptions = ["Todos", "Activos"] as const;
+import useResidente from "@/features/empleados-domesticos/hooks/useResidente";
+import useVivienda from "@/features/empleados-domesticos/hooks/useVivienda";
 
-export function EmpleadosDomesticosPage({
-  initialData,
-}: {
-  initialData: EmpleadoDomestico[];
-}) {
+export function EmpleadosDomesticosPage() {
   const {
     empleados,
     loading,
@@ -23,8 +20,16 @@ export function EmpleadosDomesticosPage({
     page,
     setPage,
     totalPages,
-    modal,
-  } = useEmpleadoDomesticos(initialData);
+    modalEdit,
+    modalHorario,
+    setResidenciaFilter,
+    setViviendaFilter,
+    residenciaFilter,
+    viviendaFilter,
+  } = useEmpleadoDomesticos();
+
+  const { data: residentes = [] } = useResidente();
+  const { data: viviendas = [] } = useVivienda();
 
   return (
     <div className="min-h-screen bg-amber-50/30 text-foreground">
@@ -32,22 +37,22 @@ export function EmpleadosDomesticosPage({
         <EmpleadosFilters
           search={search}
           onSearchChange={setSearch}
-          statusOptions={statusOptions}
           statusFilter={statusFilter}
           onStatusChange={setStatusFilter}
+          residentes={residentes}
+          residenciaId={residenciaFilter}
+          onResidenciaChange={setResidenciaFilter}
+          viviendas={viviendas}
+          viviendaId={viviendaFilter}
+          onViviendaChange={setViviendaFilter}
         />
 
         <section className="mt-6 rounded-2xl border border-border bg-white shadow-sm">
-          <div className="px-4 py-3">
-            <p className="text-xs font-semibold uppercase text-muted-foreground">
-              Nombre
-            </p>
-          </div>
-
           <EmpleadosTable
             items={empleados}
             isLoading={loading}
-            onActionClick={modal.handleActionClick}
+            onEdit={modalEdit.handleActionClick}
+            onVerHorario={modalHorario.handleVerHorario}
           />
 
           <div className="flex flex-col items-center justify-between gap-3 border-t border-border px-4 py-3 sm:flex-row sm:justify-end">
@@ -60,20 +65,27 @@ export function EmpleadosDomesticosPage({
           </div>
         </section>
 
+        <EmpleadosHorarioDialog
+          open={modalHorario.isOpen}
+          onOpenChange={modalHorario.setIsHorarioModalOpen}
+          nombre={modalHorario.nombreEmpleado}
+          horarios={modalHorario.horarios}
+        />
+
         <EmpleadosDeleteDialog
-          open={modal.isOpen}
-          onOpenChange={modal.setIsOpen}
-          selectedEmpleado={modal.selectedEmpleado}
+          open={modalEdit.isOpen}
+          onOpenChange={modalEdit.setIsEditModalOpen}
+          selectedEmpleado={modalEdit.selectedEmpleado}
           mode={
-            modal.selectedEmpleado?.servicio.activo === true
+            modalEdit.selectedEmpleado?.servicio.activo === true
               ? "deactivate"
               : "reactivate"
           }
-          motivo={modal.motivo}
-          onMotivoChange={modal.setMotivo}
-          isDeleting={modal.isDeleting}
-          deleteError={modal.deleteError}
-          onConfirm={modal.confirmAction}
+          motivo={modalEdit.motivo}
+          onMotivoChange={modalEdit.setMotivo}
+          isDeleting={modalEdit.isDeleting}
+          deleteError={modalEdit.deleteError}
+          onConfirm={modalEdit.confirmAction}
         />
       </main>
     </div>

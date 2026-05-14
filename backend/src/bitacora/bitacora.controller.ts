@@ -12,13 +12,13 @@ import {
 } from '@nestjs/common';
 
 import { BitacoraService } from './bitacora.service';
-import { CreateBitacoraDto } from './dto/create-bitacora.dto';
 
 import { Subject, Observable } from 'rxjs';
 import { Roles } from 'src/auth/decorators/roles/roles.decorator';
 import { map } from 'rxjs/operators';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
+import { AuthGuard } from '@nestjs/passport/dist/auth.guard';
 
 const bitacoraUpdates$ = new Subject<any>();
 
@@ -41,9 +41,9 @@ export class BitacoraController {
   // ---------------------------------------------------------
   // GET BITACORA
   // ---------------------------------------------------------
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Guardia', 'Residente', 'Administrador')
   @Get()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Administrador', 'Guardia', 'Residente')
   async getBitacora(
     @Query('search') search?: string,
     @Query('tipo') tipo?: string,
@@ -78,9 +78,9 @@ export class BitacoraController {
   // ---------------------------------------------------------
   // GET ID DETALLE REGISTRO
   // ---------------------------------------------------------
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Guardia', 'Residente', 'Administrador')
   @Get(':id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Administrador', 'Guardia', 'Residente')
   async obtenerDetalleRegistro(@Param('id') id: string) {
     const result = await this.bitacoraService.obtenerDetalleRegistro(id);
     return {
@@ -89,12 +89,14 @@ export class BitacoraController {
     };
   }
 
+  
+
   // ---------------------------------------------------------
   // REGISTRAR SALIDA A -> (Todos) POR ROL (GUARDIA)
   // ---------------------------------------------------------
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Guardia')
   @Patch('registrar-salida')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Guardia')
   async registrarSalida(
     @Body()
     dto: {

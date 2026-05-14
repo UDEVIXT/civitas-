@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Query,
   Controller,
@@ -8,9 +9,18 @@ import {
   Delete,
   Body,
   BadRequestException,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 
+//Services
 import { EmpleadoService } from './empleado.service';
+
+//DTOs
+import { UpdateEmpleadoDto } from './dto/update-empleado.dto';
+
+//types
+import { EmpleadoEditRequest } from './types';
 
 @Controller('empleado')
 export class EmpleadoController {
@@ -32,20 +42,16 @@ export class EmpleadoController {
         : isActiveValue === 'false'
           ? false
           : undefined;
-    const byResidenteIdNum = byResidenteId
-      ? parseInt(byResidenteId, 10)
-      : undefined;
-    const byViviendaIdNum = byViviendaId
-      ? parseInt(byViviendaId, 10)
-      : undefined;
+    const byResidenteIdValue = byResidenteId || undefined;
+    const byViviendaIdValue = byViviendaId || undefined;
 
     return this.empleadoService.obtenerEmpleados({
       search,
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
       isActive: isActiveBool,
-      byResidenteId: byResidenteIdNum,
-      byViviendaId: byViviendaIdNum,
+      byResidenteId: byResidenteIdValue,
+      byViviendaId: byViviendaIdValue,
     });
   }
   @Get(':id')
@@ -56,41 +62,19 @@ export class EmpleadoController {
   create() {
     return { message: 'Empleado creado' };
   }
-  /*
   @Put(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() body: { activo?: boolean; motivo?: string },
-  ) {
-    const { activo, motivo } = body;
+  @UsePipes(new ValidationPipe())
+  async update(@Param('id') id: string, @Body() body: UpdateEmpleadoDto) {
+    const requestData: EmpleadoEditRequest = body;
 
-    if (activo === undefined) {
-      throw new BadRequestException('El campo "activo" es requerido');
-    }
-
-    if (activo === false) {
-      if (!motivo || !motivo.trim()) {
-        throw new BadRequestException('El motivo es requerido');
-      }
-      return this.empleadoService.eliminarEmpleado(id, motivo);
-    }
-
-    return this.empleadoService.reactivarEmpleado(id);
-  }
-*/
-
-  @Put(':id')
-  async update(@Param('id') id: string, @Body() body: any) {
-    const { data } = body;
+    const accion = requestData.accion || 'edicion';
+    const data = requestData.data;
 
     // Escenario A: Solo cambio de estado (Baja/Reactivación)
-    if (data.activo !== undefined && !data.nombre) {
-      if (data.activo === false) {
-        if (!data.motivo?.trim())
-          throw new BadRequestException('El motivo es requerido');
-        return this.empleadoService.eliminarEmpleado(id, data.motivo);
-      }
-      return this.empleadoService.reactivarEmpleado(id);
+    if (accion === 'baja' || accion === 'reactivacion') {
+      return accion == 'baja'
+        ? this.empleadoService.eliminarEmpleado(id, data?.motivo)
+        : this.empleadoService.reactivarEmpleado(id);
     }
 
     // Escenario B: Edición completa (HU-1.5.4)
@@ -104,6 +88,7 @@ export class EmpleadoController {
   }
 
   @Delete(':id')
+  @UsePipes(new ValidationPipe())
   remove(@Param('id') id: string) {
     return this.empleadoService.eliminarEmpleado(id);
   }

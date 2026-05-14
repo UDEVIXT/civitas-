@@ -1,14 +1,14 @@
 export type EmpleadoEstado = "Activo" | "Inactivo";
-
-export type OpcionFiltroEmpleado =
-  | undefined
-  | "isActive"
-  | "byResidenteId"
-  | "byViviendaId";
-
 export interface FiltroEmpleado {
-  filtro: OpcionFiltroEmpleado;
-  valor: string | number | boolean;
+  isActive?: boolean | undefined;
+  byResidenteId?: string | undefined;
+  byViviendaId?: string | undefined;
+}
+
+export interface HorarioServicio {
+  dia_semana: string;
+  hora_inicio: Date;
+  hora_fin: Date;
 }
 
 export interface EmpleadoDomestico {
@@ -18,7 +18,8 @@ export interface EmpleadoDomestico {
   url_imagen?: string;
   servicio: {
     activo: boolean;
-    horario_texto: string;
+    fecha_registro: Date;
+    horarios: HorarioServicio[];
     tipo_servicio: {
       nombre: string;
       categoria: string;
@@ -41,4 +42,34 @@ export interface EmpleadoDomesticoResponse {
   success: boolean;
   data: EmpleadoDomestico[];
   meta: EmpleadoDomesticoMetadata;
+  message?: string;
+  error?: string;
+  statusCode?: number;
+}
+
+//Interfaces de APIs de residente y vivienda para filtros
+
+export interface ResidenteData {
+  id_residente: string;
+  usuario: {
+    id_usuario: string;
+    persona: {
+      nombre: string;
+      url_imagen?: string;
+    };
+  };
+}
+
+export interface ResidenteResponse {
+  success: boolean;
+  data: ResidenteData[];
+}
+
+export interface ViviendaData {
+  id_vivienda: string;
+  numero_vivienda: string;
+}
+export interface ViviendaResponse {
+  success: boolean;
+  data: ViviendaData[];
 }

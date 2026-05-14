@@ -33,6 +33,11 @@ enum EstatusAcceso {
   Inactivo
 }
 
+enum EstadoUsuario {
+  ACTIVO
+  SUSPENDIDO
+}
+
 enum TipoReporte {
   QUEJA
   SUGERENCIA
@@ -75,6 +80,9 @@ model Usuario {
   rol             Rol
   id_persona      String         @unique
   password        String
+  estado          EstadoUsuario  @default(ACTIVO)
+  correo_verificado Boolean      @default(false)
+  token_verificacion String?     @unique
   accesos         Acceso[]
   administradores Administrador?
   guardias        Guardia?
@@ -123,7 +131,7 @@ model Acceso {
 
 model Bitacora {
   id_bitacora        String    @id @default(uuid())
-  id_acceso          String  
+  id_acceso          String
   id_guardia         String
   fecha_hora_entrada DateTime  @default(now())
   fecha_hora_salida  DateTime?
@@ -143,6 +151,7 @@ model Servicio {
   rfc              String?                  @unique
   activo           Boolean                  @default(true)
   id_tipo_servicio String?
+  fecha_registro   DateTime @default(now())
   horarios         HorarioAccesoServicios[]
   tipo_servicio    TipoServicio?            @relation(fields: [id_tipo_servicio], references: [id_tipo_servicio])
   visitantes       Visitante[]
@@ -191,10 +200,10 @@ model Incidencia {
   titulo           String
   descripcion      String
   estado           EstadoIncidencia @default(PENDIENTE)
-  prioridad        String?          @default("MEDIA") 
-  es_anonimo       Boolean          @default(false)   
+  prioridad        String?          @default("MEDIA")
+  es_anonimo       Boolean          @default(false)
   fecha_creacion   DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt        
+  updatedAt        DateTime         @updatedAt
 
   id_residente     String
   residente        Residente        @relation(fields: [id_residente], references: [id_residente])
@@ -203,11 +212,11 @@ model Incidencia {
 
 model HistorialIncidencia {
   id_historial     String           @id @default(uuid())
-  estado_anterior  EstadoIncidencia 
-  nuevo_estado     EstadoIncidencia 
+  estado_anterior  EstadoIncidencia
+  nuevo_estado     EstadoIncidencia
   comentario       String?
   fecha            DateTime         @default(now())
-  actualizado_por  String?          @default("Sistema") 
+  actualizado_por  String?          @default("Sistema")
 
   id_incidencia    String
   incidencia       Incidencia       @relation(fields: [id_incidencia], references: [id_incidencia])

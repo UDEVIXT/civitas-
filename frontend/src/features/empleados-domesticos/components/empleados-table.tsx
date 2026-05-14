@@ -1,4 +1,6 @@
+import { Clock } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,16 +23,16 @@ function getInitials(name: string) {
 type EmpleadosTableProps = {
   items: EmpleadoDomestico[];
   isLoading: boolean;
-  onActionClick: (empleado: EmpleadoDomestico) => void;
+  onEdit: (empleado: EmpleadoDomestico) => void;
+  onVerHorario: (empleado: EmpleadoDomestico) => void;
 };
 
 export function EmpleadosTable({
   items = [],
   isLoading,
-  onActionClick,
+  onEdit,
+  onVerHorario,
 }: EmpleadosTableProps) {
-  console.log("TABLE DEBUG - Items:", items);
-
   if (isLoading && items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
@@ -45,11 +47,13 @@ export function EmpleadosTable({
   return (
     <Table>
       <TableHeader>
-        <TableRow className="bg-muted/30">
-          <TableHead className="w-90">Nombre</TableHead>
+        <TableRow className="bg-muted">
+          <TableHead className="w-60">Nombre</TableHead>
+          <TableHead className="w-20">Tipo</TableHead>
           <TableHead>Estado</TableHead>
           <TableHead>Destino</TableHead>
           <TableHead>Horario Autorizado</TableHead>
+          <TableHead className="w-30">Fecha de Registro</TableHead>
           <TableHead className="text-right">&nbsp;</TableHead>
         </TableRow>
       </TableHeader>
@@ -78,6 +82,10 @@ export function EmpleadosTable({
                     </div>
                   </div>
                 </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {empleado.servicio?.tipo_servicio?.nombre ||
+                    "Tipo no disponible"}
+                </TableCell>
                 <TableCell>
                   <Badge
                     variant="outline"
@@ -94,8 +102,23 @@ export function EmpleadosTable({
                   {empleado.residente?.vivienda?.numero_vivienda || "N/A"}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {empleado.servicio?.horario_texto || "Sin horario"}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onVerHorario(empleado)}
+                  >
+                    <Clock className="size-4" />
+                    <span className="ml-2">Ver horario</span>
+                  </Button>
                 </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {empleado.servicio?.fecha_registro
+                    ? new Date(
+                        empleado.servicio.fecha_registro,
+                      ).toLocaleDateString()
+                    : "Fecha no disponible"}
+                </TableCell>
+
                 <TableCell className="text-right">
                   <Button
                     type="button"
@@ -106,7 +129,7 @@ export function EmpleadosTable({
                         ? "h-8 rounded-lg border-amber-200 bg-white text-amber-900 hover:bg-amber-50"
                         : "h-8 rounded-lg bg-amber-400 text-amber-950 hover:bg-amber-500 border-none"
                     }
-                    onClick={() => onActionClick(empleado)}
+                    onClick={() => onEdit(empleado)}
                   >
                     {!empleado.servicio?.activo
                       ? "Reincorporar"

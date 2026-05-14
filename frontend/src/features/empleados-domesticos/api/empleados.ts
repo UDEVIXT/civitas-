@@ -6,16 +6,15 @@ import type {
 } from "@/features/empleados-domesticos/types";
 
 export const obtenerEmpleadosDomesticos = async (
-  filtro?: FiltroEmpleado,
+  filtros?: FiltroEmpleado,
   search?: string,
   page?: number,
 ) => {
-  const filters = filtro ? { filtro: filtro.filtro, valor: filtro.valor } : {};
   const response = await apiClient.get<EmpleadoDomesticoResponse>("/empleado", {
     params: {
       page: page || 1,
       search: search ? search.trim() : undefined,
-      ...filters,
+      ...filtros,
     },
   });
   console.log("Response from API:", response.data);
@@ -25,6 +24,7 @@ export const obtenerEmpleadosDomesticos = async (
 export const activarEmpleadoDomestico = async (id: string, motivo?: string) => {
   try {
     await apiClient.put(`/empleado/${id}`, {
+      accion: "reactivacion",
       data: {
         motivo: motivo,
         activo: true,
@@ -48,6 +48,7 @@ export const eliminarEmpleadoDomestico = async (
 ) => {
   try {
     await apiClient.put(`/empleado/${id}`, {
+      accion: "baja",
       data: {
         motivo: motivo,
         activo: false,

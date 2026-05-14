@@ -12,126 +12,14 @@ import { PrismaService } from '../prisma/prisma.service';
 export class EmpleadoService {
   constructor(private prisma: PrismaService) {}
 
-  private readonly dayOrder = [
-    'LUNES',
-    'MARTES',
-    'MIERCOLES',
-    'JUEVES',
-    'VIERNES',
-    'SABADO',
-    'DOMINGO',
-  ];
-
-  private readonly dayLabel: Record<string, string> = {
-    LUNES: 'Lun',
-    MARTES: 'Mar',
-    MIERCOLES: 'Mie',
-    JUEVES: 'Jue',
-    VIERNES: 'Vie',
-    SABADO: 'Sab',
-    DOMINGO: 'Dom',
-  };
-
-  private parseTime(value: Date | string) {
-    if (value instanceof Date) {
-      return { hours: value.getUTCHours(), minutes: value.getUTCMinutes() };
-    }
-
-    if (value.includes('T')) {
-      const date = new Date(value);
-      return { hours: date.getUTCHours(), minutes: date.getUTCMinutes() };
-    }
-
-    const [hours, minutes] = value.split(':');
-    return { hours: Number(hours), minutes: Number(minutes) };
-  }
-
-  private formatTime(value: Date | string) {
-    const { hours, minutes } = this.parseTime(value);
-    const period = hours >= 12 ? 'pm' : 'am';
-    const hours12 = hours % 12 || 12;
-    if (minutes === 0) {
-      return `${hours12}${period}`;
-    }
-
-    const padded = String(minutes).padStart(2, '0');
-    return `${hours12}:${padded}${period}`;
-  }
-
-  private buildHorarioTexto(
-    horarios: Array<{
-      dia_semana: string;
-      hora_inicio: Date | string;
-      hora_fin: Date | string;
-    }>,
-  ) {
-    if (!horarios.length) {
-      return '';
-    }
-    const byDay = new Map<string, typeof horarios>();
-    for (const horario of horarios) {
-      const current = byDay.get(horario.dia_semana) ?? [];
-      current.push(horario);
-      byDay.set(horario.dia_semana, current);
-    }
-
-    const orderedDays = this.dayOrder.filter((day) => byDay.has(day));
-    const firstDay = orderedDays[0];
-    const lastDay = orderedDays[orderedDays.length - 1];
-
-    const parts: string[] = [];
-
-    const buildRangeForDay = (day: string) => {
-      const dayHorarios = byDay.get(day) ?? [];
-      if (!dayHorarios.length) {
-        return null;
-      }
-
-      const toMinutes = (value: Date | string) => {
-        const { hours, minutes } = this.parseTime(value);
-        return hours * 60 + minutes;
-      };
-
-      const sortedByStart = dayHorarios
-        .slice()
-        .sort((a, b) => toMinutes(a.hora_inicio) - toMinutes(b.hora_inicio));
-      const sortedByEnd = dayHorarios
-        .slice()
-        .sort((a, b) => toMinutes(a.hora_fin) - toMinutes(b.hora_fin));
-
-      const start = sortedByStart[0];
-      const end = sortedByEnd[sortedByEnd.length - 1];
-
-      return `${this.dayLabel[day] ?? day}: ${this.formatTime(
-        start.hora_inicio,
-      )} - ${this.formatTime(end.hora_fin)}`;
-    };
-
-    if (firstDay) {
-      const firstText = buildRangeForDay(firstDay);
-      if (firstText) {
-        parts.push(firstText);
-      }
-    }
-
-    if (lastDay && lastDay !== firstDay) {
-      const lastText = buildRangeForDay(lastDay);
-      if (lastText) {
-        parts.push(lastText);
-      }
-    }
-
-    return parts.join(' | ');
-  }
-
   //HU-1.5.6: Administrador puede ver empleados domesticos dentro del residencial
   async obtenerEmpleados(filters: {
     search?: string;
     page: number;
     limit?: number;
     isActive?: boolean | undefined;
-    byResidenteId?: number;
-    byViviendaId?: number;
+    byResidenteId?: string;
+    byViviendaId?: string;
   }) {
     const { search, page, limit, isActive, byResidenteId, byViviendaId } =
       filters;
@@ -176,6 +64,7 @@ export class EmpleadoService {
           servicio: {
             select: {
               activo: true,
+              fecha_registro: true,
               horarios: {
                 where: {
                   activo: true,
@@ -210,24 +99,6 @@ export class EmpleadoService {
       this.prisma.visitante.count({ where }),
     ]);
 
-    const dataWithHorario = data.map((item) => {
-      if (!item.servicio) {
-        return item;
-      }
-
-      const horario_texto = this.buildHorarioTexto(
-        item.servicio.horarios ?? [],
-      );
-
-      return {
-        ...item,
-        servicio: {
-          ...item.servicio,
-          horario_texto,
-        },
-      };
-    });
-
     return {
       success: true,
       meta: {
@@ -236,7 +107,7 @@ export class EmpleadoService {
         limit,
         total_pages: limit ? Math.ceil(total / limit) : 1,
       },
-      data: dataWithHorario,
+      data,
     };
   }
 
@@ -310,7 +181,7 @@ export class EmpleadoService {
           },
         });
 
-        // 3. Si tiene un servicio, actualizamos el tipo y los horarios
+        /* 3. Si tiene un servicio, actualizamos el tipo y los horarios
         if (visitante.id_servicio) {
           await tx.servicio.update({
             where: { id_servicio: visitante.id_servicio },
@@ -329,7 +200,7 @@ export class EmpleadoService {
               },
             },
           });
-        }
+        }*/
 
         // 4. Actualizar bitácora en la tabla Acceso (CA007/008)
         await tx.acceso.updateMany({

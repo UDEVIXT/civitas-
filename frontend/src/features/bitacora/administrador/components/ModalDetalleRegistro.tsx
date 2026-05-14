@@ -29,6 +29,8 @@ import {
   ShieldCheck,
   FileText,
   Camera,
+  ListCheck,
+  NotebookPen,
 } from "lucide-react";
 
 import { ReactQRCode } from "@lglab/react-qr-code";
@@ -72,22 +74,26 @@ export function ModalDetalleRegistro({
   const getEstadoColor = (estado: string) => {
     const colors: Record<string, string> = {
       entrada: "bg-green-100 text-green-800",
+      dentro: "bg-green-100 text-green-800",
       salida: "bg-red-100 text-red-800",
+      fuera: "bg-red-100 text-red-800",
+      excedido: "bg-yellow-100 text-yellow-800",
     };
 
     return colors[estado] || "bg-gray-100 text-gray-800";
   };
 
   const getMetodoAccesoIcon = (metodo: string) => {
-    switch (metodo) {
-      case "QR":
+    const normalized = (metodo || "").trim().toLowerCase();
+    switch (normalized) {
+      case "qr":
         return <QrCode className="h-5 w-5" />;
 
       case "lista":
-        return <User className="h-5 w-5" />;
+        return <ListCheck className="h-5 w-5" />;
 
       case "manual":
-        return <FileText className="h-5 w-5" />;
+        return <NotebookPen className="h-5 w-5" />;
 
       default:
         return <User className="h-5 w-5" />;
@@ -138,7 +144,13 @@ export function ModalDetalleRegistro({
     return null;
   }
 
-  const registro = detalle.data;
+  // Extendemos el tipo localmente para evitar errores de TypeScript
+  const registro = detalle.data as typeof detalle.data & {
+    empresa?: string;
+    servicio_nombre?: string;
+    placas?: string;
+    motivo?: string;
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -220,7 +232,49 @@ export function ModalDetalleRegistro({
                     {registro.residente_asociado?.nombre || "N/A"}
                   </span>
                 </div>
+                {registro.residente_asociado?.avatar_url && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="font-medium">Avatar residente:</span>
+                    <Avatar className="w-8 h-8">
+                      <img
+                        src={registro.residente_asociado.avatar_url}
+                        alt={`Avatar de ${registro.residente_asociado.nombre}`}
+                        className="w-full h-full object-cover rounded-full"
+                      />
+                    </Avatar>
+                  </div>
+                )}
               </div>
+
+              {/* Información Adicional / Empresa / Proveedor */}
+              {(registro.empresa || registro.placas || registro.motivo || registro.servicio_nombre) && (
+                <div className="space-y-2 pt-4 border-t">
+                  {registro.empresa && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="font-medium">Empresa:</span>
+                      <span className="text-muted-foreground">{registro.empresa}</span>
+                    </div>
+                  )}
+                  {registro.servicio_nombre && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="font-medium">Servicio:</span>
+                      <span className="text-muted-foreground">{registro.servicio_nombre}</span>
+                    </div>
+                  )}
+                  {registro.placas && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="font-medium">Placas:</span>
+                      <span className="text-muted-foreground">{registro.placas}</span>
+                    </div>
+                  )}
+                  {registro.motivo && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="font-medium">Motivo de la visita:</span>
+                      <span className="text-muted-foreground">{registro.motivo}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -243,7 +297,7 @@ export function ModalDetalleRegistro({
                   {getMetodoAccesoIcon(registro.metodo_acceso)}
 
                   <span className="font-medium capitalize">
-                    {registro.metodo_acceso}
+                    {registro.metodo_acceso?.trim().toLowerCase() === "qr" ? "QR" : registro.metodo_acceso?.trim()}
                   </span>
                 </div>
 
@@ -256,7 +310,7 @@ export function ModalDetalleRegistro({
 
               {/* QR */}
 
-              {registro.metodo_acceso === "QR" && (
+              {registro.metodo_acceso?.trim().toUpperCase() === "QR" && registro.qr_utilizado && (
                 <div className="p-3 bg-muted rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <QrCode className="h-4 w-4" />
@@ -294,12 +348,12 @@ export function ModalDetalleRegistro({
 
                   <span className="text-muted-foreground">
                     {registro.fecha_entrada &&
-                    !isNaN(new Date(registro.fecha_entrada).getTime())
+                      !isNaN(new Date(registro.fecha_entrada).getTime())
                       ? format(
-                          new Date(registro.fecha_entrada),
-                          "dd/MM/yyyy HH:mm:ss",
-                          { locale: es }
-                        )
+                        new Date(registro.fecha_entrada),
+                        "dd/MM/yyyy HH:mm:ss",
+                        { locale: es }
+                      )
                       : "N/A"}
                   </span>
                 </div>

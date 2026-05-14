@@ -56,6 +56,32 @@ export function FiltrosTabla({
     { value: "antiguo", label: "Más antiguo primero" },
   ];
 
+  // Estado local para inputs con el fin de implementar debouncing (evita race conditions)
+  const [searchValue, setSearchValue] = React.useState(filters.search || "");
+  const [residenciaValue, setResidenciaValue] = React.useState(filters.residencia || "");
+
+  React.useEffect(() => {
+    setSearchValue(filters.search || "");
+  }, [filters.search]);
+
+  React.useEffect(() => {
+    setResidenciaValue(filters.residencia || "");
+  }, [filters.residencia]);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      onChange({ search: searchValue.trim() });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchValue]);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      onChange({ residencia: residenciaValue.trim() });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [residenciaValue]);
+
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="flex items-center gap-4">
@@ -65,8 +91,8 @@ export function FiltrosTabla({
           <input
             type="search"
             placeholder="Buscar por nombre..."
-            value={filters.search || ""}
-            onChange={(e) => onChange({ search: e.target.value })}
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
             className="flex h-9 w-[240px] rounded-md border border-input bg-background pl-9 pr-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>
@@ -96,8 +122,8 @@ export function FiltrosTabla({
           <input
             type="search"
             placeholder="Buscar por residencia..."
-            value={filters.residencia || ""}
-            onChange={(e) => onChange({ residencia: e.target.value })}
+            value={residenciaValue}
+            onChange={(e) => setResidenciaValue(e.target.value)}
             className="flex h-9 w-[200px] rounded-md border border-input bg-background pl-9 pr-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>
