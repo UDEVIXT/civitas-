@@ -18,8 +18,8 @@ export class EmpleadoService {
     page: number;
     limit?: number;
     isActive?: boolean | undefined;
-    byResidenteId?: number;
-    byViviendaId?: number;
+    byResidenteId?: string;
+    byViviendaId?: string;
   }) {
     const { search, page, limit, isActive, byResidenteId, byViviendaId } =
       filters;
