@@ -1,5 +1,5 @@
 // 1. EL CONTROLADOR (reportes.controller.ts)
-import { Controller, Post, Body, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Controller, Post, Get, Body, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ReportesService } from './reportes.service';
 import { ArchivosService } from './archivos.service'; // Ajusta la ruta
@@ -30,4 +30,11 @@ export class ReportesController {
     // Pasamos los datos del formulario y los datos del archivo a nuestro servicio
     return this.reportesService.crearConEvidencia(datosReporte, urlArchivo, nombreArchivo);
   }
+
+  @Get()
+  async obtenerReportes() {
+    // Llamamos a la nueva función de nuestro servicio y retornamos la lista completa
+    return this.reportesService.obtenerTodos();
+  }
+
 }

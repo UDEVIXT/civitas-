@@ -51,4 +51,13 @@ export class ReportesService {
       },
     });
   }
+
+  async obtenerTodos() {
+    return this.prisma.reporte.findMany({
+      include: {
+        evidencias: true,
+      },
+    });
+  }
+  
 }

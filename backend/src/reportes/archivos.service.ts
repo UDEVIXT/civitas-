@@ -1,55 +1,49 @@
-// 1. Importamos BadRequestException para manejar errores de datos faltantes
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 @Injectable()
-export class ReportesService {
-  constructor(private prisma: PrismaService) {}
+export class ArchivosService {
+  private supabase: SupabaseClient;
+  // Asegúrate de que este nombre sea EXACTAMENTE el mismo que creaste en Supabase
+  private nombreBucket = 'imagenes'; 
 
-  async crearConEvidencia(datos: any, urlArchivo?: string | null, nombreArchivo?: string | null) {
-    // 2. Validación defensiva: Si no nos mandaron el id_usuario, detenemos la 
-    // ejecución inmediatamente y le avisamos al cliente con un error claro.
-    if (!datos.id_usuario) {
-      throw new BadRequestException('El campo id_usuario es estrictamente obligatorio.');
+  constructor() {
+    this.supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_KEY!,
+    );
+  }
+
+  async subirImagen(archivo: any): Promise<string> {
+    try {
+      // 1. Limpiamos el nombre del archivo: quitamos espacios y caracteres raros
+      const nombreLimpio = archivo.originalname.replace(/[^a-zA-Z0-9.]/g, '');
+      
+      // 2. Le agregamos la fecha actual (Date.now) para que nunca haya dos fotos con el mismo nombre exacto
+      const rutaArchivo = `${Date.now()}_${nombreLimpio}`;
+
+      // 3. Subimos el archivo a Supabase
+      const { data, error } = await this.supabase.storage
+        .from(this.nombreBucket)
+        .upload(rutaArchivo, archivo.buffer, {
+          contentType: archivo.mimetype, // Le decimos qué tipo de archivo es (ej. image/jpeg)
+          upsert: false,
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      // 4. Pedimos la URL pública final para guardarla en nuestra base de datos (Postgres)
+      const { data: publicUrlData } = this.supabase.storage
+        .from(this.nombreBucket)
+        .getPublicUrl(rutaArchivo);
+
+      return publicUrlData.publicUrl;
+
+    } catch (error) {
+      console.error('Error al subir a Supabase:', error);
+      throw new InternalServerErrorException('No se pudo subir la evidencia a Supabase');
     }
-
-    const latitud = parseFloat(datos.latitud);
-    const longitud = parseFloat(datos.longitud);
-    const es_anonimo = datos.es_anonimo === 'true' || datos.es_anonimo === true;
-
-    let urlFinal = urlArchivo;
-    let nombreFinal = nombreArchivo;
-
-    if (!urlFinal && datos.evidencias?.create?.[0]) {
-      urlFinal = datos.evidencias.create[0].url_archivo;
-      nombreFinal = datos.evidencias.create[0].nombre_archivo;
-    }
-
-    return this.prisma.reporte.create({
-      data: {
-        id_usuario: datos.id_usuario,
-        motivo: datos.motivo,
-        descripcion: datos.descripcion,
-        tipo: datos.tipo,
-        latitud: latitud,
-        longitud: longitud,
-        estado: datos.estado || 'PENDIENTE',
-        prioridad: datos.prioridad || 'MEDIA',
-        es_anonimo: es_anonimo,
-        ...(urlFinal && nombreFinal && {
-          evidencias: {
-            create: [
-              {
-                url_archivo: urlFinal,
-                nombre_archivo: nombreFinal,
-              },
-            ],
-          },
-        }),
-      },
-      include: {
-        evidencias: true, 
-      },
-    });
   }
 }
