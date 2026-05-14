@@ -47,8 +47,8 @@ export function EmpleadosTable({
   return (
     <Table>
       <TableHeader>
-        <TableRow className="bg-muted/30">
-          <TableHead className="w-70">Nombre</TableHead>
+        <TableRow className="bg-muted">
+          <TableHead className="w-60">Nombre</TableHead>
           <TableHead className="w-20">Tipo</TableHead>
           <TableHead>Estado</TableHead>
           <TableHead>Destino</TableHead>
