@@ -2,6 +2,7 @@ import {
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
+  HttpException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -83,6 +84,10 @@ export class AuthService {
         },
       };
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
       throw new InternalServerErrorException(
         'Error técnico. Intente más tarde.',
       );
