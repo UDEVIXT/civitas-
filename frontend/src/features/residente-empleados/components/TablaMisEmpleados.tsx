@@ -56,8 +56,9 @@ export function TablaMisEmpleados({
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden">
-      <Table>
+    <div className="rounded-2xl border border-border bg-white shadow-sm overflow-x-auto">
+    <div className="min-w-[600px]"> 
+       <Table>
         <TableHeader>
           <TableRow className="bg-muted/30">
             <TableHead className="w-90">Nombre</TableHead>
@@ -144,5 +145,6 @@ export function TablaMisEmpleados({
         </TableBody>
       </Table>
     </div>
+</div>
   );
 }

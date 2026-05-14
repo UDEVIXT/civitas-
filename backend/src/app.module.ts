@@ -10,6 +10,8 @@ import { EvidenciaReporteModule } from './evidencia-reporte/evidencia-incidencia
 import { EmpleadoModule } from './empleado/empleado.module';
 import { AuthModule } from './auth/auth.module';
 import { IncidenciasModule } from './incidencias/incidencias.module';
+import { ResidenteModule } from './residente/residente.module';
+import { ViviendaModule } from './vivienda/vivienda.module';
 import { APP_GUARD } from '@nestjs/core/constants';
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { APP_GUARD } from '@nestjs/core/constants';
     EmpleadoModule,
     AuthModule,
     IncidenciasModule,
+    ResidenteModule,
+    ViviendaModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

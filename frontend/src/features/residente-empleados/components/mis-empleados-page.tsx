@@ -1,21 +1,31 @@
 "use client";
 
-//Vista para mostrar los empleados domésticos del residente, con un modal para editar permisos.
 import * as React from "react";
-import { TablaMisEmpleados } from "@/features/residente-empleados/components/TablaMisEmpleados";
-import { ModalEditarEmpleado } from "@/features/residente-empleados/components/ModalEditarEmpleado";
+// Importamos hook personalizado para gestionar empleados del residente
+import { useResidenteEmpleados } from "../hooks/useResidenteEmpleados"; 
+
+// Componentes UI
+import { TablaMisEmpleados } from "./TablaMisEmpleados";
+import { ModalEditarEmpleado } from "./ModalEditarEmpleado";
 import { EmpleadosHorarioDialog } from "@/features/empleados-domesticos/components/horarios-empleado-domestico";
-import { useEmpleadoDomesticos } from "@/features/empleados-domesticos/hooks/useEmpleadoDomestico";
 
 export default function MisEmpleadosPage() {
-  const { empleados, loading, modalEdit, modalHorario } =
-    useEmpleadoDomesticos();
+  // Aquí usamos useResidenteEmpleados.ts . El "123" es un ejemplo, 
+  // luego lo cambiaremos por el ID real del usuario logueado.
+  const { 
+    empleados, 
+    isLoading, 
+    search, 
+    setSearch, 
+    modalEdit, 
+    modalHorario 
+  } = useResidenteEmpleados("123");
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
+    <div className="flex-1 space-y-4 p-4 sm:p-8 pt-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
             Mis Empleados Domésticos
           </h2>
           <p className="text-muted-foreground">
@@ -24,37 +34,39 @@ export default function MisEmpleadosPage() {
         </div>
       </div>
 
+      {/* Buscador opcional (puedes usar el de shadcn si gustas) */}
+      <div className="flex items-center py-4">
+        <input
+          placeholder="Buscar empleado..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-sm p-2 border rounded-md"
+        />
+      </div>
+
       <div className="space-y-4">
-        {loading && empleados.length === 0 ? (
-          <div className="flex h-[400px] items-center justify-center rounded-2xl border border-dashed">
-            <div className="flex flex-col items-center gap-2">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-600/30 border-t-amber-600" />
-              <p className="text-sm text-muted-foreground">
-                Cargando tu personal...
-              </p>
-            </div>
-          </div>
-        ) : (
-          <TablaMisEmpleados
-            items={empleados}
-            isLoading={loading}
-            onEdit={modalEdit.handleActionClick}
-            onVerHorario={modalHorario.handleVerHorario}
-          />
-        )}
+        <TablaMisEmpleados
+          items={empleados}
+          isLoading={isLoading}
+          onEdit={modalEdit.handleEditClick}
+          onVerHorario={modalHorario.handleVerHorario}
+        />
       </div>
 
       <ModalEditarEmpleado
-        empleado={modalEdit.selectedEmpleado}
-        isOpen={modalEdit.isOpen}
-        onClose={() => modalEdit.setIsEditModalOpen(false)}
-      />
+      empleado={modalEdit.selectedEmpleado}
+      isOpen={modalEdit.isOpen}
+      onClose={() => modalEdit.setIsOpen(false)}
+      onSave={modalEdit.save}       // <-- Conexión con la mutación del Hook
+      isSaving={modalEdit.isSaving} // <-- Muestra el spinner si está guardando
+    />
 
+      {/* Modal de Horarios (el de Joan) */}
       <EmpleadosHorarioDialog
-        nombre={modalHorario.nombreEmpleado}
-        horarios={modalHorario.horarios}
+        nombre={modalEdit.selectedEmpleado?.nombre || ""}
+        horarios={modalEdit.selectedEmpleado?.servicio?.horarios || []}
         open={modalHorario.isOpen}
-        onOpenChange={modalHorario.setIsHorarioModalOpen}
+        onOpenChange={modalHorario.setIsOpen}
       />
     </div>
   );
