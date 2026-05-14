@@ -25,14 +25,9 @@ class DetalleEmpleadoDto {
   @IsOptional()
   activo?: boolean;
 
-  // Si se quiere dar de baja, el motivo es obligatorio. Si es reactivación o edición, no lo es.
-  @ValidateIf((o, value) => o.parent_accion === 'baja')
   @IsString({ message: 'El motivo debe ser texto' })
-  @IsNotEmpty({ message: 'El motivo es obligatorio para dar de baja' })
-  @MinLength(5, { message: 'El motivo debe tener al menos 5 caracteres' })
+  @IsOptional()
   motivo?: string;
-
-  parent_accion?: string;
 }
 
 // DTO principal
@@ -46,8 +41,8 @@ export class UpdateEmpleadoDto {
   @IsNotEmpty()
   data!: DetalleEmpleadoDto;
 
-  // Si se quiere dar de baja, el motivo es obligatorio. Si es reactivación o edición, no lo es.
-  @ValidateIf((o) => o.accion === 'baja')
+  // Si se quiere dar de baja, el motivo es obligatorio en data
+  @ValidateIf((o: UpdateEmpleadoDto) => o.accion === 'baja')
   @IsNotEmpty({ message: 'El motivo es obligatorio para dar de baja' })
   @MinLength(5, { message: 'El motivo debe tener al menos 5 caracteres' })
   private get motivoValidator() {
