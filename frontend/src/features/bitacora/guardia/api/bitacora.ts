@@ -13,6 +13,8 @@ export interface BitacoraRegistro {
   id: string;
   nombre: string;
   tipo_persona: string;
+  empresa?: string;
+  motivo?: string;
   residente_asociado: {
     nombre: string;
     avatar_url: string | null;
@@ -32,6 +34,10 @@ export interface BitacoraDetalle extends BitacoraRegistro {
   notas_guardia?: string;
   hora_validacion: string;
   foto_visitante?: string;
+  servicio_nombre?: string;
+  cargo_empleado?: string;
+  placas?: string;
+  motivo?: string;
   documento?: string;
   telefono?: string;
   empresa?: string;

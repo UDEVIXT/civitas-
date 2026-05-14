@@ -148,6 +148,7 @@ export function TablaAccesosGuardia({
         <TableHeader className="bg-muted">
           <TableRow>
             <TableHead className="text-center">✓</TableHead>
+            <TableHead>Nombre del proveedor o empresa</TableHead>
             <TableHead>Nombre</TableHead>
             <TableHead className="text-center">Tipo</TableHead>
             <TableHead className="text-center">Residente asociado</TableHead>
@@ -184,6 +185,13 @@ export function TablaAccesosGuardia({
                       onToggleSelection(registro.id);
                     }}
                   />
+                </TableCell>
+                <TableCell>
+                  {registro.empresa ? (
+                    <span className="font-medium">{registro.empresa}</span>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-3">
@@ -338,6 +346,7 @@ export function TablaAccesosGuardia({
         isOpen={modalOpen}
         onClose={handleCloseModal}
         registroId={selectedRegistroId}
+        onRegisterExitClick={onRegisterExitClick}
       />
     </div>
   );
