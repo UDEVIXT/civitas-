@@ -19,7 +19,7 @@ export default function MisEmpleadosPage() {
     setSearch, 
     modalEdit, 
     modalHorario 
-  } = useResidenteEmpleados("123");
+  } = useResidenteEmpleados("06d83e87-92d9-42fd-ad18-da5abd12a477");
 
   return (
     <div className="flex-1 space-y-4 p-4 sm:p-8 pt-6">
