@@ -5,7 +5,10 @@ import * as bcrypt from 'bcrypt';
 export async function seedUsuarios(prisma: PrismaClient) {
   const saltRounds = 10;
   const passwordPlanaPruebas = 'password123';
-  const hashedDefaultPassword = await bcrypt.hash(passwordPlanaPruebas, saltRounds);
+  const hashedDefaultPassword = await bcrypt.hash(
+    passwordPlanaPruebas,
+    saltRounds,
+  );
   // Crear usuarios fijos para desarrollo
   const adminFijo = {
     nombre: 'Admin',
@@ -27,6 +30,7 @@ export async function seedUsuarios(prisma: PrismaClient) {
         data: {
           nombre: `${perfil.nombre} ${perfil.apellido}`,
           genero: perfil.genero,
+          url_imagen: faker.image.url(),
           fecha_nacimiento: faker.date.birthdate({
             min: 18,
             max: 65,
@@ -69,6 +73,7 @@ export async function seedUsuarios(prisma: PrismaClient) {
       data: {
         nombre: `${firstName} ${lastName}`,
         genero: faker.person.sex(),
+        url_imagen: faker.image.url(),
         fecha_nacimiento: faker.date.birthdate({
           min: 18,
           max: 80,
@@ -95,8 +100,12 @@ export async function seedUsuarios(prisma: PrismaClient) {
   const MIN_GUARDIAS = 5;
   const MIN_RESIDENTES = 12;
 
-  const currentGuardias = await prisma.usuario.count({ where: { rol: Rol.Guardia } });
-  const currentResidentes = await prisma.usuario.count({ where: { rol: Rol.Residente } });
+  const currentGuardias = await prisma.usuario.count({
+    where: { rol: Rol.Guardia },
+  });
+  const currentResidentes = await prisma.usuario.count({
+    where: { rol: Rol.Residente },
+  });
 
   for (let i = currentGuardias; i < MIN_GUARDIAS; i++) {
     const firstName = faker.person.firstName();
@@ -107,8 +116,13 @@ export async function seedUsuarios(prisma: PrismaClient) {
       data: {
         nombre: `${firstName} ${lastName}`,
         genero: faker.person.sex(),
-        fecha_nacimiento: faker.date.birthdate({ min: 18, max: 65, mode: 'age' }),
+        fecha_nacimiento: faker.date.birthdate({
+          min: 18,
+          max: 65,
+          mode: 'age',
+        }),
         telefono: faker.phone.number({ style: 'national' }),
+        url_imagen: faker.image.url(),
       },
     });
 
@@ -134,8 +148,13 @@ export async function seedUsuarios(prisma: PrismaClient) {
       data: {
         nombre: `${firstName} ${lastName}`,
         genero: faker.person.sex(),
-        fecha_nacimiento: faker.date.birthdate({ min: 18, max: 80, mode: 'age' }),
+        fecha_nacimiento: faker.date.birthdate({
+          min: 18,
+          max: 80,
+          mode: 'age',
+        }),
         telefono: faker.phone.number({ style: 'national' }),
+        url_imagen: faker.image.url(),
       },
     });
 
