@@ -123,8 +123,10 @@ export function FiltrosTablaAdmin({ onSearchName, onSearchProperty, onTypeChange
           date={date}
           setDate={(newDate) => {
             setDate(newDate);
-            const from = newDate?.from ? format(newDate.from, "yyyy-MM-dd") : "";
-            const to = newDate?.to ? format(newDate.to, "yyyy-MM-dd") : "";
+            // Al anexar explícitamente las horas de inicio/fin y el offset de México (-06:00),
+            // el motor de base de datos respeta el encuadre local.
+            const from = newDate?.from ? format(newDate.from, "yyyy-MM-dd'T00:00:00-06:00'") : "";
+            const to = newDate?.to ? format(newDate.to, "yyyy-MM-dd'T23:59:59-06:00'") : "";
             onDateChange(from, to);
           }}
         />

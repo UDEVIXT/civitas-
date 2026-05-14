@@ -10,15 +10,35 @@ export async function seedUsuarios(prisma: PrismaClient) {
     saltRounds,
   );
   // Crear usuarios fijos para desarrollo
-  const adminFijo = {
-    nombre: 'Admin',
-    apellido: 'Civitas',
-    genero: 'Otro',
-    correo: 'admin@civitas.com',
-    rol: Rol.Administrador,
-  };
-
-  const perfilesFijos = [adminFijo];
+  const perfilesFijos = [
+    {
+      nombre: 'Admin',
+      apellido: 'Civitas',
+      nombre_usuario: 'admin_test',
+      correo: 'admin@test.com',
+      password: 'adminPassword123',
+      genero: 'Otro',
+      rol: Rol.Administrador,
+    },
+    {
+      nombre: 'Guardia',
+      apellido: 'Civitas',
+      nombre_usuario: 'guardia_test',
+      correo: 'guardia@test.com',
+      password: 'guardiaPassword123',
+      genero: 'Masculino',
+      rol: Rol.Guardia,
+    },
+    {
+      nombre: 'Residente',
+      apellido: 'Civitas',
+      nombre_usuario: 'residente_test',
+      correo: 'residente@test.com',
+      password: 'residentePassword123',
+      genero: 'Femenino',
+      rol: Rol.Residente,
+    },
+  ];
 
   for (const perfil of perfilesFijos) {
     const usuarioExistente = await prisma.usuario.findUnique({
@@ -40,14 +60,17 @@ export async function seedUsuarios(prisma: PrismaClient) {
         },
       });
 
+      const salt = await bcrypt.genSalt(saltRounds);
+      const hashedPassword = await bcrypt.hash(perfil.password, salt);
+
       await prisma.usuario.create({
         data: {
-          nombre_usuario: perfil.nombre.toLowerCase(),
+          nombre_usuario: perfil.nombre_usuario,
           correo: perfil.correo,
-          password: hashedDefaultPassword,
+          password: hashedPassword,
           rol: perfil.rol,
           estado: EstadoUsuario.ACTIVO,
-          correo_verificado: faker.datatype.boolean(),
+          correo_verificado: true,
           id_persona: persona.id_persona,
         },
       });
