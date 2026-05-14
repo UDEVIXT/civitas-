@@ -6,7 +6,7 @@ import {
   UserMinus,
   Home,
   User,
-  Trash2,
+  Filter,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -55,29 +55,17 @@ export function EmpleadosFilters({
   onViviendaChange,
 }: EmpleadosFiltersProps) {
   return (
-    <header className="flex flex-col gap-6 rounded-xl border bg-card p-6 shadow-sm">
+    <header className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Users className="size-6" />
           </div>
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Administración
-            </p>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
               Empleados Domésticos
             </h1>
           </div>
-        </div>
-        <div className="relative w-full max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/70" />
-          <Input
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="Buscar por nombre o identificación..."
-            className="h-10 border-muted-foreground/20 pl-9 transition-all focus:ring-2 focus:ring-primary/20"
-          />
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -131,26 +119,15 @@ export function EmpleadosFilters({
         </Button>
 
         <div className="ml-auto flex items-center gap-2">
-          {(residenciaId ||
-            viviendaId ||
-            search ||
-            statusFilter !== undefined) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                onSearchChange("");
-                onStatusChange(undefined);
-                onResidenciaChange("");
-                onViviendaChange("");
-              }}
-              className="h-8 text-muted-foreground hover:text-destructive"
-            >
-              <Trash2 className="mr-2 size-3.5" />
-              Limpiar
-            </Button>
-          )}
-
+          <div className="relative w-full max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/70" />
+            <Input
+              value={search}
+              onChange={(event) => onSearchChange(event.target.value)}
+              placeholder="Buscar por nombre o identificación..."
+              className="h-10 border-muted-foreground/20 pl-9 transition-all focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -160,16 +137,10 @@ export function EmpleadosFilters({
                 className={cn(
                   "h-8 rounded-full",
                   (residenciaId || viviendaId) &&
-                    "border-primary bg-primary/5 text-primary shadow-sm",
+                    "border-primary bg-primary/5 text-primary shadow-sm justify-center",
                 )}
               >
-                <SlidersHorizontal className="mr-2 size-3.5" />
-                Filtros Avanzados
-                {(residenciaId || viviendaId) && (
-                  <span className="ml-2 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-                    {(residenciaId ? 1 : 0) + (viviendaId ? 1 : 0)}
-                  </span>
-                )}
+                <Filter className="size-3.5" />
               </Button>
             </PopoverTrigger>
 
