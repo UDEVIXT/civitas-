@@ -4,7 +4,6 @@ import { EmpleadosTable } from "@/features/empleados-domesticos/components/emple
 import { EmpleadosFilters } from "@/features/empleados-domesticos/components/empleados-filters";
 import { EmpleadosPagination } from "@/features/empleados-domesticos/components/empleados-pagination";
 import { EmpleadosDeleteDialog } from "@/features/empleados-domesticos/components/empleados-delete-dialog";
-import type { EmpleadoDomestico } from "@/features/empleados-domesticos/types";
 import { EmpleadosHorarioDialog } from "./horarios-empleado-domestico";
 
 import useResidente from "@/features/empleados-domesticos/hooks/useResidente";
@@ -29,11 +28,8 @@ export function EmpleadosDomesticosPage() {
     viviendaFilter,
   } = useEmpleadoDomesticos();
 
-  const { data: resResponse } = useResidente();
-  const { data: vivResponse } = useVivienda();
-
-  const residentes = resResponse?.data || [];
-  const viviendas = vivResponse?.data || [];
+  const { data: residentes = [] } = useResidente();
+  const { data: viviendas = [] } = useVivienda();
 
   return (
     <div className="min-h-screen bg-amber-50/30 text-foreground">
