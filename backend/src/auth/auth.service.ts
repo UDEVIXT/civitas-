@@ -33,13 +33,13 @@ export class AuthService {
         });
       }
 
-      //Comentado por ahora, se implementará verificación de correo en el futuro
-      /*if (!user.correo_verificado) { 
+      //Al crear la cuenta, se envía un correo de verificación. El usuario no puede iniciar sesión hasta que verifique su correo.
+      if (!user.correo_verificado) {
         throw new UnauthorizedException({
           message: 'Debe verificar su correo electrónico.',
           code: 'EMAIL_NOT_VERIFIED',
         });
-      }*/
+      }
 
       const isPasswordValid = await bcrypt.compare(password, user.password);
 

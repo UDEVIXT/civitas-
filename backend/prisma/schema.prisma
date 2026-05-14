@@ -82,6 +82,7 @@ model Usuario {
   password        String
   estado          EstadoUsuario  @default(ACTIVO)
   correo_verificado Boolean      @default(false)
+  token_verificacion String?     @unique
   accesos         Acceso[]
   administradores Administrador?
   guardias        Guardia?
