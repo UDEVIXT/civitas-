@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 // Importamos tu modal desde la ruta real que mostraste
-import { ModalSalidaProveedor } from "@/components/layout/modals/guardia/registrosalida";
+import { ModalSalidaProveedor } from "@/components/modals/guardia/registrosalida";
 
 export function BotonRegistrarSalida() {
     const [isModalOpen, setIsModalOpen] = useState(false);

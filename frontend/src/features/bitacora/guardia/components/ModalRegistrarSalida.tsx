@@ -70,8 +70,8 @@ export function ModalRegistrarSalida({
                         )}
                     </div>
 
-                    <div className="space-y-2 mt-4">
-                        <label className="text-sm font-medium">Motivo o nota del guardia</label>
+                    <div className="mt-4">
+                        <label className="block text-sm font-medium mb-2">Motivo o nota del guardia</label>
                         <textarea
                             className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             placeholder="Escribe un comentario sobre la salida (opcional)..."

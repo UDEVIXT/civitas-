@@ -25,9 +25,11 @@ export function BitacoraAdminPage() {
   });
 
   // FILTROS
+  const [nameFilter, setNameFilter] = useState<string>("");
+
   const [propertyFilter, setPropertyFilter] = useState<string>("");
 
-  const [typeFilter, setTypeFilter] = useState<string>("");
+  const [typeFilter, setTypeFilter] = useState<string>("todos");
 
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
 
@@ -42,9 +44,11 @@ export function BitacoraAdminPage() {
       setLoading(true);
 
       const response = await bitacoraService.obtenerBitacoraHistorica({
-        search: propertyFilter || undefined,
+        search: nameFilter || undefined,
 
-        tipo: typeFilter || undefined,
+        residencia: propertyFilter || undefined,
+
+        tipo: typeFilter !== "todos" ? typeFilter || undefined : undefined,
 
         fecha_inicio: fechaInicio || undefined,
 
@@ -75,6 +79,7 @@ export function BitacoraAdminPage() {
   useEffect(() => {
     loadData();
   }, [
+    nameFilter,
     propertyFilter,
     typeFilter,
     sortOrder,
@@ -88,7 +93,7 @@ export function BitacoraAdminPage() {
   }
 
   return (
-    <div className="container mx-auto p-10 space-y-6">
+    <div className="container mx-auto py-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold">
           Historial de Accesos (Administrador)
@@ -100,16 +105,31 @@ export function BitacoraAdminPage() {
       </div>
 
       <FiltrosTablaAdmin
-        onSearchProperty={setPropertyFilter}
-        onTypeChange={setTypeFilter}
-        onSortChange={setSortOrder}
+        onSearchName={(val) => {
+          setNameFilter(val);
+          setPage(1);
+        }}
+        onSearchProperty={(val) => {
+          setPropertyFilter(val);
+          setPage(1);
+        }}
+        onTypeChange={(val) => {
+          setTypeFilter(val);
+          setPage(1);
+        }}
+        onSortChange={(val) => {
+          setSortOrder(val);
+          setPage(1);
+        }}
         onDateChange={(inicio: string, fin: string) => {
           setFechaInicio(inicio);
           setFechaFin(fin);
+          setPage(1);
         }}
         onClearFilters={() => {
+          setNameFilter("");
           setPropertyFilter("");
-          setTypeFilter("");
+          setTypeFilter("todos");
           setSortOrder("desc");
           setFechaInicio("");
           setFechaFin("");
