@@ -46,3 +46,30 @@ export interface EmpleadoDomesticoResponse {
   error?: string;
   statusCode?: number;
 }
+
+//Interfaces de APIs de residente y vivienda para filtros
+
+export interface ResidenteData {
+  id_residente: string;
+  usuario: {
+    id_usuario: string;
+    persona: {
+      nombre: string;
+      url_imagen?: string;
+    };
+  };
+}
+
+export interface ResidenteResponse {
+  success: boolean;
+  data: ResidenteData[];
+}
+
+export interface ViviendaData {
+  id_vivienda: string;
+  numero_vivienda: string;
+}
+export interface ViviendaResponse {
+  success: boolean;
+  data: ViviendaData[];
+}

@@ -42,20 +42,16 @@ export class EmpleadoController {
         : isActiveValue === 'false'
           ? false
           : undefined;
-    const byResidenteIdNum = byResidenteId
-      ? parseInt(byResidenteId, 10)
-      : undefined;
-    const byViviendaIdNum = byViviendaId
-      ? parseInt(byViviendaId, 10)
-      : undefined;
+    const byResidenteIdValue = byResidenteId || undefined;
+    const byViviendaIdValue = byViviendaId || undefined;
 
     return this.empleadoService.obtenerEmpleados({
       search,
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
       isActive: isActiveBool,
-      byResidenteId: byResidenteIdNum,
-      byViviendaId: byViviendaIdNum,
+      byResidenteId: byResidenteIdValue,
+      byViviendaId: byViviendaIdValue,
     });
   }
   @Get(':id')
