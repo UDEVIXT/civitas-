@@ -40,7 +40,7 @@ async function truncateAll(prismaClient: PrismaClient) {
       "Persona",
       "TipoServicio",
       "Reporte",
-      "EvidenciaIncidencia"
+      "EvidenciaReporte"
     RESTART IDENTITY CASCADE;
   `);
 }

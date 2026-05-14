@@ -13,6 +13,8 @@ export interface BitacoraRegistro {
   id: string;
   nombre: string;
   tipo_persona: string;
+  empresa?: string;
+  motivo?: string;
   residente_asociado: {
     nombre: string;
     avatar_url: string | null;
@@ -32,6 +34,10 @@ export interface BitacoraDetalle extends BitacoraRegistro {
   notas_guardia?: string;
   hora_validacion: string;
   foto_visitante?: string;
+  servicio_nombre?: string;
+  cargo_empleado?: string;
+  placas?: string;
+  motivo?: string;
   documento?: string;
   telefono?: string;
   empresa?: string;
@@ -65,7 +71,7 @@ import apiClient from "@/api/axios";
 export async function obtenerBitacoraHistorica(
   filtros: BitacoraFiltro = {},
 ): Promise<BitacoraResponse> {
-  const response = await apiClient.get("/bitacora-guardia", {
+  const response = await apiClient.get("/bitacora", {
     params: filtros,
   });
   return response.data;
@@ -74,6 +80,6 @@ export async function obtenerBitacoraHistorica(
 export async function obtenerDetalleRegistro(
   id: string,
 ): Promise<BitacoraDetalleResponse> {
-  const response = await apiClient.get(`/bitacora-guardia/${id}`);
+  const response = await apiClient.get(`/bitacora/${id}`);
   return response.data;
 }

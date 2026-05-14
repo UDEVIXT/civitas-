@@ -7,6 +7,56 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Cargo {
+  Gobierno
+  Comite
+}
+
+enum Rol {
+  Administrador
+  Guardia
+  Residente
+}
+
+enum DiaSemana {
+  LUNES
+  MARTES
+  MIERCOLES
+  JUEVES
+  VIERNES
+  SABADO
+  DOMINGO
+}
+
+enum EstatusAcceso {
+  Activo
+  Inactivo
+}
+
+enum EstadoUsuario {
+  ACTIVO
+  SUSPENDIDO
+}
+
+enum TipoReporte {
+  QUEJA
+  SUGERENCIA
+  INCIDENCIA
+}
+
+enum PrioridadReporte {
+  BAJA
+  MEDIA
+  ALTA
+}
+
+enum EstadoIncidencia {
+  PENDIENTE
+  EN_PROCESO
+  RESUELTA
+  CANCELADA
+}
+
 model Persona {
   id_persona       String   @id @default(uuid())
   nombre           String
@@ -30,6 +80,9 @@ model Usuario {
   rol             Rol
   id_persona      String         @unique
   password        String
+  estado          EstadoUsuario  @default(ACTIVO)
+  correo_verificado Boolean      @default(false)
+  token_verificacion String?     @unique
   accesos         Acceso[]
   administradores Administrador?
   guardias        Guardia?
@@ -66,19 +119,19 @@ model Acceso {
   id_acceso        String        @id @default(uuid())
   id_usuario       String
   id_visitante     String
-  codigo_qr        String        @unique
+  codigo_qr        String?        @unique
   fecha_creacion   DateTime      @default(now())
   fecha_expiracion DateTime
   estatus          EstatusAcceso @default(Activo)
   comentario_admin String?
   usuario          Usuario       @relation(fields: [id_usuario], references: [id_usuario])
   visitante        Visitante     @relation(fields: [id_visitante], references: [id_visitante], onDelete: Cascade)
-  bitacora         Bitacora?
+  bitacora         Bitacora[]
 }
 
 model Bitacora {
   id_bitacora        String    @id @default(uuid())
-  id_acceso          String    @unique
+  id_acceso          String
   id_guardia         String
   fecha_hora_entrada DateTime  @default(now())
   fecha_hora_salida  DateTime?
@@ -98,6 +151,7 @@ model Servicio {
   rfc              String?                  @unique
   activo           Boolean                  @default(true)
   id_tipo_servicio String?
+  fecha_registro   DateTime @default(now())
   horarios         HorarioAccesoServicios[]
   tipo_servicio    TipoServicio?            @relation(fields: [id_tipo_servicio], references: [id_tipo_servicio])
   visitantes       Visitante[]
@@ -141,22 +195,15 @@ model Administrador {
   usuario          Usuario @relation(fields: [id_usuario], references: [id_usuario])
 }
 
-enum EstadoIncidencia {
-  PENDIENTE
-  EN_PROCESO
-  RESUELTA
-  CANCELADA
-}
-
 model Incidencia {
   id_incidencia    String           @id @default(uuid())
   titulo           String
   descripcion      String
   estado           EstadoIncidencia @default(PENDIENTE)
-  prioridad        String?          @default("MEDIA") 
-  es_anonimo       Boolean          @default(false)   
+  prioridad        String?          @default("MEDIA")
+  es_anonimo       Boolean          @default(false)
   fecha_creacion   DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt        
+  updatedAt        DateTime         @updatedAt
 
   id_residente     String
   residente        Residente        @relation(fields: [id_residente], references: [id_residente])
@@ -165,12 +212,38 @@ model Incidencia {
 
 model HistorialIncidencia {
   id_historial     String           @id @default(uuid())
-  estado_anterior  EstadoIncidencia 
-  nuevo_estado     EstadoIncidencia 
+  estado_anterior  EstadoIncidencia
+  nuevo_estado     EstadoIncidencia
   comentario       String?
   fecha            DateTime         @default(now())
-  actualizado_por  String?          @default("Sistema") 
+  actualizado_por  String?          @default("Sistema")
 
   id_incidencia    String
   incidencia       Incidencia       @relation(fields: [id_incidencia], references: [id_incidencia])
+}
+
+model EvidenciaReporte {
+  id_evidencia      String   @id @default(uuid()) @db.Uuid
+  id_reporte        String   @db.Uuid
+  reporte           Reporte  @relation(fields: [id_reporte], references: [id_reporte])
+  url_archivo       String   @db.Text
+  nombre_archivo    String   @db.VarChar(256)
+  createdAt         DateTime @default(now()) @db.Timestamp()
+}
+
+model Reporte {
+  id_reporte         String                @id @default(uuid()) @db.Uuid
+  id_usuario         String                @db.Uuid
+  motivo             String                @db.VarChar(100)
+  descripcion        String                @db.Text
+  tipo               TipoReporte
+  latitud            Decimal
+  longitud           Decimal
+  estado             EstadoIncidencia
+  prioridad          PrioridadReporte
+  es_anonimo         Boolean
+  resultado_esperado String?               @db.Text
+  resultado_solucion String?               @db.Text
+
+  evidencias         EvidenciaReporte[]
 }

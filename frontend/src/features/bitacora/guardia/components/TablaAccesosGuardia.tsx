@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
 // Icons
 import {
@@ -24,7 +25,6 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { format } from "date-fns";
-import { useBitacoraHistorica } from "../hooks/useBitacora";
 import { BitacoraFiltro, BitacoraRegistro } from "../api/bitacora";
 import { PaginacionTabla } from "./PaginacionTabla";
 import { ModalDetalleRegistro } from "./ModalDetalleRegistro";
@@ -32,16 +32,24 @@ import { ModalDetalleRegistro } from "./ModalDetalleRegistro";
 interface TablaAccesosGuardiaProps {
   filtros: BitacoraFiltro;
   onPageChange?: (page: number) => void;
+  // Nuevas props para manejar estado desde el padre
+  bitacoraData: any;
+  isLoading: boolean;
+  error: Error | null;
+  refetch: () => void;
+  selectedIds: string[];
+  onToggleSelection: (id: string) => void;
+  onRegisterExitClick: (registro: BitacoraRegistro) => void;
 }
 
 const getTipoPersonaColor = (tipo: string) => {
   const colors: Record<string, string> = {
-    visitante: "bg-blue-100 text-blue-800 hover:bg-blue-100",
-    residente: "bg-purple-100 text-purple-800 hover:bg-purple-100",
-    empleado_domestico: "bg-teal-100 text-teal-800 hover:bg-teal-100",
-    proveedor: "bg-orange-100 text-orange-800 hover:bg-orange-100",
+    visitante: "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200",
+    residente: "bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200",
+    empleado_domestico: "bg-teal-100 text-teal-800 border-teal-200 hover:bg-teal-200",
+    proveedor: "bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200",
   };
-  return colors[tipo] || "bg-gray-100 text-gray-800 hover:bg-gray-100";
+  return colors[tipo] || "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200";
 };
 
 const getTipoPersonaLabel = (tipo: string) => {
@@ -56,27 +64,29 @@ const getTipoPersonaLabel = (tipo: string) => {
 
 const getEstadoBadge = (estado: string) => {
   const variants: Record<string, string> = {
-    entrada: "bg-green-100 text-green-800",
-    salida: "bg-red-100 text-red-800",
+    entrada: "bg-green-100 text-green-800 border-green-200 hover:bg-green-200",
+    dentro: "bg-green-100 text-green-800 border-green-200 hover:bg-green-200",
+    salida: "bg-red-100 text-red-800 border-red-200 hover:bg-red-200",
+    fuera: "bg-red-100 text-red-800 border-red-200 hover:bg-red-200",
+    excedido: "bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200",
   };
-  return variants[estado] || "bg-gray-100 text-gray-800";
+  return variants[estado] || "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200";
 };
 
 export function TablaAccesosGuardia({
-  filtros,
   onPageChange,
+  bitacoraData,
+  isLoading,
+  error,
+  refetch,
+  selectedIds,
+  onToggleSelection,
+  onRegisterExitClick,
 }: TablaAccesosGuardiaProps) {
   const [modalOpen, setModalOpen] = React.useState(false);
   const [selectedRegistroId, setSelectedRegistroId] = React.useState<
     string | null
   >(null);
-
-  const {
-    data: bitacoraData,
-    isLoading,
-    error,
-    refetch,
-  } = useBitacoraHistorica(filtros);
 
   const handleRowClick = (registroId: string) => {
     setSelectedRegistroId(registroId);
@@ -140,18 +150,16 @@ export function TablaAccesosGuardia({
       <Table className="border rounded-lg">
         <TableHeader className="bg-muted">
           <TableRow>
+            <TableHead className="text-center">✓</TableHead>       
             <TableHead>Nombre</TableHead>
-            <TableHead className="text-center">Tipo</TableHead>
+            <TableHead>Nombre del proveedor o empresa</TableHead>
+            <TableHead className="text-center">Tipo de acceso</TableHead>
             <TableHead className="text-center">Residente asociado</TableHead>
-            <TableHead className="text-center">
-              Fecha y hora de entrada
-            </TableHead>
-            <TableHead className="text-center">
-              Fecha y hora de salida
-            </TableHead>
             <TableHead className="text-center">Método de acceso</TableHead>
             <TableHead className="text-center">Guardia que registró</TableHead>
             <TableHead className="text-center">Estado</TableHead>
+            <TableHead className="text-center"> Fecha y hora de entrada </TableHead>
+            <TableHead className="text-center"> Fecha y hora de salida </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -163,12 +171,25 @@ export function TablaAccesosGuardia({
               registro.fecha_salida && registro.fecha_salida !== "-"
                 ? new Date(registro.fecha_salida)
                 : null;
+            const metodoNorm = (registro.metodo_acceso || "").trim().toLowerCase();
             return (
               <TableRow
                 key={registro.id}
                 className="py-8 cursor-pointer hover:bg-muted/50"
                 onClick={() => handleRowClick(registro.id)}
               >
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 cursor-pointer"
+                    disabled={!!fechaSalida}
+                    checked={selectedIds.includes(registro.id)}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      onToggleSelection(registro.id);
+                    }}
+                  />
+                </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar>
@@ -192,14 +213,21 @@ export function TablaAccesosGuardia({
                     <span className="font-medium">{registro.nombre}</span>
                   </div>
                 </TableCell>
+                <TableCell>
+                  {registro.empresa ? (
+                    <span className="font-medium">{registro.empresa}</span>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
+                </TableCell>             
                 <TableCell className="text-center">
-                  <Badge className={getTipoPersonaColor(registro.tipo_persona)}>
+                  <Badge variant="outline" className={getTipoPersonaColor(registro.tipo_persona)}>
                     {getTipoPersonaLabel(registro.tipo_persona)}
                   </Badge>
                 </TableCell>
                 <TableCell>
                   {registro.residente_asociado?.nombre &&
-                  registro.residente_asociado.nombre !== "-" ? (
+                    registro.residente_asociado.nombre !== "-" ? (
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
                         {registro.residente_asociado.avatar_url ? (
@@ -227,6 +255,37 @@ export function TablaAccesosGuardia({
                     <span className="text-muted-foreground">-</span>
                   )}
                 </TableCell>
+                <TableCell className="text-center text-muted-foreground">
+                  {metodoNorm === "qr" ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <QrCode className="h-5 w-5" />
+                      <span>QR</span>
+                    </div>
+                  ) : metodoNorm === "lista" ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <ListCheck className="h-5 w-5" />
+                      <span>Lista</span>
+                    </div>
+                  ) : metodoNorm === "manual" ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <NotebookPen className="h-5 w-5" />
+                      <span>Manual</span>
+                    </div>
+                  ) : (
+                    <span className="capitalize">{registro.metodo_acceso?.trim()}</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-center">
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                    <ShieldCheck />
+                    <span>{registro.guardia_registro}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-center">
+                  <Badge variant="outline" className={`capitalize ${getEstadoBadge(registro.estado)}`}>
+                    {registro.estado}
+                  </Badge>
+                </TableCell>
                 <TableCell className="text-center">
                   {fechaEntrada ? (
                     <div className="flex flex-col items-center gap-1">
@@ -243,7 +302,7 @@ export function TablaAccesosGuardia({
                     <span className="text-muted-foreground text-sm">-</span>
                   )}
                 </TableCell>
-                <TableCell className="text-center">
+                <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                   {fechaSalida ? (
                     <div className="flex flex-col items-center gap-1">
                       <div className="flex items-center gap-1.5 text-muted-foreground">
@@ -256,39 +315,19 @@ export function TablaAccesosGuardia({
                       </div>
                     </div>
                   ) : (
-                    <span className="text-muted-foreground text-sm">-</span>
+                    <span className="text-muted-foreground text-sm">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRegisterExitClick(registro);
+                        }}
+                      >
+                        Registrar Salida
+                      </Button>
+                    </span>
                   )}
-                </TableCell>
-                <TableCell className="text-center text-muted-foreground">
-                  {registro.metodo_acceso === "QR" ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <QrCode className="h-5 w-5" />
-                      <span>QR</span>
-                    </div>
-                  ) : registro.metodo_acceso === "lista" ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <ListCheck className="h-5 w-5" />
-                      <span>Lista</span>
-                    </div>
-                  ) : registro.metodo_acceso === "manual" ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <NotebookPen className="h-5 w-5" />
-                      <span>Manual</span>
-                    </div>
-                  ) : (
-                    <span>{registro.metodo_acceso}</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-center">
-                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                    <ShieldCheck />
-                    <span>{registro.guardia_registro}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Badge className={getEstadoBadge(registro.estado)}>
-                    {registro.estado}
-                  </Badge>
                 </TableCell>
               </TableRow>
             );
@@ -311,6 +350,7 @@ export function TablaAccesosGuardia({
         isOpen={modalOpen}
         onClose={handleCloseModal}
         registroId={selectedRegistroId}
+        onRegisterExitClick={onRegisterExitClick}
       />
     </div>
   );
