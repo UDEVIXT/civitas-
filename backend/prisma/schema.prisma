@@ -33,6 +33,11 @@ enum EstatusAcceso {
   Inactivo
 }
 
+enum EstadoUsuario {
+  ACTIVO
+  SUSPENDIDO
+}
+
 enum TipoReporte {
   QUEJA
   SUGERENCIA
@@ -75,6 +80,9 @@ model Usuario {
   rol             Rol
   id_persona      String         @unique
   password        String
+  estado          EstadoUsuario  @default(ACTIVO)
+  correo_verificado Boolean      @default(false)
+  token_verificacion String?     @unique
   accesos         Acceso[]
   administradores Administrador?
   guardias        Guardia?
