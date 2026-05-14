@@ -13,37 +13,23 @@ export async function seedBitacoras(prisma: PrismaClient) {
 
   for (const acceso of accesos) {
     const guardia = faker.helpers.arrayElement(guardias);
-    
-    // Solo creamos bitácora para algunos accesos (simulando que no todos han sido procesados o registrados)
+
     if (faker.datatype.boolean(0.8)) {
-      // Fecha de entrada dispersa en los últimos 30 días con hora/minuto aleatorios
       const baseDate = faker.date.recent({ days: 30 });
       const fechaEntrada = new Date(baseDate);
       fechaEntrada.setHours(
         faker.number.int({ min: 0, max: 23 }),
         faker.number.int({ min: 0, max: 59 }),
-        faker.number.int({ min: 0, max: 59 })
+        faker.number.int({ min: 0, max: 59 }),
       );
 
       const fechaSalida = faker.datatype.boolean(0.7)
-        ? new Date(fechaEntrada.getTime() + faker.number.int({ min: 1800000, max: 28800000 })) // +30min a 8h
+        ? new Date(fechaEntrada.getTime() + faker.number.int({ min: 1800000, max: 28800000 }))
         : null;
 
-      await prisma.bitacora.upsert({
-        where: { id_acceso: acceso.id_acceso },
-        update: {
-          id_guardia: guardia.id_guardia,
-          fecha_hora_entrada: fechaEntrada,
-          comentario: faker.helpers.arrayElement([
-            'Ingreso sin novedades',
-            'Se revisó identificación',
-            'Vehículo autorizado',
-            'Visitante frecuente registrado'
-          ]),
-          comentario_salida: fechaSalida ? 'Salida normal' : null,
-          fecha_hora_salida: fechaSalida,
-        },
-        create: {
+      // EL CAMBIO ESTÁ AQUÍ:
+      await prisma.bitacora.create({
+        data: {
           id_acceso: acceso.id_acceso,
           id_guardia: guardia.id_guardia,
           fecha_hora_entrada: fechaEntrada,
@@ -51,7 +37,7 @@ export async function seedBitacoras(prisma: PrismaClient) {
             'Ingreso sin novedades',
             'Se revisó identificación',
             'Vehículo autorizado',
-            'Visitante frecuente registrado'
+            'Visitante frecuente registrado',
           ]),
           comentario_salida: fechaSalida ? 'Salida normal' : null,
           fecha_hora_salida: fechaSalida,
@@ -59,4 +45,5 @@ export async function seedBitacoras(prisma: PrismaClient) {
       });
     }
   }
+  console.log('Seeding de Bitácora completado.');
 }

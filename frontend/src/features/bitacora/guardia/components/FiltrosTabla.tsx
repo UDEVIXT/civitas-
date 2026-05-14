@@ -25,13 +25,24 @@ export function FiltrosTabla({
   filters,
   onChange,
   onClear,
+  selectedIds,
+  onMassExitClick,
 }: {
   filters: BitacoraFiltro;
   onChange: (f: Partial<BitacoraFiltro>) => void;
   onClear: () => void;
+  selectedIds: string[];
+  onMassExitClick: () => void;
 }) {
-  const [localDate, setLocalDate] = React.useState<any>(null);
-
+  // Convertimos las fechas del filtro en un objeto DateRange controlable
+  const dateRange = React.useMemo(() => {
+    if (!filters.fecha_inicio) return undefined;
+    return {
+      from: new Date(`${filters.fecha_inicio}T12:00:00`), // Evitamos desfase de huso horario
+      to: filters.fecha_fin ? new Date(`${filters.fecha_fin}T12:00:00`) : undefined,
+    };
+  }, [filters.fecha_inicio, filters.fecha_fin]);
+  
   const tipos = [
     { value: "todos", label: "Todos los tipos" },
     { value: "visitante", label: "Visitante" },
@@ -45,6 +56,32 @@ export function FiltrosTabla({
     { value: "antiguo", label: "Más antiguo primero" },
   ];
 
+  // Estado local para inputs con el fin de implementar debouncing (evita race conditions)
+  const [searchValue, setSearchValue] = React.useState(filters.search || "");
+  const [residenciaValue, setResidenciaValue] = React.useState(filters.residencia || "");
+
+  React.useEffect(() => {
+    setSearchValue(filters.search || "");
+  }, [filters.search]);
+
+  React.useEffect(() => {
+    setResidenciaValue(filters.residencia || "");
+  }, [filters.residencia]);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      onChange({ search: searchValue.trim() });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchValue]);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      onChange({ residencia: residenciaValue.trim() });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [residenciaValue]);
+
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="flex items-center gap-4">
@@ -54,8 +91,8 @@ export function FiltrosTabla({
           <input
             type="search"
             placeholder="Buscar por nombre..."
-            value={filters.search || ""}
-            onChange={(e) => onChange({ search: e.target.value })}
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
             className="flex h-9 w-[240px] rounded-md border border-input bg-background pl-9 pr-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>
@@ -85,19 +122,19 @@ export function FiltrosTabla({
           <input
             type="search"
             placeholder="Buscar por residencia..."
-            value={filters.residencia || ""}
-            onChange={(e) => onChange({ residencia: e.target.value })}
+            value={residenciaValue}
+            onChange={(e) => setResidenciaValue(e.target.value)}
             className="flex h-9 w-[200px] rounded-md border border-input bg-background pl-9 pr-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>
 
         {/* CA003 - Filtro por rango de fechas */}
         <DatePickerWithRange
+          date={dateRange}
           onChangeDate={(from, to) => {
-            setLocalDate({ from, to });
             onChange({
-              fecha_inicio: from ? from.toISOString().split("T")[0] : undefined,
-              fecha_fin: to ? to.toISOString().split("T")[0] : undefined,
+              fecha_inicio: from ? format(from, "yyyy-MM-dd") : undefined,
+              fecha_fin: to ? format(to, "yyyy-MM-dd") : undefined,
             });
           }}
         />
@@ -122,6 +159,14 @@ export function FiltrosTabla({
           </SelectContent>
         </Select>
 
+        <Button
+          variant="destructive"
+          disabled={selectedIds.length === 0}
+          onClick={onMassExitClick}
+        >
+          Salida Masiva ({selectedIds.length})
+        </Button>
+
         {/* Botón limpiar filtros */}
         <Button
           variant="outline"
@@ -137,12 +182,12 @@ export function FiltrosTabla({
 }
 
 function DatePickerWithRange({
+  date,
   onChangeDate,
 }: {
+  date?: DateRange;
   onChangeDate: (from: Date | null, to: Date | null) => void;
 }) {
-  const [date, setDate] = React.useState<DateRange | undefined>(undefined);
-
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -171,7 +216,6 @@ function DatePickerWithRange({
           defaultMonth={date?.from}
           selected={date}
           onSelect={(d) => {
-            setDate(d);
             const from = (d as any)?.from ?? null;
             const to = (d as any)?.to ?? null;
             onChangeDate(from, to);
