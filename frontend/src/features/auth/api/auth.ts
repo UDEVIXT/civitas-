@@ -12,3 +12,8 @@ export const loginRequest = async (
   });
   return response.data;
 };
+
+export const refreshRequest = async () => {
+  const response = await apiClient.post("/auth/refresh");
+  return response.data;
+};
