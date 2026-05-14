@@ -8,8 +8,10 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -29,12 +31,14 @@ interface ModalDetalleRegistroProps {
   isOpen: boolean;
   onClose: () => void;
   registroId: string | null;
+  onRegisterExitClick?: (registro: any) => void;
 }
 
 export function ModalDetalleRegistro({
   isOpen,
   onClose,
   registroId,
+  onRegisterExitClick,
 }: ModalDetalleRegistroProps) {
   const {
     data: detalle,
@@ -170,7 +174,6 @@ export function ModalDetalleRegistro({
                 </div>
               </div>
 
-              {/* Residente asociado */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
                   <span className="font-medium">Residente asociado:</span>
@@ -191,16 +194,57 @@ export function ModalDetalleRegistro({
                   </div>
                 )}
               </div>
+
+              {/* Información Adicional / Empresa / Proveedor */}
+              {(registro.empresa || registro.placas || registro.motivo) && (
+                <div className="space-y-2 pt-4 border-t">
+                  {registro.empresa && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="font-medium">Empresa:</span>
+                      <span className="text-muted-foreground">{registro.empresa}</span>
+                    </div>
+                  )}
+                  {registro.servicio_nombre && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="font-medium">Servicio:</span>
+                      <span className="text-muted-foreground">{registro.servicio_nombre}</span>
+                    </div>
+                  )}
+                  {registro.placas && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="font-medium">Placas:</span>
+                      <span className="text-muted-foreground">{registro.placas}</span>
+                    </div>
+                  )}
+                  {registro.motivo && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="font-medium">Motivo de la visita:</span>
+                      <span className="text-muted-foreground">{registro.motivo}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
           {/* Información de Acceso */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
               <CardTitle className="flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5" />
                 Información de Acceso
               </CardTitle>
+              {(!registro.fecha_salida || registro.fecha_salida === "-") && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    onRegisterExitClick?.(registro);
+                    onClose(); 
+                  }}
+                >
+                  Registrar Salida
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Método de acceso */}
@@ -307,6 +351,13 @@ export function ModalDetalleRegistro({
             </CardContent>
           </Card>
         </div>
+
+        {/* Footer */}
+        <DialogFooter className="mt-4 sm:justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>
+            Cerrar
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

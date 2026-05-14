@@ -30,7 +30,7 @@ import { APP_GUARD } from '@nestjs/core/constants';
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
-        limit: 5,
+        limit: 50,
       },
     ]),
   ],
