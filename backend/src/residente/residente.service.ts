@@ -13,26 +13,27 @@ export class ResidenteService {
   }
 
   async findAll() {
-    const residentes = await Promise.all([
-      this.prisma.residente.findMany({
-        select: {
-          id_residente: true,
-          usuario: {
-            select: {
-              id_usuario: true,
-              persona: {
-                select: {
-                  url_imagen: true,
-                  nombre: true,
-                },
+    const residentes = await this.prisma.residente.findMany({
+      select: {
+        id_residente: true,
+        usuario: {
+          select: {
+            id_usuario: true,
+            persona: {
+              select: {
+                url_imagen: true,
+                nombre: true,
               },
             },
           },
         },
-      }),
-    ]);
+      },
+    });
 
-    return residentes;
+    return {
+      success: true,
+      data: residentes,
+    };
   }
 
   findOne(id: number) {

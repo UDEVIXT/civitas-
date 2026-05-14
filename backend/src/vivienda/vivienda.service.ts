@@ -13,14 +13,17 @@ export class ViviendaService {
   }
 
   async findAll() {
-    return await Promise.all([
-      this.prisma.vivienda.findMany({
-        select: {
-          id_vivienda: true,
-          numero_vivienda: true,
-        },
-      }),
-    ]);
+    const viviendas = await this.prisma.vivienda.findMany({
+      select: {
+        id_vivienda: true,
+        numero_vivienda: true,
+      },
+    });
+
+    return {
+      success: true,
+      data: viviendas,
+    };
   }
 
   findOne(id: number) {
