@@ -10,6 +10,8 @@ import { EvidenciaReporteModule } from './evidencia-reporte/evidencia-incidencia
 import { EmpleadoModule } from './empleado/empleado.module';
 import { AuthModule } from './auth/auth.module';
 import { IncidenciasModule } from './incidencias/incidencias.module';
+import { ViviendaModule } from './vivienda/vivienda.module';
+import { ResidenteModule } from './residente/residente.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { IncidenciasModule } from './incidencias/incidencias.module';
     EmpleadoModule,
     AuthModule,
     IncidenciasModule,
+    ResidenteModule,
+    ViviendaModule,
   ],
   controllers: [AppController],
   providers: [AppService],
