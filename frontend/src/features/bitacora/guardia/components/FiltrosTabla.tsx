@@ -19,29 +19,43 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { BitacoraFiltro } from "../api/bitacora";
 
-const tipos = [
-  { value: "todos", label: "Todos los tipos" },
-  { value: "visitante", label: "Visitante" },
-  { value: "residente", label: "Residente" },
-  { value: "empleado doméstico", label: "Empleado doméstico" },
-  { value: "proveedor", label: "Proveedor" },
-];
+export function FiltrosTabla({
+  filters,
+  onChange,
+  onClear,
+  selectedIds,
+  onMassExitClick,
+}: {
+  filters: BitacoraFiltro;
+  onChange: (f: Partial<BitacoraFiltro>) => void;
+  onClear: () => void;
+  selectedIds: string[];
+  onMassExitClick: () => void;
+}) {
+  // Convertimos las fechas del filtro en un objeto DateRange controlable
+  const dateRange = React.useMemo(() => {
+    if (!filters.fecha_inicio) return undefined;
+    return {
+      from: new Date(`${filters.fecha_inicio}T12:00:00`), // Evitamos desfase de huso horario
+      to: filters.fecha_fin ? new Date(`${filters.fecha_fin}T12:00:00`) : undefined,
+    };
+  }, [filters.fecha_inicio, filters.fecha_fin]);
+  
+  const tipos = [
+    { value: "todos", label: "Todos los tipos" },
+    { value: "visitante", label: "Visitante" },
+    { value: "residente", label: "Residente" },
+    { value: "empleado_domestico", label: "Empleado doméstico" },
+    { value: "proveedor", label: "Proveedor" },
+  ];
 
-const residencias = [
-  { value: "todas", label: "Todas las residencias" },
-  { value: "Apartamento 101", label: "Apartamento 101" },
-  { value: "Apartamento 205", label: "Apartamento 205" },
-  { value: "Apartamento 305", label: "Apartamento 305" },
-  { value: "Administración", label: "Administración" },
-];
+  const ordenamientos = [
+    { value: "reciente", label: "Más reciente primero" },
+    { value: "antiguo", label: "Más antiguo primero" },
+  ];
 
-const ordenamientos = [
-  { value: "reciente", label: "Más reciente primero" },
-  { value: "antiguo", label: "Más antiguo primero" },
-];
-
-export function FiltrosTabla() {
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="flex items-center gap-4">
@@ -51,6 +65,8 @@ export function FiltrosTabla() {
           <input
             type="search"
             placeholder="Buscar por nombre..."
+            value={filters.search || ""}
+            onChange={(e) => onChange({ search: e.target.value })}
             className="flex h-9 w-[240px] rounded-md border border-input bg-background pl-9 pr-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>
@@ -58,7 +74,10 @@ export function FiltrosTabla() {
 
       <div className="flex items-center gap-4">
         {/* CA004 - Filtro por tipo */}
-        <Select defaultValue="todos">
+        <Select
+          value={filters.tipo || "todos"}
+          onValueChange={(v) => onChange({ tipo: v as BitacoraFiltro["tipo"] })}
+        >
           <SelectTrigger className="w-[180px] h-9">
             <SelectValue placeholder="Tipo" />
           </SelectTrigger>
@@ -72,24 +91,35 @@ export function FiltrosTabla() {
         </Select>
 
         {/* CA004 - Filtro por residencia */}
-        <Select defaultValue="todas">
-          <SelectTrigger className="w-[200px] h-9">
-            <SelectValue placeholder="Residencia" />
-          </SelectTrigger>
-          <SelectContent>
-            {residencias.map((res) => (
-              <SelectItem key={res.value} value={res.value}>
-                {res.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="search"
+            placeholder="Buscar por residencia..."
+            value={filters.residencia || ""}
+            onChange={(e) => onChange({ residencia: e.target.value })}
+            className="flex h-9 w-[200px] rounded-md border border-input bg-background pl-9 pr-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+        </div>
 
         {/* CA003 - Filtro por rango de fechas */}
-        <DatePickerWithRange />
+        <DatePickerWithRange
+          date={dateRange}
+          onChangeDate={(from, to) => {
+            onChange({
+              fecha_inicio: from ? format(from, "yyyy-MM-dd") : undefined,
+              fecha_fin: to ? format(to, "yyyy-MM-dd") : undefined,
+            });
+          }}
+        />
 
         {/* CA006 - Ordenar por fecha */}
-        <Select defaultValue="reciente">
+        <Select
+          value={filters.ordenar || "reciente"}
+          onValueChange={(v) =>
+            onChange({ ordenar: v as BitacoraFiltro["ordenar"] })
+          }
+        >
           <SelectTrigger className="w-[180px] h-9">
             <ArrowUpDown className="h-4 w-4 mr-2 text-muted-foreground" />
             <SelectValue placeholder="Ordenar por" />
@@ -103,8 +133,21 @@ export function FiltrosTabla() {
           </SelectContent>
         </Select>
 
+        <Button
+          variant="destructive"
+          disabled={selectedIds.length === 0}
+          onClick={onMassExitClick}
+        >
+          Salida Masiva ({selectedIds.length})
+        </Button>
+
         {/* Botón limpiar filtros */}
-        <Button variant="outline" size="icon" className="h-9 w-9">
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-9 w-9"
+          onClick={onClear}
+        >
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -112,12 +155,13 @@ export function FiltrosTabla() {
   );
 }
 
-function DatePickerWithRange() {
-  const [date, setDate] = React.useState<DateRange | undefined>({
-    from: new Date(new Date().getFullYear(), 0, 20),
-    to: addDays(new Date(new Date().getFullYear(), 0, 20), 20),
-  });
-
+function DatePickerWithRange({
+  date,
+  onChangeDate,
+}: {
+  date?: DateRange;
+  onChangeDate: (from: Date | null, to: Date | null) => void;
+}) {
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -145,7 +189,11 @@ function DatePickerWithRange() {
           mode="range"
           defaultMonth={date?.from}
           selected={date}
-          onSelect={setDate}
+          onSelect={(d) => {
+            const from = (d as any)?.from ?? null;
+            const to = (d as any)?.to ?? null;
+            onChangeDate(from, to);
+          }}
           numberOfMonths={2}
           locale={es}
         />

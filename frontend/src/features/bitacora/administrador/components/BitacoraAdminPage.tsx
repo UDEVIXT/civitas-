@@ -3,55 +3,127 @@
 import React, { useEffect, useState } from "react";
 import { FiltrosTablaAdmin } from "./FiltrosTablaAdmin";
 import { TablaAccesosAdmin } from "./TablaAccesosAdmin";
-import { bitacoraService, Bitacora } from "@/services/bitacora.service";
+import { bitacoraService } from "@/services/bitacora.service";
+import { BitacoraRegistro } from "../../guardia/api/bitacora";
 
 export function BitacoraAdminPage() {
-  // Estados de datos
-  const [records, setRecords] = useState<Bitacora[]>([]);
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // DATOS
+  const [records, setRecords] = useState<BitacoraRegistro[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Estados de filtros
+  // PAGINACIÓN
+  const [meta, setMeta] = useState({
+    page: 1,
+    total_pages: 1,
+    total: 0,
+  });
+
+  // FILTROS
   const [propertyFilter, setPropertyFilter] = useState<string>("");
-  const [typeFilter, setTypeFilter] = useState<string>("todos");
-  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>("desc");
+
+  const [typeFilter, setTypeFilter] = useState<string>("");
+
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+
+  const [fechaInicio, setFechaInicio] = useState<string>("");
+
+  const [fechaFin, setFechaFin] = useState<string>("");
+
+  const [page, setPage] = useState<number>(1);
 
   const loadData = async () => {
-    setLoading(true);
     try {
-      const data = await bitacoraService.getAll({
-        propertyId: propertyFilter || undefined,
-        visitorType: typeFilter !== "todos" ? typeFilter : undefined,
-        sort: sortOrder,
+      setLoading(true);
+
+      const response = await bitacoraService.obtenerBitacoraHistorica({
+        search: propertyFilter || undefined,
+
+        tipo: typeFilter || undefined,
+
+        fecha_inicio: fechaInicio || undefined,
+
+        fecha_fin: fechaFin || undefined,
+
+        ordenar: sortOrder === "asc" ? "antiguo" : "reciente",
+
+        page: String(page),
+
+        limit: "10",
       });
-      setRecords(data);
+
+      setRecords(response.data);
+
+      setMeta({
+        page: response.meta.page,
+        total_pages: response.meta.total_pages,
+        total: response.meta.total,
+      });
+      console.log("Bitácora cargada:", response.data);
     } catch (error) {
-      console.error("Error al cargar accesos de bitácora", error);
+      console.error("Error cargando bitácora:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Cargar datos al montar y cuando cambian los filtros
   useEffect(() => {
-    // Podrías agregar un "debounce" aquí para el propertyFilter si quisieras
     loadData();
-  }, [propertyFilter, typeFilter, sortOrder]);
+  }, [
+    propertyFilter,
+    typeFilter,
+    sortOrder,
+    fechaInicio,
+    fechaFin,
+    page,
+  ]);
+
+  if (!isMounted) {
+    return null; // Evita el error de hidratación con las fechas del administrador
+  }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto p-10 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Bitácora de Accesos (Administrador)</h1>
-        <p className="text-muted-foreground text-sm mt-1">Supervisa todas las entradas y salidas del recinto.</p>
+        <h1 className="text-2xl font-bold">
+          Historial de Accesos (Administrador)
+        </h1>
+
+        <p className="text-muted-foreground text-sm mt-1">
+          Supervisa todas las entradas y salidas de la residencia.
+        </p>
       </div>
-      
-      <FiltrosTablaAdmin 
+
+      <FiltrosTablaAdmin
         onSearchProperty={setPropertyFilter}
         onTypeChange={setTypeFilter}
         onSortChange={setSortOrder}
-        onClearFilters={() => { setPropertyFilter(""); setTypeFilter("todos"); setSortOrder("desc"); }}
+        onDateChange={(inicio: string, fin: string) => {
+          setFechaInicio(inicio);
+          setFechaFin(fin);
+        }}
+        onClearFilters={() => {
+          setPropertyFilter("");
+          setTypeFilter("");
+          setSortOrder("desc");
+          setFechaInicio("");
+          setFechaFin("");
+          setPage(1);
+        }}
       />
-      
-      <TablaAccesosAdmin data={records} loading={loading} />
+
+      <TablaAccesosAdmin
+        data={records}
+        loading={loading}
+        onRefresh={loadData}
+        meta={meta}
+        onPageChange={setPage}
+      />
     </div>
   );
 }
