@@ -1,17 +1,19 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { BitacoraModule } from './bitacora/bitacora.module';
 import { ReportesModule } from './reportes/reportes.module';
-import { EvidenciaIncidenciaModule } from './evidencia-incidencia/evidencia-incidencia.module';
+import { EvidenciaReporteModule } from './evidencia-reporte/evidencia-incidencia.module';
 import { EmpleadoModule } from './empleado/empleado.module';
 import { EmpleadoGeneralModule } from './empleado-general/empleado-general.module';
 import { AuthModule } from './auth/auth.module';
-import { BitacoraGuardiaModule } from './bitacora-guardia/bitacora-guardia.module';
-
+import { IncidenciasModule } from './incidencias/incidencias.module';
+import { ResidenteModule } from './residente/residente.module';
+import { ViviendaModule } from './vivienda/vivienda.module';
+import { APP_GUARD } from '@nestjs/core/constants';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -20,13 +22,28 @@ import { BitacoraGuardiaModule } from './bitacora-guardia/bitacora-guardia.modul
     PrismaModule,
     BitacoraModule,
     ReportesModule,
-    EvidenciaIncidenciaModule,
+    EvidenciaReporteModule,
     EmpleadoModule,
     EmpleadoGeneralModule,
     AuthModule,
-    BitacoraGuardiaModule,
+    IncidenciasModule,
+    ResidenteModule,
+    ViviendaModule,
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 5,
+      },
+    ]),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

@@ -10,8 +10,16 @@ export async function seedServicios(prisma: PrismaClient) {
   }
 
   const serviciosBase = [
-    'Jardinería', 'Plomería', 'Limpieza', 'Internet', 'Comida', 
-    'Seguridad', 'Electricidad', 'Mantenimiento', 'Paquetería', ' Gas'
+    'Jardinería',
+    'Plomería',
+    'Limpieza',
+    'Internet',
+    'Comida',
+    'Seguridad',
+    'Electricidad',
+    'Mantenimiento',
+    'Paquetería',
+    'Gas',
   ];
 
   for (const nombreServicio of serviciosBase) {
@@ -21,6 +29,7 @@ export async function seedServicios(prisma: PrismaClient) {
     const placas = faker.vehicle.vrm();
     const rfc = faker.helpers.replaceSymbols('????######???').toUpperCase();
     const tipoServicio = faker.helpers.arrayElement(tiposServicio);
+    const fechaRegistro = new Date(faker.date.past());
 
     const servicioExistente = await prisma.servicio.findFirst({
       where: {
@@ -37,7 +46,8 @@ export async function seedServicios(prisma: PrismaClient) {
       placas: placas,
       rfc: faker.datatype.boolean() ? rfc : null,
       id_tipo_servicio: tipoServicio.id_tipo_servicio,
-      activo: true
+      activo: true,
+      fecha_registro: fechaRegistro,
     };
 
     if (servicioExistente) {
@@ -65,7 +75,7 @@ export async function seedServicios(prisma: PrismaClient) {
         tipo_carro: faker.vehicle.type(),
         placas: faker.vehicle.vrm(),
         id_tipo_servicio: tipoServicio.id_tipo_servicio,
-        activo: true
+        activo: true,
       },
     });
   }
