@@ -4,8 +4,10 @@ import { EmpleadosTable } from "@/features/empleados-domesticos/components/emple
 import { EmpleadosFilters } from "@/features/empleados-domesticos/components/empleados-filters";
 import { EmpleadosPagination } from "@/features/empleados-domesticos/components/empleados-pagination";
 import { EmpleadosDeleteDialog } from "@/features/empleados-domesticos/components/empleados-delete-dialog";
-import type { EmpleadoDomestico } from "@/features/empleados-domesticos/types";
 import { EmpleadosHorarioDialog } from "./horarios-empleado-domestico";
+
+import useResidente from "@/features/empleados-domesticos/hooks/useResidente";
+import useVivienda from "@/features/empleados-domesticos/hooks/useVivienda";
 
 export function EmpleadosDomesticosPage() {
   const {
@@ -20,7 +22,14 @@ export function EmpleadosDomesticosPage() {
     totalPages,
     modalEdit,
     modalHorario,
+    setResidenciaFilter,
+    setViviendaFilter,
+    residenciaFilter,
+    viviendaFilter,
   } = useEmpleadoDomesticos();
+
+  const { data: residentes = [] } = useResidente();
+  const { data: viviendas = [] } = useVivienda();
 
   return (
     <div className="min-h-screen bg-amber-50/30 text-foreground">
@@ -30,15 +39,15 @@ export function EmpleadosDomesticosPage() {
           onSearchChange={setSearch}
           statusFilter={statusFilter}
           onStatusChange={setStatusFilter}
+          residentes={residentes}
+          residenciaId={residenciaFilter}
+          onResidenciaChange={setResidenciaFilter}
+          viviendas={viviendas}
+          viviendaId={viviendaFilter}
+          onViviendaChange={setViviendaFilter}
         />
 
         <section className="mt-6 rounded-2xl border border-border bg-white shadow-sm">
-          <div className="px-4 py-3">
-            <p className="text-xs font-semibold uppercase text-muted-foreground">
-              Nombre
-            </p>
-          </div>
-
           <EmpleadosTable
             items={empleados}
             isLoading={loading}
