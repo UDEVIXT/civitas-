@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ReportesController } from './reportes.controller';
 import { ReportesService } from './reportes.service';
-// Importamos el Módulo (NO el servicio) desde su ruta correspondiente
 import { ArchivosModule } from './archivos.module'; 
+import { EvidenciaReporteModule } from '../evidencia-reporte/evidencia-incidencia.module'; 
 
 @Module({
-  // Colocamos el módulo invitado en el arreglo de imports
-  imports: [ArchivosModule], 
+  imports: [ArchivosModule, EvidenciaReporteModule],
   controllers: [ReportesController],
   providers: [ReportesService],
 })

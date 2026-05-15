@@ -5,5 +5,6 @@ import { EvidenciaReporteController } from './evidencia-incidencia.controller';
 @Module({
   controllers: [EvidenciaReporteController],
   providers: [EvidenciaReporteService],
+  exports: [EvidenciaReporteService],
 })
 export class EvidenciaReporteModule {}
