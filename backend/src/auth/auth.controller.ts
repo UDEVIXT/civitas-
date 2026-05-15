@@ -40,6 +40,7 @@ export class AuthController {
     res.cookie('access_token', data.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
+      domain: process.env.DOMAIN || undefined,
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
       maxAge: refreshMaxAge,
     });
@@ -47,6 +48,7 @@ export class AuthController {
     res.cookie('refresh_token', data.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
+      domain: process.env.DOMAIN || undefined,
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
       maxAge: refreshMaxAge,
     });
@@ -70,6 +72,7 @@ export class AuthController {
     res.cookie('access_token', data.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
+      domain: process.env.DOMAIN || undefined,
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
       maxAge: 1000 * 60 * 15,
     });

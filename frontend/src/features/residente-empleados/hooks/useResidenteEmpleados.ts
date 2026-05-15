@@ -33,14 +33,15 @@ export function useResidenteEmpleados(idResidente: string) {
     enabled: !!idResidente,
   });
 
-  // 2. ACTUALIZAR EMPLEADO
+// 2. ACTUALIZAR EMPLEADO
   const updateMutation = useMutation({
     mutationFn: (values: any) => {
       if (!selectedEmpleado) return Promise.reject("No hay empleado seleccionado");
       return actualizarEmpleadoResidente(selectedEmpleado.id_visitante, values);
     },
     onSuccess: (res) => {
-      if (res.success) {
+      // Si la función de la API respondió success: true
+      if (res && res.success) {
         queryClient.invalidateQueries({ queryKey: ["residente-empleados"] });
         setIsEditModalOpen(false);
         toast({
@@ -48,26 +49,30 @@ export function useResidenteEmpleados(idResidente: string) {
           description: "La información se actualizó correctamente.",
         });
       } else {
-        // Traducción de errores técnicos a amigables
-        const mensajeAmigable = (res.message?.length || 0) > 80 
-          ? "Revisa que los datos sean correctos. Algunos campos adicionales podrían no estar habilitados aún en el servidor."
-          : res.message;
-
+        // En caso de que se retorne success: false de manera explícita
         toast({
           title: "No se pudo guardar",
-          description: mensajeAmigable || "Hubo un problema al procesar la información.",
+          description: res.message || "Hubo un problema al procesar la información.",
           variant: "destructive",
         });
       }
     },
-    onError: () => {
+    onError: (error: any) => {
+      // 🚀 CAPTURA INTELIGENTE DEL ERROR DEL BACKEND:
+      // Si NestJS mandó un mensaje (sea string o un arreglo del ValidationPipe), lo extraemos
+      const backendMessage = error.response?.data?.message;
+      
+      const mensajeFinal = Array.isArray(backendMessage)
+        ? backendMessage.join(". ") // Si es un arreglo de validaciones, los junta
+        : backendMessage || "Parece que hay un problema con el servidor. Verifica tu internet o intenta más tarde.";
+
       toast({
-        title: "Error de conexión",
-        description: "Parece que hay un problema con el servidor. Verifica tu internet o intenta más tarde.",
+        title: "Error en la solicitud",
+        description: mensajeFinal,
         variant: "destructive",
       });
     }
-  }); 
+  });
 
   // Manejadores de eventos
   const handleEditClick = (empleado: EmpleadoDomestico) => {
