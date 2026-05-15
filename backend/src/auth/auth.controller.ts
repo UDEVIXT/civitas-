@@ -11,6 +11,9 @@ import { Throttle } from '@nestjs/throttler';
 import type { Response, Request } from 'express';
 import { AuthService } from './auth.service';
 import { AccesoLoginDto } from './dto/acceso-login.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { VerifyCodeDto } from './dto/verify-code.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -74,5 +77,35 @@ export class AuthController {
     return {
       success: true,
     };
+  }
+
+  // 1. Endpoint para solicitar el código (CA001, CA002, CA003)
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // Protección contra spam (3 peticiones por minuto)
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return await this.authService.forgotPassword(
+      forgotPasswordDto.identificador,
+    );
+  }
+
+  // 2. Endpoint para verificar si el código es válido y no ha expirado (CA004, CA005)
+  @Post('verify-code')
+  @HttpCode(HttpStatus.OK)
+  async verifyCode(@Body() verifyCodeDto: VerifyCodeDto) {
+    return await this.authService.verifyResetCode(
+      verifyCodeDto.identificador,
+      verifyCodeDto.codigo,
+    );
+  }
+
+  // 3. Endpoint para guardar la nueva contraseña (CA006, CA007)
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return await this.authService.resetPassword(
+      resetPasswordDto.codigo,
+      resetPasswordDto.nuevaPassword,
+    );
   }
 }

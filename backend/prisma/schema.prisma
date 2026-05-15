@@ -81,6 +81,12 @@ model Usuario {
   id_persona         String         @unique
   password           String
   estado             EstadoUsuario  @default(ACTIVO)
+  // --- Campos nuevos para recuperación de contraseña ---
+  // Almacena el código (ej. "123456") o un token generado
+  resetPasswordToken   String?   
+  
+  // Almacena la fecha y hora exacta en que el código dejará de ser válido
+  resetPasswordExpires DateTime?
   correo_verificado  Boolean        @default(false)
   token_verificacion String?        @unique
   accesos            Acceso[]
