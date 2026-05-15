@@ -5,6 +5,8 @@ import { FiltrosTablaAdmin } from "./FiltrosTablaAdmin";
 import { TablaAccesosAdmin } from "./TablaAccesosAdmin";
 import { bitacoraService } from "@/services/bitacora.service";
 import { BitacoraRegistro } from "../../guardia/api/bitacora";
+import { AlertCircle } from "lucide-react"; // NUEVO por drk
+import { Button } from "@/components/ui/button"; // NUEVO por drk
 
 export function BitacoraAdminPage() {
   const [isMounted, setIsMounted] = React.useState(false);
@@ -16,6 +18,7 @@ export function BitacoraAdminPage() {
   // DATOS
   const [records, setRecords] = useState<BitacoraRegistro[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null); // NUEVO ESTADO
 
   // PAGINACIÓN
   const [meta, setMeta] = useState({
@@ -42,7 +45,7 @@ export function BitacoraAdminPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-
+      setError(null);
       const response = await bitacoraService.obtenerBitacoraHistorica({
         search: nameFilter || undefined,
 
@@ -69,8 +72,10 @@ export function BitacoraAdminPage() {
         total: response.meta.total,
       });
       console.log("Bitácora cargada:", response.data);
-    } catch (error) {
-      console.error("Error cargando bitácora:", error);
+    } catch (err) {
+      console.error("Error cargando bitácora:", err);
+      // Capturamos el error para mostrarlo en la UI
+      setError("No se pudo cargar el historial de accesos debido a un problema técnico. Verifica tu conexión o intenta más tarde."); 
     } finally {
       setLoading(false);
     }
@@ -137,13 +142,27 @@ export function BitacoraAdminPage() {
         }}
       />
 
-      <TablaAccesosAdmin
-        data={records}
-        loading={loading}
-        onRefresh={loadData}
-        meta={meta}
-        onPageChange={setPage}
-      />
+      {/* Renderizado Condicional: Error vs Tabla */}
+      {error ? (
+        <div className="flex flex-col items-center justify-center py-12 px-4 border rounded-lg bg-destructive/10 text-destructive border-destructive/20">
+          <AlertCircle className="h-10 w-10 mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Error de conexión</h3>
+          <p className="text-center max-w-md text-sm mb-6">
+            {error}
+          </p>
+          <Button onClick={loadData} variant="outline">
+            Reintentar conexión
+          </Button>
+        </div>
+      ) : (
+        <TablaAccesosAdmin
+          data={records}
+          loading={loading}
+          onRefresh={loadData}
+          meta={meta}
+          onPageChange={setPage}
+        />
+      )}
     </div>
   );
 }
