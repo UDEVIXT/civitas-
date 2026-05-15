@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as ToasterProvider } from "sonner";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 
 const queryClient = new QueryClient({
@@ -33,6 +34,7 @@ export default function RootLayoutClient({ children }: RootLayoutClientProps) {
     <QueryClientProvider client={queryClient}>
       <AuthInitializer>{children}</AuthInitializer>
       <Toaster />
+      <ToasterProvider richColors />
     </QueryClientProvider>
   );
 }
