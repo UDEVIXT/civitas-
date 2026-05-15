@@ -5,7 +5,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 export class ArchivosService {
   private supabase: SupabaseClient;
   // Asegúrate de que este nombre sea EXACTAMENTE el mismo que creaste en Supabase
-  private nombreBucket = 'imagenes'; 
+  private nombreBucket = 'imagenes';
 
   constructor() {
     this.supabase = createClient(
@@ -18,7 +18,7 @@ export class ArchivosService {
     try {
       // 1. Limpiamos el nombre del archivo: quitamos espacios y caracteres raros
       const nombreLimpio = archivo.originalname.replace(/[^a-zA-Z0-9.]/g, '');
-      
+
       // 2. Le agregamos la fecha actual (Date.now) para que nunca haya dos fotos con el mismo nombre exacto
       const rutaArchivo = `${Date.now()}_${nombreLimpio}`;
 
@@ -40,10 +40,11 @@ export class ArchivosService {
         .getPublicUrl(rutaArchivo);
 
       return publicUrlData.publicUrl;
-
     } catch (error) {
       console.error('Error al subir a Supabase:', error);
-      throw new InternalServerErrorException('No se pudo subir la evidencia a Supabase');
+      throw new InternalServerErrorException(
+        'No se pudo subir la evidencia a Supabase',
+      );
     }
   }
 }
