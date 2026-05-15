@@ -23,13 +23,13 @@ export function ReportTypeSelect({ value, onChange, error }: ReportTypeSelectPro
         <SelectContent>
           <SelectGroup>
             <SelectLabel>Tipo de reporte</SelectLabel>
-            <SelectItem value="queja" className="cursor-pointer">
+            <SelectItem value="QUEJA" className="cursor-pointer">
               Queja
             </SelectItem>
-            <SelectItem value="sugerencia" className="cursor-pointer">
+            <SelectItem value="SUGERENCIA" className="cursor-pointer">
               Sugerencia
             </SelectItem>
-            <SelectItem value="incidente" className="cursor-pointer">
+            <SelectItem value="INCIDENCIA" className="cursor-pointer">
               Incidente
             </SelectItem>
           </SelectGroup>
