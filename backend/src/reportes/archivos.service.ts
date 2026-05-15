@@ -1,4 +1,5 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 @Injectable()
@@ -7,11 +8,15 @@ export class ArchivosService {
   // Asegúrate de que este nombre sea EXACTAMENTE el mismo que creaste en Supabase
   private nombreBucket = 'imagenes';
 
-  constructor() {
-    this.supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_KEY!,
-    );
+  constructor(private configService: ConfigService) {
+    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
+    const supabaseKey = this.configService.get<string>('SUPABASE_KEY');
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('SUPABASE_URL y SUPABASE_KEY son requeridos');
+    }
+
+    this.supabase = createClient(supabaseUrl, supabaseKey);
   }
 
   async subirImagen(archivo: any): Promise<string> {
