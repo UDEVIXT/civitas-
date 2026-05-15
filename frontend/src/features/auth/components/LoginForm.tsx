@@ -2,6 +2,7 @@
 
 // Componentes
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,7 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
 
   const { login } = useAuth();
+  const router = useRouter();
 
   async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -48,6 +50,7 @@ export function LoginForm() {
     setIsLoading(true);
     try {
       await login({ usuario, password, recordarme });
+      router.push("/");
     } catch (error: unknown) {
       setIsLoading(false);
       console.error(error);
