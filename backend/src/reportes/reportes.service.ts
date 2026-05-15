@@ -1,9 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class ReportesService {
   constructor(private prisma: PrismaService) {}
+
+  private generarTokenSeguimiento(): string { //Este metodo genera un token unico para cada reporte anonimo, con el prefijo "REP-"
+    return `REP-${randomUUID().slice(0, 8).toUpperCase()}`;
+  }
 
   async crearConEvidencia(datos: any, /*urlArchivo?: string | null, nombreArchivo?: string | null*/) {
     const latitud = parseFloat(datos.latitud);
@@ -32,6 +37,10 @@ export class ReportesService {
         estado: datos.estado || 'PENDIENTE',
         prioridad: datos.prioridad || 'MEDIA',
         es_anonimo: es_anonimo,
+
+        token_seguimiento: es_anonimo  //el tojen se genera solo si el reporte es anonimo, si no lo deja como null
+          ? this.generarTokenSeguimiento()
+          : null,
         
         // 3. Ahora usamos nuestras variables 'Finales'. 
         // Prisma creará la evidencia si encontró datos en el archivo físico o en el JSON.
