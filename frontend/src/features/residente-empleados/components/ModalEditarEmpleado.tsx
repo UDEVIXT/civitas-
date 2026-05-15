@@ -97,16 +97,20 @@ export function ModalEditarEmpleado({ empleado, isOpen, onClose, onSave, isSavin
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             
             {/* Header con Foto */}
-            <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-xl justify-center">
-              <Avatar className="h-16 w-16 border-2 border-white shadow-sm">
+            <div className="flex flex-col items-center justify-center gap-3 bg-gray-50 p-4 rounded-xl mb-4 text-center">
+              <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-4 border-white shadow-md">
                 <AvatarImage src={form.watch("foto") || "/placeholder-user.jpg"} />
-                <AvatarFallback className="bg-amber-100 text-amber-700 font-bold">
+                <AvatarFallback className="bg-amber-100 text-amber-700 font-bold text-2xl">
                   {empleado?.nombre?.charAt(0)}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <p className="text-sm font-bold text-gray-900">{form.watch("nombre") || "Sin nombre"}</p>
-                <p className="text-xs text-gray-500">{form.watch("cargo")}</p>
+              <div className="flex flex-col gap-0.5">
+                <p className="text-base sm:text-lg font-extrabold text-gray-950 tracking-tight">
+                  {form.watch("nombre") || "Sin nombre"}
+                </p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 bg-gray-100 px-3 py-0.5 rounded-full inline-block mx-auto">
+                  {form.watch("cargo")}
+                </p>
               </div>
             </div>
 
