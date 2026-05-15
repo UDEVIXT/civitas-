@@ -35,20 +35,37 @@ export function useResidenteEmpleados(idResidente: string) {
   //  ACTUALIZAR MODAL
   const updateMutation = useMutation({
     mutationFn: (values: any) => {
-      if (!selectedEmpleado) return Promise.reject();
+      if (!selectedEmpleado) return Promise.reject("No hay empleado seleccionado");
       return actualizarEmpleadoResidente(selectedEmpleado.id_visitante, values);
     },
-   onSuccess: (res) => 
-    {
-    if (res.success) 
-        {
-            queryClient.invalidateQueries({ queryKey: ["residente-empleados"] });
-            setIsEditModalOpen(false);
-            toast({
-            title: "Éxito",
-            description: "Información actualizada correctamente",
-            });
-        }
+    onSuccess: (res) => {
+      if (res.success) {
+        // ÉXITO: Refrescamos y cerramos
+        queryClient.invalidateQueries({ queryKey: ["residente-empleados"] });
+        setIsEditModalOpen(false);
+        toast({
+          title: "¡Guardado!",
+          description: "Los cambios se aplicaron correctamente.",
+        });
+      } else {
+        // ERROR DE NEGOCIO (CA011): El servidor respondió pero con un error
+        toast({
+          title: "Error al actualizar",
+          description: res.message || "No se pudieron guardar los cambios.",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error: any) => {
+      // ERROR TÉCNICO (CA011): Falló la conexión, timeout o error 500
+      console.error("Error técnico detectado:", error);
+      toast({
+        title: "Problema técnico",
+        description: "No se pudo conectar con el servidor. Intenta de nuevo más tarde.",
+        variant: "destructive",
+      });
+      // Nota: Como no llamamos a setIsEditModalOpen(false), el modal se queda 
+      // abierto para que el usuario no pierda lo que escribió.
     }
   });
 

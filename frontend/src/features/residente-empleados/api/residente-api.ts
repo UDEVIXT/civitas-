@@ -12,6 +12,8 @@ export const actualizarEmpleadoResidente = async (id: string, data: any) => {
         // Mandamos las horas por separado como se configuró en el modal
         hora_entrada: data.hora_entrada,
         hora_salida: data.hora_salida,
+        dias_autorizados: data.dias_autorizados,
+        notas: data.notas,
       },
     });
     return { success: true, data: response.data };
