@@ -1,10 +1,6 @@
-//ModalRegistrarSalida.tsx
-
 "use client";
 
 import React, { useState } from "react";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import {
     Dialog,
     DialogContent,
@@ -35,10 +31,8 @@ export function ModalRegistrarSalida({
     const handleConfirm = async () => {
         setIsLoading(true);
         try {
-            // Llamada real al backend para registrar la salida
             await bitacoraService.registrarSalida(registro.id.toString(), comentario);
-
-            onSuccess(); // Esto cerrará el modal y refrescará la tabla en la página principal
+            onSuccess();
         } catch (error) {
             console.error("Error al registrar salida:", error);
             alert("Ocurrió un error al registrar la salida");
@@ -49,7 +43,7 @@ export function ModalRegistrarSalida({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !isLoading && !open && onClose()}>
-            <DialogContent className="max-w-md">
+            <DialogContent className="w-[95vw] max-w-md rounded-lg p-4 sm:p-6">
                 <DialogHeader>
                     <DialogTitle>Confirmar Salida</DialogTitle>
                     <DialogDescription className="sr-only">
@@ -57,23 +51,36 @@ export function ModalRegistrarSalida({
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="py-4 space-y-3 text-sm">
-                    <p className="text-muted-foreground mb-4">
+                <div className="py-3 space-y-3 text-sm">
+                    <p className="text-muted-foreground">
                         ¿Estás seguro que deseas registrar la salida de esta persona?
                     </p>
 
-                    <div className="p-3 border rounded-md bg-muted/30 grid grid-cols-1 gap-2 text-left">
-                        <p><span className="font-medium">Nombre:</span> {registro.nombre}</p>
-                        <p><span className="font-medium">Tipo:</span> {registro.tipo_persona?.replace("_", " ")}</p>
-                        {registro.residente_asociado?.nombre && registro.residente_asociado.nombre !== "-" && (
-                            <p><span className="font-medium">Residente Asociado:</span> {registro.residente_asociado.nombre}</p>
-                        )}
+                    <div className="p-3 border rounded-md bg-muted/30 space-y-1.5">
+                        <p><span className="font-medium">Nombre:</span>{" "}
+                            <span className="text-muted-foreground">{registro.nombre}</span>
+                        </p>
+                        <p><span className="font-medium">Tipo:</span>{" "}
+                            <span className="text-muted-foreground">
+                                {registro.tipo_persona?.replace("_", " ")}
+                            </span>
+                        </p>
+                        {registro.residente_asociado?.nombre &&
+                            registro.residente_asociado.nombre !== "-" && (
+                                <p><span className="font-medium">Residente Asociado:</span>{" "}
+                                    <span className="text-muted-foreground">
+                                        {registro.residente_asociado.nombre}
+                                    </span>
+                                </p>
+                            )}
                     </div>
 
-                    <div className="mt-4">
-                        <label className="block text-sm font-medium mb-2">Motivo o nota del guardia</label>
+                    <div>
+                        <label className="block text-sm font-medium mb-2">
+                            Motivo o nota del guardia
+                        </label>
                         <textarea
-                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             placeholder="Escribe un comentario sobre la salida (opcional)..."
                             value={comentario}
                             onChange={(e) => setComentario(e.target.value)}
@@ -81,11 +88,11 @@ export function ModalRegistrarSalida({
                     </div>
                 </div>
 
-                <div className="flex justify-end gap-2 mt-4">
-                    <Button variant="outline" onClick={onClose} disabled={isLoading}>
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-2">
+                    <Button variant="outline" onClick={onClose} disabled={isLoading} className="w-full sm:w-auto">
                         Cancelar
                     </Button>
-                    <Button onClick={handleConfirm} disabled={isLoading}>
+                    <Button onClick={handleConfirm} disabled={isLoading} className="w-full sm:w-auto">
                         {isLoading ? "Registrando..." : "Confirmar Salida"}
                     </Button>
                 </div>
