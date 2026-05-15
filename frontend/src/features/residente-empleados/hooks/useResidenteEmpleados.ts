@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useToast } from "@/hooks/use-toast"; // Quitamos el import de toast directo
+import { useToast } from "@/hooks/use-toast"; 
 
 // Importamos las funciones de la API
 import { obtenerEmpleadosDomesticos } from "@/features/empleados-domesticos/api/empleados";
@@ -13,7 +13,7 @@ import type { EmpleadoDomestico } from "@/features/empleados-domesticos/types";
 
 export function useResidenteEmpleados(idResidente: string) {
   const queryClient = useQueryClient();
-  const { toast } = useToast(); // <--- IMPORTANTE: Inicializamos el toast aquí
+  const { toast } = useToast(); //
   
   // Estados para la UI
   const [search, setSearch] = useState("");
