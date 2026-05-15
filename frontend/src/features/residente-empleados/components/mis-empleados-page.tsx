@@ -7,8 +7,7 @@ import { useResidenteEmpleados } from "../hooks/useResidenteEmpleados";
 // Componentes UI
 import { TablaMisEmpleados } from "./TablaMisEmpleados";
 import { ModalEditarEmpleado } from "./ModalEditarEmpleado";
-import { EmpleadosHorarioDialog } from "@/features/empleados-domesticos/components/horarios-empleado-domestico";
-
+import { MiEmpleadoHorarioDialog } from "./MiEmpleadoHorarioDialog";
 export default function MisEmpleadosPage() {
   // Aquí usamos useResidenteEmpleados.ts . El "123" es un ejemplo, 
   // luego lo cambiaremos por el ID real del usuario logueado.
@@ -62,7 +61,7 @@ export default function MisEmpleadosPage() {
     />
 
       {/* Modal de Horarios (el de Joan) */}
-      <EmpleadosHorarioDialog
+      <MiEmpleadoHorarioDialog
         nombre={modalEdit.selectedEmpleado?.nombre || ""}
         horarios={modalEdit.selectedEmpleado?.servicio?.horarios || []}
         open={modalHorario.isOpen}
