@@ -65,7 +65,7 @@ export function ModalEditarEmpleado({ empleado, isOpen, onClose, onSave, isSavin
     },
   });
 
-  React.useEffect(() => {
+ /* React.useEffect(() => {
     if (empleado) {
       const telefonoLimpio = (empleado.telefono || "").replace(/\D/g, "");
       form.reset({
@@ -76,6 +76,56 @@ export function ModalEditarEmpleado({ empleado, isOpen, onClose, onSave, isSavin
         dias_autorizados: (empleado.servicio as any)?.dias_autorizados || [],
         cargo: (empleado.servicio as any)?.cargo || "Nana",
         notas: (empleado.servicio as any)?.notas || "",
+        foto: empleado.url_imagen || "",
+      });
+    }
+  }, [empleado, form]);
+*/
+
+React.useEffect(() => {
+    if (empleado) {
+      const telefonoLimpio = (empleado.telefono || "").replace(/\D/g, "");
+
+      // 1. Extraemos el cargo real desde la relación tipo_servicio
+      const cargoReal = empleado.servicio?.tipo_servicio?.nombre || "Limpieza";
+
+      // 2. Extraemos los días activos mapeándolos de MAYÚSCULAS a formato Checkbox (Ej: "LUNES" -> "Lunes")
+      const mapeoDiasInverso: Record<string, string> = {
+        'LUNES': 'Lunes',
+        'MARTES': 'Martes',
+        'MIERCOLES': 'Miércoles',
+        'JUEVES': 'Jueves',
+        'VIERNES': 'Viernes',
+        'SABADO': 'Sábado',
+        'DOMINGO': 'Domingo'
+      };
+      
+      const listaHorarios = empleado.servicio?.horarios || [];
+      const diasSeleccionados = listaHorarios.map((h: any) => mapeoDiasInverso[h.dia_semana]).filter(Boolean);
+
+      // 3. Formateamos las horas ISO/UTC a formato "HH:MM" de 24 horas para el <input type="time" />
+      const formatearHoraInput = (dateValue: any) => {
+        if (!dateValue) return "08:00";
+        // Si viene un string ISO completo o un objeto Date, extraemos la hora UTC limpia
+        const d = new Date(dateValue);
+        const horas = String(d.getUTCHours()).padStart(2, '0');
+        const minutos = String(d.getUTCMinutes()).padStart(2, '0');
+        return `${horas}:${minutos}`;
+      };
+
+      // Tomamos la hora del primer horario disponible de la lista como base
+      const primerHorario = listaHorarios[0];
+      const horaEntradaReal = primerHorario ? formatearHoraInput(primerHorario.hora_inicio) : "08:00";
+      const horaSalidaReal = primerHorario ? formatearHoraInput(primerHorario.hora_fin) : "16:00";
+
+      form.reset({
+        nombre: empleado.nombre || "",
+        telefono: telefonoLimpio || "",
+        hora_entrada: horaEntradaReal,
+        hora_salida: horaSalidaReal,
+        dias_autorizados: diasSeleccionados,
+        cargo: cargoReal, // 👈 Ahora sí se pre-selecciona "Limpieza", "Nana", etc.
+        notas: "", // Inicializado vacío temporalmente si Joan no incluye notas en la query
         foto: empleado.url_imagen || "",
       });
     }
