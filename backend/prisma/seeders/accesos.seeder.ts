@@ -21,8 +21,10 @@ export async function seedAccesos(prisma: PrismaClient) {
 
   const estatusValues = [EstatusAcceso.Activo, EstatusAcceso.Inactivo];
 
+  // ------------------------------------------------------------------
+  // 1. GENERACIÓN DE ACCESOS PARA VISITANTES (Lógica Original)
+  // ------------------------------------------------------------------
   for (const visitante of visitantes) {
-    // Cada visitante tiene 1 o 2 intentos de acceso
     const numAccesos = faker.number.int({ min: 1, max: 2 });
     
     for (let j = 0; j < numAccesos; j++) {
@@ -31,7 +33,6 @@ export async function seedAccesos(prisma: PrismaClient) {
       const creator = faker.helpers.arrayElement(creatorPool);
       const estatus = faker.helpers.arrayElement(estatusValues);
 
-      // Fecha de expiración con variabilidad (1-90 días)
       const fechaExpiracion = faker.date.soon({ days: faker.number.int({ min: 1, max: 90 }) });
 
       await prisma.acceso.create({
@@ -45,5 +46,33 @@ export async function seedAccesos(prisma: PrismaClient) {
         },
       });
     }
+  }
+
+  // ------------------------------------------------------------------
+  // 2. GENERACIÓN DE ACCESOS PROPIOS PARA RESIDENTES (Nueva Lógica)
+  // ------------------------------------------------------------------
+  if (usuariosResidentes.length > 0) {
+    for (const residente of usuariosResidentes) {
+      // Generalmente, un residente tiene un único QR activo, pero simularemos 1 para mantener el rigor.
+      const codigoQR = faker.string.uuid();
+      const estatus = faker.helpers.arrayElement(estatusValues);
+      
+      // La expiración de un residente suele ser prolongada (ej. 1 año)
+      const fechaExpiracion = faker.date.future({ years: 1 });
+
+      await prisma.acceso.create({
+        data: {
+          id_usuario: residente.id_usuario, // El residente es el titular del acceso
+          id_visitante: null,               // Se declara explícitamente como nulo
+          codigo_qr: codigoQR,
+          fecha_expiracion: fechaExpiracion,
+          estatus: estatus,
+          comentario_admin: 'Acceso permanente de residente generado vía seeder',
+        },
+      });
+    }
+    console.log('Seeding de Accesos (Visitantes y Residentes) completado.');
+  } else {
+    console.warn('No hay usuarios residentes para generar sus accesos propios.');
   }
 }
