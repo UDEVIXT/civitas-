@@ -19,14 +19,16 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
     @Body() accesoLoginDto: AccesoLoginDto,
     @Res({ passthrough: true }) res: Response,
+    @Req() req: Request,
   ) {
     const data = await this.authService.login(
+      req,
       accesoLoginDto.usuario,
       accesoLoginDto.password || '',
       accesoLoginDto.recordarme,
@@ -107,5 +109,28 @@ export class AuthController {
       resetPasswordDto.codigo,
       resetPasswordDto.nuevaPassword,
     );
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  async logout(
+    @Req() req: Request,
+
+    @Res({ passthrough: true })
+    res: Response,
+  ) {
+    const refreshToken =
+      req.cookies?.refresh_token;
+
+    const result =
+      await this.authService.logout(
+        refreshToken,
+      );
+
+    res.clearCookie('access_token');
+
+    res.clearCookie('refresh_token');
+
+    return result;
   }
 }

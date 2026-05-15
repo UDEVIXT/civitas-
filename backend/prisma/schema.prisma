@@ -94,6 +94,7 @@ model Usuario {
   guardias           Guardia?
   residentes         Residente[]
   persona            Persona        @relation(fields: [id_persona], references: [id_persona])
+  sesiones Sesion[]
 }
 
 model Residente {
@@ -252,4 +253,18 @@ model Reporte {
   resultado_solucion String?          @db.Text
 
   evidencias EvidenciaReporte[]
+}
+
+model Sesion {
+  id_sesion      String   @id @default(uuid())
+  id_usuario     String
+  refresh_token  String
+  activo         Boolean  @default(true)
+  ip             String?
+  dispositivo    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user_agent     String?
+  usuario Usuario @relation( fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+  @@map("sesiones")
 }
