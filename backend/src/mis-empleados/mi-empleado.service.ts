@@ -125,23 +125,23 @@ export class EmpleadoService {
   }
 
   //HU-1.5.6: Administrador puede ver empleados domesticos dentro del residencial
+ // HU-1.5.6: Administrador puede ver empleados domesticos dentro del residencial
+ // HU-1.5.6: El endpoint ahora traerá cualquier visitante con servicio asociado
+  // HU-1.5.6: El endpoint ahora traerá cualquier visitante con servicio asociado
   async obtenerEmpleados(filters: {
     search?: string;
     page: number;
     limit?: number;
     isActive?: boolean | undefined;
-    byResidenteId?: number;
-    byViviendaId?: number;
+    byResidenteId?: string;
+    byViviendaId?: string;
   }) {
     const { search, page, limit, isActive, byResidenteId, byViviendaId } =
       filters;
 
+    // ALERTA: Filtro relajado para pruebas de desarrollo
     const where: any = {
-      servicio: {
-        tipo_servicio: {
-          categoria: 'Empleado',
-        },
-      },
+      servicio: {} 
     };
 
     if (search) {
@@ -289,6 +289,8 @@ export class EmpleadoService {
     };
   }
 
+
+  /*
   async actualizarEmpleado(id: string, data: any) {
     try {
       return await this.prisma.$transaction(async (tx) => {
@@ -347,7 +349,97 @@ export class EmpleadoService {
       });
     }
   }
+*/
 
+async actualizarEmpleado(id: string, data: any) {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        // 1. Buscamos el registro para obtener la conexión con la tabla Servicio
+        const visitante = await tx.visitante.findUnique({
+          where: { id_visitante: id },
+          select: { id_servicio: true },
+        });
+
+        if (!visitante) throw new NotFoundException('Empleado no encontrado');
+
+        // 2. Actualizamos los datos personales en la tabla Visitante
+        await tx.visitante.update({
+          where: { id_visitante: id },
+          data: {
+            nombre: data.nombre,
+            telefono: data.telefono,
+            // Soporta tanto url_imagen como foto que viene de tu modal
+            url_imagen: data.url_imagen || data.foto,
+          },
+        });
+
+        // 3. Si tiene un servicio, procesamos el cargo y construimos el array de horarios dinámicamente
+        if (visitante.id_servicio) {
+          
+          // Diccionario para traducir los días del checkbox al ENUM de Postgres
+          const mapeoDias: Record<string, string> = {
+            'Lunes': 'LUNES',
+            'Martes': 'MARTES',
+            'Miércoles': 'MIERCOLES',
+            'Jueves': 'JUEVES',
+            'Viernes': 'VIERNES',
+            'Sábado': 'SABADO',
+            'Domingo': 'DOMINGO'
+          };
+
+          // Si el front manda el array directo en data.dias_autorizados
+          const diasSeleccionados: string[] = data.dias_autorizados || [];
+
+          // Construimos el arreglo mapeado que Prisma necesita para HorarioAccesoServicios
+          const nuevosHorarios = diasSeleccionados.map((dia: string) => {
+            const diaEnum = mapeoDias[dia];
+            if (!diaEnum) return null;
+
+            // Extraemos las horas usando los nombres planos de tu modal
+            const entrada = data.hora_entrada || '08:00';
+            const salida = data.hora_salida || '16:00';
+
+            return {
+              dia_semana: diaEnum,
+              // Convertimos a Date para el tipo @db.Time(6) de PostgreSQL
+              hora_inicio: new Date(`1970-01-01T${entrada}:00.000Z`),
+              hora_fin: new Date(`1970-01-01T${salida}:00.000Z`),
+              activo: true,
+            };
+          }).filter(Boolean); // Limpiamos elementos nulos
+
+          await tx.servicio.update({
+            where: { id_servicio: visitante.id_servicio },
+            data: {
+              cargo: data.cargo, // Guardamos el rol seleccionado ("Limpieza", "Nana", etc.)
+              horarios: {
+                // Borramos los horarios viejos para evitar que se amontonen o dupliquen
+                deleteMany: {},
+                // Insertamos el bloque de nuevos días autorizados
+                create: nuevosHorarios as any,
+              },
+            },
+          });
+        }
+
+        // 4. Actualizar bitácora en la tabla Acceso
+        await tx.acceso.updateMany({
+          where: { id_visitante: id, estatus: 'Activo' },
+          data: { comentario_admin: 'Información actualizada por residente' },
+        });
+
+        return { success: true, statusCode: 200, message: 'Empleado actualizado con éxito' };
+      });
+    } catch (error: any) {
+      console.error('Error en actualizarEmpleado:', error);
+      throw new InternalServerErrorException({
+        message: 'No se pudo actualizar el registro',
+        error: error.message,
+      });
+    }
+  }
+
+  
   async eliminarEmpleado(id: string, motivo?: string) {
     try {
       const servicio = await this.obtenerServicio(id);

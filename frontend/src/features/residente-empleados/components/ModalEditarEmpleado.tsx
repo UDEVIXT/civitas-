@@ -67,9 +67,10 @@ export function ModalEditarEmpleado({ empleado, isOpen, onClose, onSave, isSavin
 
   React.useEffect(() => {
     if (empleado) {
+      const telefonoLimpio = (empleado.telefono || "").replace(/\D/g, "");
       form.reset({
         nombre: empleado.nombre || "",
-        telefono: empleado.telefono || "",
+        telefono: telefonoLimpio || "" ,
         hora_entrada: (empleado.servicio as any)?.hora_entrada || "08:00",
         hora_salida: (empleado.servicio as any)?.hora_salida || "16:00",
         dias_autorizados: (empleado.servicio as any)?.dias_autorizados || [],
