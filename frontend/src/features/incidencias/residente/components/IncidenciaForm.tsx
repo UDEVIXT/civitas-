@@ -19,6 +19,8 @@ interface IncidenciaFormProps {
   onFieldChange: (field: string, value: any) => void;
   onFileChange: (files: File[]) => void;
   onMapClick: (lng: number, lat: number) => void;
+  onLocationSelect?: (coords: { longitude: number; latitude: number }) => void;
+  selectedCoords?: { longitude: number; latitude: number };
 }
 
 export function IncidenciaForm({
@@ -28,7 +30,9 @@ export function IncidenciaForm({
   isAddressLoading,
   onFieldChange,
   onFileChange,
-  onMapClick
+  onMapClick,
+  onLocationSelect,
+  selectedCoords
 }: IncidenciaFormProps) {
   return (
     <FieldGroup className="no-scrollbar max-h-[60vh] overflow-y-auto px-2">
@@ -72,6 +76,8 @@ export function IncidenciaForm({
         isAddressLoading={isAddressLoading}
         error={errors.ubicacion}
         onMapClick={onMapClick}
+        onLocationSelect={onLocationSelect}
+        selectedCoords={selectedCoords}
       />
 
       <Field>

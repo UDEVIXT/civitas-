@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -12,6 +14,16 @@ const queryClient = new QueryClient({
   },
 });
 
+function AuthInitializer({ children }: { children: React.ReactNode }) {
+  const checkAuth = useAuth((state) => state.checkAuth);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  return <>{children}</>;
+}
+
 type RootLayoutClientProps = Readonly<{
   children: React.ReactNode;
 }>;
@@ -19,7 +31,7 @@ type RootLayoutClientProps = Readonly<{
 export default function RootLayoutClient({ children }: RootLayoutClientProps) {
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
+      <AuthInitializer>{children}</AuthInitializer>
       <Toaster />
     </QueryClientProvider>
   );

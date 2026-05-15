@@ -44,12 +44,12 @@ interface TablaAccesosGuardiaProps {
 
 const getTipoPersonaColor = (tipo: string) => {
   const colors: Record<string, string> = {
-    visitante: "bg-blue-100 text-blue-800 hover:bg-blue-100",
-    residente: "bg-purple-100 text-purple-800 hover:bg-purple-100",
-    empleado_domestico: "bg-teal-100 text-teal-800 hover:bg-teal-100",
-    proveedor: "bg-orange-100 text-orange-800 hover:bg-orange-100",
+    visitante: "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200",
+    residente: "bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200",
+    empleado_domestico: "bg-teal-100 text-teal-800 border-teal-200 hover:bg-teal-200",
+    proveedor: "bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200",
   };
-  return colors[tipo] || "bg-gray-100 text-gray-800 hover:bg-gray-100";
+  return colors[tipo] || "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200";
 };
 
 const getTipoPersonaLabel = (tipo: string) => {
@@ -64,10 +64,13 @@ const getTipoPersonaLabel = (tipo: string) => {
 
 const getEstadoBadge = (estado: string) => {
   const variants: Record<string, string> = {
-    entrada: "bg-green-100 text-green-800",
-    salida: "bg-red-100 text-red-800",
+    entrada: "bg-green-100 text-green-800 border-green-200 hover:bg-green-200",
+    dentro: "bg-green-100 text-green-800 border-green-200 hover:bg-green-200",
+    salida: "bg-red-100 text-red-800 border-red-200 hover:bg-red-200",
+    fuera: "bg-red-100 text-red-800 border-red-200 hover:bg-red-200",
+    excedido: "bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200",
   };
-  return variants[estado] || "bg-gray-100 text-gray-800";
+  return variants[estado] || "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200";
 };
 
 export function TablaAccesosGuardia({
@@ -147,9 +150,10 @@ export function TablaAccesosGuardia({
       <Table className="border rounded-lg">
         <TableHeader className="bg-muted">
           <TableRow>
-            <TableHead className="text-center">✓</TableHead>
+            <TableHead className="text-center">✓</TableHead>       
             <TableHead>Nombre</TableHead>
-            <TableHead className="text-center">Tipo</TableHead>
+            <TableHead>Nombre del proveedor o empresa</TableHead>
+            <TableHead className="text-center">Tipo de acceso</TableHead>
             <TableHead className="text-center">Residente asociado</TableHead>
             <TableHead className="text-center">Método de acceso</TableHead>
             <TableHead className="text-center">Guardia que registró</TableHead>
@@ -167,6 +171,7 @@ export function TablaAccesosGuardia({
               registro.fecha_salida && registro.fecha_salida !== "-"
                 ? new Date(registro.fecha_salida)
                 : null;
+            const metodoNorm = (registro.metodo_acceso || "").trim().toLowerCase();
             return (
               <TableRow
                 key={registro.id}
@@ -208,8 +213,15 @@ export function TablaAccesosGuardia({
                     <span className="font-medium">{registro.nombre}</span>
                   </div>
                 </TableCell>
+                <TableCell>
+                  {registro.empresa ? (
+                    <span className="font-medium">{registro.empresa}</span>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
+                </TableCell>             
                 <TableCell className="text-center">
-                  <Badge className={getTipoPersonaColor(registro.tipo_persona)}>
+                  <Badge variant="outline" className={getTipoPersonaColor(registro.tipo_persona)}>
                     {getTipoPersonaLabel(registro.tipo_persona)}
                   </Badge>
                 </TableCell>
@@ -244,23 +256,23 @@ export function TablaAccesosGuardia({
                   )}
                 </TableCell>
                 <TableCell className="text-center text-muted-foreground">
-                  {registro.metodo_acceso === "QR" ? (
+                  {metodoNorm === "qr" ? (
                     <div className="flex items-center justify-center gap-2">
                       <QrCode className="h-5 w-5" />
                       <span>QR</span>
                     </div>
-                  ) : registro.metodo_acceso === "lista" ? (
+                  ) : metodoNorm === "lista" ? (
                     <div className="flex items-center justify-center gap-2">
                       <ListCheck className="h-5 w-5" />
                       <span>Lista</span>
                     </div>
-                  ) : registro.metodo_acceso === "manual" ? (
+                  ) : metodoNorm === "manual" ? (
                     <div className="flex items-center justify-center gap-2">
                       <NotebookPen className="h-5 w-5" />
                       <span>Manual</span>
                     </div>
                   ) : (
-                    <span>{registro.metodo_acceso}</span>
+                    <span className="capitalize">{registro.metodo_acceso?.trim()}</span>
                   )}
                 </TableCell>
                 <TableCell className="text-center">
@@ -270,7 +282,7 @@ export function TablaAccesosGuardia({
                   </div>
                 </TableCell>
                 <TableCell className="text-center">
-                  <Badge className={getEstadoBadge(registro.estado)}>
+                  <Badge variant="outline" className={`capitalize ${getEstadoBadge(registro.estado)}`}>
                     {registro.estado}
                   </Badge>
                 </TableCell>
@@ -338,6 +350,7 @@ export function TablaAccesosGuardia({
         isOpen={modalOpen}
         onClose={handleCloseModal}
         registroId={selectedRegistroId}
+        onRegisterExitClick={onRegisterExitClick}
       />
     </div>
   );

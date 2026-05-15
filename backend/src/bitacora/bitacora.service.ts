@@ -182,6 +182,7 @@ export class BitacoraService {
                     select: {
                       nombre_empresa: true,
                       nombre_servicio: true,
+                      cargo: true,
                       placas: true,
 
                       tipo_servicio: {
@@ -228,6 +229,12 @@ export class BitacoraService {
         id: item.id_bitacora,
 
         nombre: item.acceso.visitante.nombre,
+        empresa: item.acceso.visitante.servicio?.nombre_empresa ?? 'N/A',
+        servicio_nombre:
+          item.acceso.visitante.servicio?.nombre_servicio ?? 'N/A',
+        cargo_empleado: item.acceso.visitante.servicio?.cargo ?? 'Sin cargo',
+        placas: item.acceso.visitante.servicio?.placas ?? 'Sin placas',
+        motivo: item.acceso.visitante.motivo ?? 'Sin motivo especificado',
 
         tipo_persona:
           item.acceso.visitante.servicio?.tipo_servicio?.categoria ??
@@ -244,7 +251,7 @@ export class BitacoraService {
 
         fecha_salida: item.fecha_hora_salida,
 
-        metodo_acceso: 'QR',
+        metodo_acceso: item.acceso.codigo_qr ? 'QR' : 'Manual',
 
         guardia_registro: item.guardia.nombre,
 
@@ -332,7 +339,11 @@ export class BitacoraService {
             visitante: {
               include: {
                 servicio: {
-                  include: {
+                  select: {
+                    nombre_empresa: true,
+                    nombre_servicio: true,
+                    cargo: true,
+                    placas: true,
                     tipo_servicio: true,
                   },
                 },
@@ -350,7 +361,7 @@ export class BitacoraService {
     });
 
     if (!registro) {
-      throw new Error('Registro no encontrado');
+      throw new NotFoundException('Registro no encontrado');
     }
 
     const visitante = registro.acceso.visitante;
@@ -385,6 +396,11 @@ export class BitacoraService {
       guardia_registro: registro.guardia?.nombre || 'No registrado',
       estado,
       avatar_url: visitante.url_imagen || null,
+      empresa: visitante.servicio?.nombre_empresa || undefined,
+      motivo: visitante.motivo || undefined,
+      servicio_nombre: visitante.servicio?.nombre_servicio || undefined,
+      cargo_empleado: visitante.servicio?.cargo || undefined,
+      placas: visitante.servicio?.placas || undefined,
       qr_utilizado: registro.acceso.codigo_qr || null,
       notas: registro.comentario_salida || null,
       hora_validacion: registro.fecha_hora_entrada,

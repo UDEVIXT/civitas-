@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/popover";
 
 interface FiltrosTablaAdminProps {
+  onSearchName: (name: string) => void;
   onSearchProperty: (propertyId: string) => void;
   onTypeChange: (type: string) => void;
   onSortChange: (sort: 'desc' | 'asc') => void;
@@ -32,7 +33,7 @@ const tipos = [
   { value: "todos", label: "Todos los tipos" },
   { value: "visitante", label: "Visitante" },
   { value: "residente", label: "Residente" },
-  { value: "empleado doméstico", label: "Empleado doméstico" },
+  { value: "empleado_domestico", label: "Empleado doméstico" },
   { value: "proveedor", label: "Proveedor" },
 ];
 
@@ -41,15 +42,33 @@ const ordenamientos = [
   { value: "asc", label: "Más antiguo primero" },
 ];
 
-export function FiltrosTablaAdmin({ onSearchProperty, onTypeChange, onSortChange, onDateChange, onClearFilters }: FiltrosTablaAdminProps) {
+export function FiltrosTablaAdmin({ onSearchName, onSearchProperty, onTypeChange, onSortChange, onDateChange, onClearFilters }: FiltrosTablaAdminProps) {
   // Convertimos los filtros a un estado controlado para poder limpiarlos visualmente
-  const [searchValue, setSearchValue] = React.useState("");
+  const [searchNameValue, setSearchNameValue] = React.useState("");
+  const [searchPropertyValue, setSearchPropertyValue] = React.useState("");
   const [typeValue, setTypeValue] = React.useState("todos");
   const [sortValue, setSortValue] = React.useState<'desc' | 'asc'>("desc");
   const [date, setDate] = React.useState<DateRange | undefined>(undefined);
 
+  // Debounce para nombre
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      onSearchName(searchNameValue.trim());
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchNameValue]);
+
+  // Debounce para propiedad
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      onSearchProperty(searchPropertyValue.trim());
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchPropertyValue]);
+
   const handleClear = () => {
-    setSearchValue("");
+    setSearchNameValue("");
+    setSearchPropertyValue("");
     setTypeValue("todos");
     setSortValue("desc");
     setDate(undefined);
@@ -63,13 +82,24 @@ export function FiltrosTablaAdmin({ onSearchProperty, onTypeChange, onSortChange
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="search"
-            placeholder="Buscar por propiedad (ej. 101)..."
-            value={searchValue}
+            placeholder="Buscar por nombre..."
+            value={searchNameValue}
             onChange={(e) => {
-              setSearchValue(e.target.value);
-              onSearchProperty(e.target.value);
+              setSearchNameValue(e.target.value);
             }}
-            className="flex h-9 w-[240px] rounded-md border border-input bg-background pl-9 pr-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="flex h-9 w-[200px] rounded-md border border-input bg-background pl-9 pr-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="search"
+            placeholder="Buscar por propiedad..."
+            value={searchPropertyValue}
+            onChange={(e) => {
+              setSearchPropertyValue(e.target.value);
+            }}
+            className="flex h-9 w-[200px] rounded-md border border-input bg-background pl-9 pr-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>
       </div>
@@ -93,8 +123,10 @@ export function FiltrosTablaAdmin({ onSearchProperty, onTypeChange, onSortChange
           date={date}
           setDate={(newDate) => {
             setDate(newDate);
-            const from = newDate?.from ? format(newDate.from, "yyyy-MM-dd") : "";
-            const to = newDate?.to ? format(newDate.to, "yyyy-MM-dd") : "";
+            // Al anexar explícitamente las horas de inicio/fin y el offset de México (-06:00),
+            // el motor de base de datos respeta el encuadre local.
+            const from = newDate?.from ? format(newDate.from, "yyyy-MM-dd'T00:00:00-06:00'") : "";
+            const to = newDate?.to ? format(newDate.to, "yyyy-MM-dd'T23:59:59-06:00'") : "";
             onDateChange(from, to);
           }}
         />

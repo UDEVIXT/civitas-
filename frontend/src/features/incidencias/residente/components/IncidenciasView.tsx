@@ -34,6 +34,27 @@ function IncidenciasView() {
         }
     }, [setField]);
 
+    const handleLocationSelect = useCallback((coords: { longitude: number; latitude: number }) => {
+        if (setPosition) {
+            setPosition({ lat: coords.latitude, lng: coords.longitude });
+        }
+        if (address) {
+            if (setField) {
+                setField('ubicacion', {
+                    lat: coords.latitude,
+                    lng: coords.longitude,
+                    direccion: address
+                });
+
+                setTimeout(() => {
+                    if (errors.ubicacion && setErrors) {
+                        setErrors({ ...errors, ubicacion: '' });
+                    }
+                }, 500);
+            }
+        }
+    }, [setPosition, address, setField, errors.ubicacion, setErrors]);
+
     const handleMapClick = useCallback((lng: number, lat: number) => {
         if (setPosition) {
             setPosition({ lat, lng });
@@ -88,6 +109,8 @@ function IncidenciasView() {
           onFieldChange={handleFieldChange}
           onFileChange={handleFile}
           onMapClick={handleMapClick}
+          onLocationSelect={handleLocationSelect}
+          selectedCoords={position ? { longitude: position.lng, latitude: position.lat } : undefined}
           onSubmit={handleSubmit}
         />
     );
