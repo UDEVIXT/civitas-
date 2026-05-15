@@ -81,6 +81,12 @@ model Usuario {
   id_persona         String         @unique
   password           String
   estado             EstadoUsuario  @default(ACTIVO)
+  // --- Campos nuevos para recuperación de contraseña ---
+  // Almacena el código (ej. "123456") o un token generado
+  resetPasswordToken   String?   
+  
+  // Almacena la fecha y hora exacta en que el código dejará de ser válido
+  resetPasswordExpires DateTime?
   correo_verificado  Boolean        @default(false)
   token_verificacion String?        @unique
   accesos            Acceso[]
@@ -88,6 +94,7 @@ model Usuario {
   guardias           Guardia?
   residentes         Residente[]
   persona            Persona        @relation(fields: [id_persona], references: [id_persona])
+  sesiones Sesion[]
 }
 
 model Residente {
@@ -242,8 +249,23 @@ model Reporte {
   estado             EstadoIncidencia
   prioridad          PrioridadReporte
   es_anonimo         Boolean
+  token_seguimiento  String? @unique
   resultado_esperado String?          @db.Text
   resultado_solucion String?          @db.Text
 
   evidencias EvidenciaReporte[]
+}
+
+model Sesion {
+  id_sesion      String   @id @default(uuid())
+  id_usuario     String
+  refresh_token  String
+  activo         Boolean  @default(true)
+  ip             String?
+  dispositivo    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user_agent     String?
+  usuario Usuario @relation( fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+  @@map("sesiones")
 }

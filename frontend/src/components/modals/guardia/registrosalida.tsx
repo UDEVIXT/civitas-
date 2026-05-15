@@ -1,3 +1,4 @@
+//ModalSalidaProveedor.tsx
 import React, { useState } from "react";
 import { bitacoraService } from "@/services/bitacora.service";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
