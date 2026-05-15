@@ -65,20 +65,86 @@ export class BitacoraService {
     }
 
     // FILTRO TIPO
-    if (tipo) {
-      where.acceso = {
-        ...where.acceso,
+    if (tipo && tipo !== 'todos') {
+      const tipoNormalizado = tipo.toLowerCase();
 
-        visitante: {
-          ...where.acceso?.visitante,
-
-          servicio: {
-            tipo_servicio: {
-              categoria: tipo,
+      switch (tipoNormalizado) {
+        case 'proveedor':
+          where.acceso = {
+            ...where.acceso,
+            visitante: {
+              ...where.acceso?.visitante,
+              servicio: {
+                tipo_servicio: {
+                  OR: [
+                    // Buscamos en la categoría
+                    { categoria: { contains: 'proveedor', mode: 'insensitive' } },
+                    { categoria: { contains: 'repartidor', mode: 'insensitive' } },
+                    { categoria: { contains: 'mantenimiento', mode: 'insensitive' } },
+                    // Buscamos en el nombre por si el dato se guardó ahí
+                    { nombre: { contains: 'proveedor', mode: 'insensitive' } },
+                    { nombre: { contains: 'repartidor', mode: 'insensitive' } },
+                    { nombre: { contains: 'mantenimiento', mode: 'insensitive' } }
+                  ]
+                }
+              }
+            }
+          };
+          break;
+        case 'empleado_domestico':
+          where.acceso = {
+            ...where.acceso,
+            visitante: {
+              ...where.acceso?.visitante,
+              servicio:{
+                tipo_servicio: {
+                  OR: [
+                    { categoria: { contains: 'empleado', mode: 'insensitive' } }
+                  ]                
+                }
+              },
             },
-          },
-        },
-      };
+          };
+          break;
+
+        case 'visitante':
+          where.acceso = {
+            ...where.acceso,
+            visitante: {
+              ...where.acceso?.visitante,
+              es_frecuente: false,
+              id_servicio: null, // Asegura que no es un proveedor
+            },
+          };
+          break;
+
+        case 'residente':
+          where.acceso = {
+            ...where.acceso,
+            // Filtramos los registros de residentes. 
+            // Prisma no permite de forma nativa la validación "id_visitante == id_usuario" en la misma consulta,
+            // pero validamos si el id_visitante viene vacío según la especificación.
+            OR: [
+              { id_visitante: "" }
+            ],
+          };
+          break;
+
+        default:
+          // Fallback para tipos dinámicos o no especificados en las reglas principales
+          where.acceso = {
+            ...where.acceso,
+            visitante: {
+              ...where.acceso?.visitante,
+              servicio: {
+                tipo_servicio: {
+                  categoria: tipo,
+                },
+              },
+            },
+          };
+          break;
+      }
     }
 
     // FILTRO RESIDENCIA
@@ -225,33 +291,41 @@ export class BitacoraService {
         expiracion &&
         new Date(expiracion) < ahora;
 
+      // NUEVO: Lógica exacta para determinar el método de acceso
+      let metodoAccesoCalculado: string;
+      if (item.acceso.visitante.es_frecuente) {
+        metodoAccesoCalculado = 'Lista';
+      } else if (item.acceso.codigo_qr) {
+        metodoAccesoCalculado = 'QR';
+      } else {
+        metodoAccesoCalculado = 'Manual';
+      }
+
       return {
         id: item.id_bitacora,
 
         nombre: item.acceso.visitante.nombre,
         empresa: item.acceso.visitante.servicio?.nombre_empresa ?? 'N/A',
-        servicio_nombre:
-          item.acceso.visitante.servicio?.nombre_servicio ?? 'N/A',
+        servicio_nombre: item.acceso.visitante.servicio?.nombre_servicio ?? 'N/A',
         cargo_empleado: item.acceso.visitante.servicio?.cargo ?? 'Sin cargo',
         placas: item.acceso.visitante.servicio?.placas ?? 'Sin placas',
         motivo: item.acceso.visitante.motivo ?? 'Sin motivo especificado',
 
-        tipo_persona:
-          item.acceso.visitante.servicio?.tipo_servicio?.categoria ??
-          'Visitante',
+        // Mejora opcional para alinear el tipo de persona visualmente con la regla
+        tipo_persona: item.acceso.visitante.es_frecuente 
+          ? 'empleado_domestico' 
+          : (item.acceso.visitante.servicio?.tipo_servicio?.categoria ?? 'visitante'),
 
         residente_asociado: {
-          nombre:
-            item.acceso.visitante.residente?.vivienda?.numero_vivienda ?? '',
-
+          nombre: item.acceso.visitante.residente?.vivienda?.numero_vivienda ?? '',
           avatar_url: null,
         },
 
         fecha_entrada: item.fecha_hora_entrada,
-
         fecha_salida: item.fecha_hora_salida,
 
-        metodo_acceso: item.acceso.codigo_qr ? 'QR' : 'Manual',
+        // ACTUALIZADO: Reemplazamos la validación en línea por la variable calculada
+        metodo_acceso: metodoAccesoCalculado,
 
         guardia_registro: item.guardia.nombre,
 
@@ -330,40 +404,39 @@ export class BitacoraService {
     }
   }
 
-  async obtenerDetalleRegistro(id: string) {
-    const registro = await this.prisma.bitacora.findUnique({
-      where: { id_bitacora: id },
-      include: {
-        acceso: {
-          include: {
-            visitante: {
-              include: {
-                servicio: {
-                  select: {
-                    nombre_empresa: true,
-                    nombre_servicio: true,
-                    cargo: true,
-                    placas: true,
-                    tipo_servicio: true,
-                  },
+async obtenerDetalleRegistro(id: string) {
+  const registro = await this.prisma.bitacora.findUnique({
+    where: { id_bitacora: id },
+    include: {
+      acceso: {
+        include: {
+          visitante: {
+            include: {
+              servicio: {
+                select: {
+                  nombre_empresa: true,
+                  nombre_servicio: true,
+                  cargo: true,
+                  placas: true,
+                  tipo_servicio: true,
                 },
               },
             },
-            usuario: {
-              include: {
-                persona: true,
-              },
+          },
+          usuario: {
+            include: {
+              persona: true,
             },
           },
         },
-        guardia: true,
       },
-    });
+      guardia: true,
+    },
+  });
 
-    if (!registro) {
-      throw new NotFoundException('Registro no encontrado');
-    }
-
+  if (!registro) {
+    throw new NotFoundException('Registro no encontrado');
+  }
     const visitante = registro.acceso.visitante;
 
     let tipoPersona: string;
@@ -402,7 +475,7 @@ export class BitacoraService {
       cargo_empleado: visitante.servicio?.cargo || undefined,
       placas: visitante.servicio?.placas || undefined,
       qr_utilizado: registro.acceso.codigo_qr || null,
-      notas: registro.comentario_salida || null,
+      notas: registro.comentario ?? 'Sin comentarios',
       hora_validacion: registro.fecha_hora_entrada,
     };
   }
