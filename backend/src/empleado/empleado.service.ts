@@ -159,7 +159,7 @@ export class EmpleadoService {
       nombre: visitante.nombre,
     };
   }
-
+/*
   async actualizarEmpleado(id: string, data: any) {
     try {
       return await this.prisma.$transaction(async (tx) => {
@@ -181,7 +181,7 @@ export class EmpleadoService {
           },
         });
 
-        /* 3. Si tiene un servicio, actualizamos el tipo y los horarios
+         3. Si tiene un servicio, actualizamos el tipo y los horarios
         if (visitante.id_servicio) {
           await tx.servicio.update({
             where: { id_servicio: visitante.id_servicio },
@@ -200,7 +200,7 @@ export class EmpleadoService {
               },
             },
           });
-        }*/
+        }
 
         // 4. Actualizar bitácora en la tabla Acceso (CA007/008)
         await tx.acceso.updateMany({
@@ -214,6 +214,92 @@ export class EmpleadoService {
       console.error('Error en actualizarEmpleado:', error);
       throw new InternalServerErrorException({
         message: 'No se pudo actualizar el registro',
+        error: error.message,
+      });
+    }
+  }
+*/
+
+  async actualizarEmpleado(id: string, data: any) {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        // 1. Buscamos el registro para obtener la conexión con la tabla Servicio
+        const visitante = await tx.visitante.findUnique({
+          where: { id_visitante: id },
+          select: { id_servicio: true },
+        });
+
+        if (!visitante) throw new NotFoundException('Empleado no encontrado');
+
+        // 2. Actualizamos los datos personales en la tabla Visitante
+        await tx.visitante.update({
+          where: { id_visitante: id },
+          data: {
+            nombre: data.nombre,
+            telefono: data.telefono,
+            // Soporta tanto 'url_imagen' como 'foto' que viene de tu modal
+            url_imagen: data.url_imagen || data.foto, 
+            motivo: data.notas, // Si usas el campo motivo como notas/comentarios
+          },
+        });
+
+        // 3. Si tiene un servicio asociado, actualizamos el Cargo y los Horarios Dinámicos
+        if (visitante.id_servicio) {
+          
+          // Mapeamos los días del modal al formato ENUM de tu schema.prisma
+          const mapeoDias: Record<string, any> = {
+            'Lunes': 'LUNES',
+            'Martes': 'MARTES',
+            'Miércoles': 'MIERCOLES',
+            'Jueves': 'JUEVES',
+            'Viernes': 'VIERNES',
+            'Sábado': 'SABADO',
+            'Domingo': 'DOMINGO'
+          };
+
+          const diasSeleccionados: string[] = data.dias_autorizados || [];
+
+          // Generamos el arreglo de horarios formateados para Prisma
+          const nuevosHorarios = diasSeleccionados.map((dia: string) => {
+            const diaEnum = mapeoDias[dia];
+            if (!diaEnum) return null;
+
+            return {
+              dia_semana: diaEnum,
+              // Formato @db.Time(6): Postgres espera objetos Date completos en JS
+              hora_inicio: new Date(`1970-01-01T${data.hora_entrada || '08:00'}:00.000Z`),
+              hora_fin: new Date(`1970-01-01T${data.hora_salida || '16:00'}:00.000Z`),
+              activo: true,
+            };
+          }).filter(Boolean); // Limpiamos cualquier nulo por si acaso
+
+          // Ejecutamos la actualización del Servicio y sus relaciones
+          await tx.servicio.update({
+            where: { id_servicio: visitante.id_servicio },
+            data: {
+              cargo: data.cargo, // Guarda "Nana", "Limpieza", etc.
+              horarios: {
+                // Borramos horarios actuales para evitar que se dupliquen al re-guardar
+                deleteMany: {},
+                // Insertamos los nuevos horarios calculados arriba
+                create: nuevosHorarios as any,
+              },
+            },
+          });
+        }
+
+        // 4. Actualizar bitácora o auditoría en la tabla Acceso
+        await tx.acceso.updateMany({
+          where: { id_visitante: id, estatus: 'Activo' },
+          data: { comentario_admin: 'Información actualizada por residente desde el portal' },
+        });
+
+        return { success: true, statusCode: 200, message: 'Empleado actualizado con éxito' };
+      });
+    } catch (error: any) {
+      console.error('Error en actualizarEmpleado:', error);
+      throw new InternalServerErrorException({
+        message: 'No se pudo actualizar el registro debido a un error en el servidor.',
         error: error.message,
       });
     }
