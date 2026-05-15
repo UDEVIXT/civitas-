@@ -249,6 +249,7 @@ model Reporte {
   estado             EstadoIncidencia
   prioridad          PrioridadReporte
   es_anonimo         Boolean
+  token_seguimiento  String? @unique
   resultado_esperado String?          @db.Text
   resultado_solucion String?          @db.Text
 
