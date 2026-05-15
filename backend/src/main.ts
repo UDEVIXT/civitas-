@@ -27,7 +27,7 @@ async function bootstrap() {
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   });
-  
+
   const config = new DocumentBuilder()
     .setTitle('Civitas API')
     .setDescription('Documentación')
@@ -37,7 +37,7 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
-  
+
   await app.listen(process.env.PORT ?? 3001, '0.0.0.0');
 }
 bootstrap();
