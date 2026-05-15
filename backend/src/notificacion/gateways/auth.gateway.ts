@@ -21,6 +21,10 @@ export class AuthGateway {
     console.log('Cliente conectado:', client.id);
   }
 
+  handleDisconnect(client: Socket) {
+    console.log('Cliente desconectado:', client.id);
+  }
+
   @SubscribeMessage('register')
   registerUser(
     @MessageBody() userId: string,
@@ -28,10 +32,10 @@ export class AuthGateway {
     @ConnectedSocket()
     client: Socket,
   ) {
-    client.join(userId);
+    client.join(`user-${userId}`);
   }
 
   notifyNewLogin(userId: string, payload: any) {
-    this.server.to(userId).emit('new-login-detected', payload);
+    this.server.to(`user-${userId}`).emit('new-login-detected', payload);
   }
 }
