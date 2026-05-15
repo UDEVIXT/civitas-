@@ -58,7 +58,6 @@ export function ImageUpload({ type, onDataChange, label }: ImageUploadProps) {
             return;
         }
 
-        // Validación de tipo mejorada
         const fileExtension = `.${file.name.split('.').pop()?.toLowerCase()}`;
         const isValid = config.types.includes(file.type) || config.accept.includes(fileExtension);
 
