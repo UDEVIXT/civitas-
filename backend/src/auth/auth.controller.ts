@@ -53,6 +53,7 @@ export class AuthController {
 
     return {
       user: data.user,
+      multipleSessions: data.multipleSessions,
     };
   }
 
