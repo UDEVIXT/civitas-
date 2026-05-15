@@ -1,18 +1,19 @@
-/*Este archivo contiene los hooks personalizados para gestionar los empleados del rol residente */
+/* Este archivo contiene los hooks personalizados para gestionar los empleados del rol residente */
 "use client";
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useDebounce } from "@/hooks/use-debounce";
-import { toast, useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast"; // Quitamos el import de toast directo
 
 // Importamos las funciones de la API
-import { obtenerEmpleadosDomesticos, eliminarEmpleadoDomestico } from "@/features/empleados-domesticos/api/empleados";
+import { obtenerEmpleadosDomesticos } from "@/features/empleados-domesticos/api/empleados";
 import { actualizarEmpleadoResidente } from "../api/residente-api";
 import type { EmpleadoDomestico } from "@/features/empleados-domesticos/types";
 
 export function useResidenteEmpleados(idResidente: string) {
   const queryClient = useQueryClient();
+  const { toast } = useToast(); // <--- IMPORTANTE: Inicializamos el toast aquí
   
   // Estados para la UI
   const [search, setSearch] = useState("");
@@ -22,17 +23,17 @@ export function useResidenteEmpleados(idResidente: string) {
   
   const debouncedSearch = useDebounce(search, 300);
 
-  // 1. OBTENER EMPLEADOS (Solo los del residente actual)
+  // 1. OBTENER EMPLEADOS
   const { data, isLoading } = useQuery({
     queryKey: ["residente-empleados", idResidente, debouncedSearch],
     queryFn: () => obtenerEmpleadosDomesticos(
-      { byResidenteId: idResidente, isActive: true }, // Filtro forzado para residentes
+      { byResidenteId: idResidente, isActive: true },
       debouncedSearch
     ),
-    enabled: !!idResidente, // Solo se ejecuta si hay un ID de residente
+    enabled: !!idResidente,
   });
 
-  //  ACTUALIZAR MODAL
+  // 2. ACTUALIZAR EMPLEADO
   const updateMutation = useMutation({
     mutationFn: (values: any) => {
       if (!selectedEmpleado) return Promise.reject("No hay empleado seleccionado");
@@ -40,34 +41,33 @@ export function useResidenteEmpleados(idResidente: string) {
     },
     onSuccess: (res) => {
       if (res.success) {
-        // ÉXITO: Refrescamos y cerramos
         queryClient.invalidateQueries({ queryKey: ["residente-empleados"] });
         setIsEditModalOpen(false);
         toast({
-          title: "¡Guardado!",
-          description: "Los cambios se aplicaron correctamente.",
+          title: "¡Todo listo!",
+          description: "La información se actualizó correctamente.",
         });
       } else {
-        // ERROR DE NEGOCIO (CA011): El servidor respondió pero con un error
+        // Traducción de errores técnicos a amigables
+        const mensajeAmigable = (res.message?.length || 0) > 80 
+          ? "Revisa que los datos sean correctos. Algunos campos adicionales podrían no estar habilitados aún en el servidor."
+          : res.message;
+
         toast({
-          title: "Error al actualizar",
-          description: res.message || "No se pudieron guardar los cambios.",
+          title: "No se pudo guardar",
+          description: mensajeAmigable || "Hubo un problema al procesar la información.",
           variant: "destructive",
         });
       }
     },
-    onError: (error: any) => {
-      // ERROR TÉCNICO (CA011): Falló la conexión, timeout o error 500
-      console.error("Error técnico detectado:", error);
+    onError: () => {
       toast({
-        title: "Problema técnico",
-        description: "No se pudo conectar con el servidor. Intenta de nuevo más tarde.",
+        title: "Error de conexión",
+        description: "Parece que hay un problema con el servidor. Verifica tu internet o intenta más tarde.",
         variant: "destructive",
       });
-      // Nota: Como no llamamos a setIsEditModalOpen(false), el modal se queda 
-      // abierto para que el usuario no pierda lo que escribió.
     }
-  });
+  }); 
 
   // Manejadores de eventos
   const handleEditClick = (empleado: EmpleadoDomestico) => {
@@ -80,24 +80,24 @@ export function useResidenteEmpleados(idResidente: string) {
     setIsHorarioModalOpen(true);
   };
 
- return {
-  empleados: data?.data || [],
-  isLoading,
-  search,
-  setSearch,
-  modalEdit: {
-    isOpen: isEditModalOpen,
-    setIsOpen: setIsEditModalOpen,
-    selectedEmpleado,
-    handleEditClick,
-    isSaving: updateMutation.isPending,
-    save: updateMutation.mutate,
-  },
-  modalHorario: {
-    isOpen: isHorarioModalOpen,
-    setIsOpen: setIsHorarioModalOpen,
-    selectedEmpleado,
-    handleVerHorario,
-  },
-};
+  return {
+    empleados: data?.data || [],
+    isLoading,
+    search,
+    setSearch,
+    modalEdit: {
+      isOpen: isEditModalOpen,
+      setIsOpen: setIsEditModalOpen,
+      selectedEmpleado,
+      handleEditClick,
+      isSaving: updateMutation.isPending,
+      save: updateMutation.mutate,
+    },
+    modalHorario: {
+      isOpen: isHorarioModalOpen,
+      setIsOpen: setIsHorarioModalOpen,
+      selectedEmpleado,
+      handleVerHorario,
+    },
+  };
 }
