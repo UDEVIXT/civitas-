@@ -56,7 +56,7 @@ export function EmpleadosFilters({
 }: EmpleadosFiltersProps) {
   return (
     <header className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Users className="size-6" />
@@ -118,8 +118,8 @@ export function EmpleadosFilters({
           Inactivos
         </Button>
 
-        <div className="ml-auto flex items-center gap-2">
-          <div className="relative w-full max-w-sm">
+        <div className="ml-0 flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:items-center">
+          <div className="relative w-full sm:w-72">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/70" />
             <Input
               value={search}
@@ -135,7 +135,7 @@ export function EmpleadosFilters({
                 variant="outline"
                 size="sm"
                 className={cn(
-                  "h-8 rounded-full",
+                  "h-9 w-full rounded-full sm:w-auto",
                   (residenciaId || viviendaId) &&
                     "border-primary bg-primary/5 text-primary shadow-sm justify-center",
                 )}
@@ -144,7 +144,7 @@ export function EmpleadosFilters({
               </Button>
             </PopoverTrigger>
 
-            <PopoverContent className="w-80 shadow-xl" align="end">
+            <PopoverContent className="w-[92vw] max-w-sm shadow-xl" align="end">
               <div className="flex flex-col gap-5">
                 <div className="flex items-center justify-between border-b pb-2">
                   <p className="font-semibold tracking-tight text-foreground">

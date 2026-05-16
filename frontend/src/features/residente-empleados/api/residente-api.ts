@@ -1,29 +1,29 @@
 import apiClient from "@/api/axios";
+import type {
+  EmpleadoDomesticoResponse,
+  FiltroEmpleado,
+} from "@/features/empleados-domesticos/types"; 
 
-
-export const getEmpleadosResidente = async (residenteId: string, search: string = "") => {
-  try {
-    console.log("📡 [API CLIENT] Enviando GET a /mi-empleado. Params ->", { byResidenteId: residenteId, search });
-    
-    const response = await apiClient.get('mi-empleado', { // 💡 Consejo: Quítale el '/' inicial si ves que falla
-      params: {
-        byResidenteId: residenteId,
-        search: search || undefined,
-        limit: 10,
-      },
-    });
-
-    console.log("✅ [API CLIENT] Respuesta exitosa del servidor:", response.data);
-    return response.data;
-  } catch (error: any) {
-    console.error("❌ [API CLIENT] Error en la petición Axios:", error.response || error);
-    throw error;
-  }
+// NUEVA FUNCIÓN: Solo para que el residente vea a sus propios empleados
+export const obtenerMisEmpleados = async (
+  filtros?: FiltroEmpleado,
+  search?: string,
+  page?: number,
+) => {
+  //Cambiamos "/empleado" por "/mi-empleado"
+  const response = await apiClient.get<EmpleadoDomesticoResponse>("/mi-empleado", {
+    params: {
+      page: page || 1,
+      search: search ? search.trim() : undefined,
+      ...filtros,
+    },
+  });
+  return response.data;
 };
 
+// 
 export const actualizarEmpleadoResidente = async (id: string, data: any) => {
   try {
-    // Forzamos el uso de tu ruta limpia sin espacios accidentales
     const response = await apiClient.put(`/mi-empleado/${id.trim()}`, {
       accion: "actualizacion_residente", 
       data: {

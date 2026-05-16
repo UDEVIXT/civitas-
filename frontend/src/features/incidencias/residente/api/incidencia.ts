@@ -11,7 +11,7 @@ const mapFormDataToBackend = (formData: IncidenciaFormData) => {
         latitud: formData.ubicacion.lat,
         longitud: formData.ubicacion.lng,
         es_anonimo: isAnonymous,
-        evidencias: formData.evidencia?.map(file => ({
+        imagenes: formData.imagen?.map(file => ({
           nombre_archivo: file.name,
         })) || []
     };

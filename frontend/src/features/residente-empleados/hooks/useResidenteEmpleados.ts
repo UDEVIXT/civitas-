@@ -4,18 +4,17 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useToast } from "@/hooks/use-toast"; // Quitamos el import de toast directo
+import { useToast } from "@/hooks/use-toast"; 
 
 // Importamos las funciones de la API
-import { actualizarEmpleadoResidente } from "../api/residente-api";
+import { actualizarEmpleadoResidente, obtenerMisEmpleados } from "../api/residente-api";
 import type { EmpleadoDomestico } from "@/features/empleados-domesticos/types";
-import { getEmpleadosResidente } from "../api/residente-api"; // Ajusta la ruta de importación si es necesario
 
 
 
 export function useResidenteEmpleados(idResidente: string) {
   const queryClient = useQueryClient();
-  const { toast } = useToast(); // <--- IMPORTANTE: Inicializamos el toast aquí
+  const { toast } = useToast(); //
   
   // Estados para la UI
   const [search, setSearch] = useState("");
@@ -32,10 +31,11 @@ console.log("🚀 [HOOK] El idResidente que llega al hook es:", idResidente);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["residente-empleados", idResidente, debouncedSearch],
-    queryFn: () => {
-      console.log("🔥 [HOOK] ¡useQuery se disparó! Llamando a getEmpleadosResidente con ID:", idResidente);
-      return getEmpleadosResidente(idResidente, debouncedSearch);
-    },
+    queryFn: () => obtenerMisEmpleados(
+      { byResidenteId: idResidente, isActive: true },
+      debouncedSearch
+    ),
+    enabled: !!idResidente,
   });
 
   if (error) {
