@@ -13,8 +13,9 @@ export default function MisEmpleadosPage() {
   // 2. Obtén el usuario logueado dinámicamente
   const { user } = useAuth(); 
 
-  // 3. Le pasas el ID dinámico (revisa si en tu objeto user se llama id, id_usuario o id_residente)
-  const idResidenteActivo = user?.id ? String(user.id) : "";
+  // 3. Le pasas el ID dinámico
+  // const idResidenteActivo = user?.id_residente ? String(user.id_residente) : "";
+  const idResidenteActivo = "c70e1942-e3a8-4b97-959b-b1e051b85aa0";
 
   const { 
     empleados, 
@@ -24,6 +25,8 @@ export default function MisEmpleadosPage() {
     modalEdit, 
     modalHorario 
   } = useResidenteEmpleados(idResidenteActivo);
+
+  console.log("Lo que llega al hook:", empleados);
 
   return (
     <div className="flex-1 space-y-4 p-4 sm:p-8 pt-6">

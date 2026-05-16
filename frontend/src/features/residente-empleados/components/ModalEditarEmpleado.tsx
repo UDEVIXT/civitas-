@@ -6,38 +6,71 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2 } from "lucide-react";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea"; // Asegúrate de tener este componente
-import { Checkbox } from "@/components/ui/checkbox"; // Asegúrate de tener este componente
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { EmpleadoDomestico } from "@/features/empleados-domesticos/types";
 
-const DIAS_SEMANA = [
-  { id: "Lunes", label: "L" },
-  { id: "Martes", label: "M" },
-  { id: "Miércoles", label: "M" },
-  { id: "Jueves", label: "J" },
-  { id: "Viernes", label: "V" },
-  { id: "Sábado", label: "S" },
-  { id: "Domingo", label: "D" },
-];
+// Tipos base para iterar la tabla
+const DIAS_SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"] as const;
 
+// 1. Esquema de un día individual
+const horarioDiaSchema = z.object({
+  dia: z.enum(DIAS_SEMANA),
+  activo: z.boolean(),
+  hora_entrada: z.string(),
+  hora_salida: z.string(),
+});
+
+// 2. Esquema principal + Validaciones estrictas
 const formSchema = z.object({
-  nombre: z.string().min(1, "El nombre es obligatorio"),
-  telefono: z.string().length(10, "El teléfono debe tener 10 dígitos"),
-  hora_entrada: z.string().min(1, "La hora de entrada es obligatoria"),
-  hora_salida: z.string().min(1, "La hora de salida es obligatoria"),
-  dias_autorizados: z.array(z.string()).min(1, "Debes seleccionar al menos un día"),
-  cargo: z.string().min(1, "Selecciona un cargo"),
+  nombre: z.string()
+    .trim()
+    .min(1, "Campo obligatorio")
+    .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, "Solo se permiten letras"),
+  
+  telefono: z.string()
+    .trim()
+    .min(1, "Campo obligatorio")
+    .regex(/^\d+$/, "Solo se permiten números")
+    .length(10, "El teléfono debe tener exactamente 10 dígitos"),
+  
+  cargo: z.string()
+    .trim()
+    .min(1, "Campo obligatorio")
+    .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, "Solo se permiten letras"),
+  
   notas: z.string().optional(),
   foto: z.string().optional(),
-}).refine((data) => data.hora_entrada < data.hora_salida, {
-  message: "Error: La hora de salida debe ser posterior a la de entrada",
-  path: ["hora_salida"],
+  horarios: z.array(horarioDiaSchema),
+}).superRefine((data, ctx) => {
+  let tieneDiasActivos = false;
+
+  data.horarios.forEach((horario, index) => {
+    if (horario.activo) {
+      tieneDiasActivos = true;
+      // VALIDACIÓN CA005: Inconsistencia de horarios
+      if (horario.hora_entrada >= horario.hora_salida) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "La salida debe ser después de la entrada",
+          path: ["horarios", index, "hora_salida"],
+        });
+      }
+    }
+  });
+
+  if (!tieneDiasActivos) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Debes autorizar al menos un día de acceso",
+      path: ["horarios"],
+    });
+  }
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -51,82 +84,73 @@ interface ModalEditarEmpleadoProps {
 }
 
 export function ModalEditarEmpleado({ empleado, isOpen, onClose, onSave, isSaving }: ModalEditarEmpleadoProps) {
+  // Plantilla por defecto para los 7 días
+  const horariosPorDefecto = DIAS_SEMANA.map(dia => ({
+    dia,
+    activo: false,
+    hora_entrada: "08:00",
+    hora_salida: "16:00"
+  }));
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       nombre: "",
       telefono: "",
-      hora_entrada: "08:00",
-      hora_salida: "16:00",
-      dias_autorizados: [],
       cargo: "",
       notas: "",
       foto: "",
+      horarios: horariosPorDefecto,
     },
   });
 
- /* React.useEffect(() => {
+  React.useEffect(() => {
     if (empleado) {
       const telefonoLimpio = (empleado.telefono || "").replace(/\D/g, "");
-      form.reset({
-        nombre: empleado.nombre || "",
-        telefono: telefonoLimpio || "" ,
-        hora_entrada: (empleado.servicio as any)?.hora_entrada || "08:00",
-        hora_salida: (empleado.servicio as any)?.hora_salida || "16:00",
-        dias_autorizados: (empleado.servicio as any)?.dias_autorizados || [],
-        cargo: (empleado.servicio as any)?.cargo || "Nana",
-        notas: (empleado.servicio as any)?.notas || "",
-        foto: empleado.url_imagen || "",
-      });
-    }
-  }, [empleado, form]);
-*/
+ 
+      const servicioAny = empleado.servicio as any;
+      const empleadoAny = empleado as any;
 
-React.useEffect(() => {
-    if (empleado) {
-      const telefonoLimpio = (empleado.telefono || "").replace(/\D/g, "");
+      const cargoReal = servicioAny?.tipo_servicio?.nombre || servicioAny?.cargo || "";
 
-      // 1. Extraemos el cargo real desde la relación tipo_servicio
-      const cargoReal = empleado.servicio?.tipo_servicio?.nombre || "Limpieza";
-
-      // 2. Extraemos los días activos mapeándolos de MAYÚSCULAS a formato Checkbox (Ej: "LUNES" -> "Lunes")
+      // Diccionario para traducir de la BD al UI
       const mapeoDiasInverso: Record<string, string> = {
-        'LUNES': 'Lunes',
-        'MARTES': 'Martes',
-        'MIERCOLES': 'Miércoles',
-        'JUEVES': 'Jueves',
-        'VIERNES': 'Viernes',
-        'SABADO': 'Sábado',
-        'DOMINGO': 'Domingo'
-      };
-      
-      const listaHorarios = empleado.servicio?.horarios || [];
-      const diasSeleccionados = listaHorarios.map((h: any) => mapeoDiasInverso[h.dia_semana]).filter(Boolean);
-
-      // 3. Formateamos las horas ISO/UTC a formato "HH:MM" de 24 horas para el <input type="time" />
-      const formatearHoraInput = (dateValue: any) => {
-        if (!dateValue) return "08:00";
-        // Si viene un string ISO completo o un objeto Date, extraemos la hora UTC limpia
-        const d = new Date(dateValue);
-        const horas = String(d.getUTCHours()).padStart(2, '0');
-        const minutos = String(d.getUTCMinutes()).padStart(2, '0');
-        return `${horas}:${minutos}`;
+        'LUNES': 'Lunes', 'MARTES': 'Martes', 'MIERCOLES': 'Miércoles',
+        'JUEVES': 'Jueves', 'VIERNES': 'Viernes', 'SABADO': 'Sábado', 'DOMINGO': 'Domingo'
       };
 
-      // Tomamos la hora del primer horario disponible de la lista como base
-      const primerHorario = listaHorarios[0];
-      const horaEntradaReal = primerHorario ? formatearHoraInput(primerHorario.hora_inicio) : "08:00";
-      const horaSalidaReal = primerHorario ? formatearHoraInput(primerHorario.hora_fin) : "16:00";
+      const listaHorariosBD: any[] = servicioAny?.horarios || [];
+
+      // Reconstruimos la tabla de 7 días cruzando con los datos de la BD
+      const horariosMapeados = DIAS_SEMANA.map(diaUI => {
+        const horarioBD = listaHorariosBD.find(h => mapeoDiasInverso[h.dia_semana] === diaUI);
+        
+        if (horarioBD && horarioBD.activo) {
+          const dEntrada = new Date(horarioBD.hora_inicio);
+          const dSalida = new Date(horarioBD.hora_fin);
+          return {
+            dia: diaUI,
+            activo: true,
+            hora_entrada: `${String(dEntrada.getUTCHours()).padStart(2, '0')}:${String(dEntrada.getUTCMinutes()).padStart(2, '0')}`,
+            hora_salida: `${String(dSalida.getUTCHours()).padStart(2, '0')}:${String(dSalida.getUTCMinutes()).padStart(2, '0')}`,
+          };
+        }
+
+        return {
+          dia: diaUI,
+          activo: false,
+          hora_entrada: "08:00",
+          hora_salida: "16:00"
+        };
+      });
 
       form.reset({
         nombre: empleado.nombre || "",
-        telefono: telefonoLimpio || "",
-        hora_entrada: horaEntradaReal,
-        hora_salida: horaSalidaReal,
-        dias_autorizados: diasSeleccionados,
-        cargo: cargoReal, // 👈 Ahora sí se pre-selecciona "Limpieza", "Nana", etc.
-        notas: "", // Inicializado vacío temporalmente si Joan no incluye notas en la query
+        telefono: telefonoLimpio,
+        cargo: cargoReal,
+        notas: servicioAny?.notas || empleadoAny.motivo || "", 
         foto: empleado.url_imagen || "",
+        horarios: horariosMapeados,
       });
     }
   }, [empleado, form]);
@@ -137,191 +161,171 @@ React.useEffect(() => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] sm:max-w-[500px] p-4 sm:p-6 max-h-[95vh] overflow-y-auto rounded-2xl">
+      <DialogContent className="w-[95vw] sm:max-w-[550px] p-4 sm:p-6 max-h-[95vh] overflow-y-auto overflow-x-hidden rounded-2xl">
         <DialogHeader className="border-b pb-4 mb-4">
           <DialogTitle className="text-xl font-bold text-center text-gray-800">
-            Editar Perfil de Empleado
+            Editar Perfil y Accesos
           </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             
             {/* Header con Foto */}
-            <div className="flex flex-col items-center justify-center gap-3 bg-gray-50 p-4 rounded-xl mb-4 text-center">
+            <div className="flex flex-col items-center justify-center gap-3 bg-gray-50 p-4 rounded-xl text-center">
               <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-4 border-white shadow-md">
                 <AvatarImage src={form.watch("foto") || "/placeholder-user.jpg"} />
                 <AvatarFallback className="bg-amber-100 text-amber-700 font-bold text-2xl">
-                  {empleado?.nombre?.charAt(0)}
+                  {empleado?.nombre?.charAt(0) || "E"}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col gap-0.5">
                 <p className="text-base sm:text-lg font-extrabold text-gray-950 tracking-tight">
                   {form.watch("nombre") || "Sin nombre"}
                 </p>
-                <p className="text-xs sm:text-sm font-medium text-gray-600 bg-gray-100 px-3 py-0.5 rounded-full inline-block mx-auto">
-                  {form.watch("cargo")}
-                </p>
               </div>
             </div>
 
-            {/* Nombre Completo */}
-            <FormField
-              control={form.control}
-              name="nombre"
-              render={({ field }) => (
+            {/* Datos Personales (Apilados verticalmente con Filtros de Teclado) */}
+            <div className="flex flex-col gap-4">
+              <FormField control={form.control} name="nombre" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="font-bold">Nombre Completo <span className="text-xs font-normal text-red-500">*</span></FormLabel>
-                  <FormControl><Input placeholder="Ej. Juan Pérez" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Teléfono */}
-              <FormField
-                control={form.control}
-                name="telefono"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="font-bold">Teléfono <span className="text-xs font-normal text-red-500">*</span></FormLabel>
-                    <FormControl><Input type="tel" maxLength={10} {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Cargo */}
-              <FormField
-                control={form.control}
-                name="cargo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="font-bold">Tipo de Empleado <span className="text-xs font-normal text-red-500">*</span></FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        <SelectItem value="Nana">Nana</SelectItem>
-                        <SelectItem value="Limpieza">Limpieza</SelectItem>
-                        <SelectItem value="Chofer">Chofer</SelectItem>
-                        <SelectItem value="Cuidador">Cuidador</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Días Autorizados (CA003) */}
-            <FormField
-              control={form.control}
-              name="dias_autorizados"
-              render={() => (
-                <FormItem>
-                  <div className="mb-2">
-                    <FormLabel className="font-bold">Días Autorizados <span className="text-xs font-normal text-red-500">*</span></FormLabel>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {DIAS_SEMANA.map((dia) => (
-                      <FormField
-                        key={dia.id}
-                        control={form.control}
-                        name="dias_autorizados"
-                        render={({ field }) => {
-                          const isChecked = field.value?.includes(dia.id);
-                          return (
-                            <FormItem key={dia.id} className="flex items-center space-x-2 space-y-0">
-                              <FormControl>
-                                <Checkbox
-                                  checked={isChecked}
-                                  onCheckedChange={(checked) => {
-                                    return checked
-                                      ? field.onChange([...field.value, dia.id])
-                                      : field.onChange(field.value?.filter((value) => value !== dia.id));
-                                  }}
-                                />
-                              </FormControl>
-                              <FormLabel className="text-xs font-medium cursor-pointer">{dia.label}</FormLabel>
-                            </FormItem>
-                          );
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Horario Autorizado (CA005) */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="hora_entrada"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="font-bold text-xs">Entrada <span className="text-red-500">*</span></FormLabel>
-                    <FormControl><Input type="time" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="hora_salida"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="font-bold text-xs">Salida <span className="text-red-500">*</span></FormLabel>
-                    <FormControl><Input type="time" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Notas Adicionales (CA003) */}
-            <FormField
-              control={form.control}
-              name="notas"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-bold">Notas Adicionales <span className="text-xs font-normal text-gray-400">(Opcional)</span></FormLabel>
+                  <FormLabel className="font-bold">Nombre Completo *</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Ej. Entra por la puerta de servicio..." className="resize-none" {...field} />
+                    <Input 
+                      placeholder="Ej. Juan Pérez" 
+                      {...field} 
+                      onChange={(e) => {
+                        // Borra instantáneamente todo lo que no sean letras o espacios
+                        const valorLimpio = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
+                        field.onChange(valorLimpio);
+                      }}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
-              )}
-            />
+              )} />
 
-            {/* Foto URL */}
-            <FormField
-              control={form.control}
-              name="foto"
-              render={({ field }) => (
+              <FormField control={form.control} name="telefono" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="font-bold">URL de Foto <span className="text-xs font-normal text-gray-400">(Opcional)</span></FormLabel>
-                  <FormControl><Input placeholder="https://..." {...field} /></FormControl>
+                  <FormLabel className="font-bold">Teléfono *</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="tel" 
+                      maxLength={10} 
+                      placeholder="10 dígitos" 
+                      {...field} 
+                      onChange={(e) => {
+                        // Borra instantáneamente todo lo que no sean números
+                        const valorLimpio = e.target.value.replace(/\D/g, "");
+                        field.onChange(valorLimpio);
+                      }}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
+              )} />
+
+              <FormField control={form.control} name="cargo" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-bold">Tipo de Empleado / Cargo *</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Ej. Chofer, Jardinero..." 
+                      {...field} 
+                      onChange={(e) => {
+                        // Borra instantáneamente todo lo que no sean letras o espacios
+                        const valorLimpio = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
+                        field.onChange(valorLimpio);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+
+            {/* Tabla de Horarios */}
+            <div className="space-y-3">
+              <div>
+                <h3 className="font-bold text-sm">Horario de Acceso Permitido *</h3>
+                <p className="text-xs text-muted-foreground">Define las horas de entrada y salida para cada día de la semana.</p>
+              </div>
+              
+              <div className="hidden sm:grid grid-cols-[100px_60px_1fr_1fr] gap-4 px-2 py-1 bg-gray-100 rounded-t-md text-xs font-semibold text-gray-600">
+                <div>Día</div>
+                <div className="text-center">Activo</div>
+                <div>Entrada</div>
+                <div>Salida</div>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:gap-1">
+                {form.watch("horarios").map((horario, index) => (
+                  <div key={horario.dia} className="grid grid-cols-1 sm:grid-cols-[100px_60px_1fr_1fr] items-center gap-2 sm:gap-4 p-3 sm:p-2 bg-gray-50 sm:bg-transparent rounded-lg border sm:border-none">
+                    
+                    <div className="flex items-center justify-between sm:justify-start gap-2">
+                      <span className="text-sm font-medium">{horario.dia}</span>
+                      <FormField control={form.control} name={`horarios.${index}.activo`} render={({ field }) => (
+                        <FormControl>
+                          <Checkbox checked={field.value} onCheckedChange={field.onChange} className="sm:hidden" />
+                        </FormControl>
+                      )} />
+                    </div>
+
+                    <div className="hidden sm:flex justify-center">
+                      <FormField control={form.control} name={`horarios.${index}.activo`} render={({ field }) => (
+                        <FormControl>
+                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      )} />
+                    </div>
+
+                    <FormField control={form.control} name={`horarios.${index}.hora_entrada`} render={({ field }) => (
+                      <FormItem className="space-y-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500 sm:hidden w-12">Entrada</span>
+                          <FormControl><Input type="time" disabled={!form.watch(`horarios.${index}.activo`)} className="h-8 w-full min-w-0" {...field} /></FormControl>
+                        </div>
+                      </FormItem>
+                    )} />
+
+                    <FormField control={form.control} name={`horarios.${index}.hora_salida`} render={({ field }) => (
+                      <FormItem className="space-y-0 relative">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500 sm:hidden w-12">Salida</span>
+                          <FormControl><Input type="time" disabled={!form.watch(`horarios.${index}.activo`)} className="h-8 w-full min-w-0" {...field} /></FormControl>
+                        </div>
+                        <FormMessage className="text-[10px] absolute -bottom-4 left-0 sm:left-auto" />
+                      </FormItem>
+                    )} />
+                  </div>
+                ))}
+              </div>
+              {form.formState.errors.horarios?.root && (
+                <p className="text-sm font-medium text-destructive">{form.formState.errors.horarios.root.message}</p>
               )}
-            />
+            </div>
+
+            <FormField control={form.control} name="notas" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="font-bold">Notas Adicionales <span className="text-xs font-normal text-gray-400">(Opcional)</span></FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Ej. Entra por la puerta de servicio..." className="resize-none" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
 
             {/* Botones */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t mt-6">
               <Button type="button" variant="outline" onClick={onClose} className="flex-1 order-2 sm:order-1" disabled={isSaving}>
                 Cancelar
               </Button>
-              <Button 
-                type="submit" 
-                disabled={isSaving}
-                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold order-1 sm:order-2"
-              >
+              <Button type="submit" disabled={isSaving} className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold order-1 sm:order-2">
                 {isSaving ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : "Guardar Cambios"}
               </Button>
             </div>
+            
           </form>
         </Form>
       </DialogContent>
