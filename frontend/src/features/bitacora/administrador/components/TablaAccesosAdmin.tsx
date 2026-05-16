@@ -95,7 +95,7 @@ function AccesoCard({
     <div className="border rounded-lg overflow-hidden">
       {/* Cabecera siempre visible */}
       <button
-        className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-background hover:bg-muted/50 transition-colors text-left"
+        className="cursor-pointer w-full flex items-center justify-between gap-3 px-4 py-3 bg-background hover:bg-muted/50 transition-colors text-left"
         onClick={() => setExpanded((v) => !v)}
       >
         <div className="flex items-center gap-3 min-w-0">
@@ -238,7 +238,7 @@ function AccesoCard({
 
           {/* Botón ver detalle completo */}
           <button
-            className="w-full mt-1 text-xs text-primary font-medium py-1.5 rounded-md border border-primary/30 hover:bg-primary/5 transition-colors"
+            className="cursor-pointer w-full mt-1 text-xs text-primary font-medium py-1.5 rounded-md border border-primary/30 hover:bg-primary/5 transition-colors"
             onClick={(e) => {
               e.stopPropagation();
               onOpen(acceso.id?.toString());

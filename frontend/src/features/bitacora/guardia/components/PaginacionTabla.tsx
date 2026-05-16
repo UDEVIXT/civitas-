@@ -55,7 +55,7 @@ export function PaginacionTabla({
       <div className="flex items-center gap-1">
         <Button
           variant="outline"
-          className="h-8 w-8 p-0"
+          className="h-8 w-8 p-0 cursor-pointer"
           onClick={handlePrevious}
           disabled={currentPage === 1}
         >
@@ -68,7 +68,7 @@ export function PaginacionTabla({
             <Button
               key={page}
               variant={currentPage === page ? "default" : "outline"}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 cursor-pointer"
               onClick={() => onPageChange(page)}
             >
               {page}
@@ -83,7 +83,7 @@ export function PaginacionTabla({
 
         <Button
           variant="outline"
-          className="h-8 w-8 p-0"
+          className="h-8 w-8 p-0 cursor-pointer"
           onClick={handleNext}
           disabled={currentPage === totalPages}
         >

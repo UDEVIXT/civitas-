@@ -60,7 +60,7 @@ export function VerificarCodigo({ email }: { email: string }) {
                         onChange={(e) => setCodigo(e.target.value.replace(/\D/g, '').slice(0, 6))}
                         className="text-center tracking-widest font-mono text-3xl h-14"
                     />
-                    <Button type="submit" className="w-full bg-amber-400 hover:bg-amber-500" size="lg" disabled={isLoading}>
+                    <Button type="submit" className="w-full bg-amber-400 hover:bg-amber-500" size="lg" disabled={isLoading} cursor-pointer>
                         {isLoading ? <Spinner /> : "Verificar código"}
                     </Button>
                 </form>
