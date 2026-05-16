@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -252,8 +253,8 @@ export class BitacoraService {
     comentario_salida?: string,
   ) {
     try {
-      const guardiaInfo = await this.prisma.guardia.findUnique({
-        where: { id_guardia: id_guardia },
+      const guardiaInfo = await this.prisma.guardia.findFirst({
+        where: { id_usuario: id_guardia },
       });
 
       if (!guardiaInfo) {
@@ -295,7 +296,9 @@ export class BitacoraService {
       ) {
         throw error;
       }
-      throw new Error('Error interno del servidor al registrar salida.');
+      throw new InternalServerErrorException(
+        'Error interno del servidor al registrar salida.',
+      );
     }
   }
 
