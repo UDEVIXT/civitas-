@@ -7,6 +7,7 @@ import { useResidenteEmpleados } from "../hooks/useResidenteEmpleados";
 // Componentes UI
 import { TablaMisEmpleados } from "./TablaMisEmpleados";
 import { ModalEditarEmpleado } from "./ModalEditarEmpleado";
+import { ModalBajaEmpleado } from "./ModalBajaEmpleado"; // <-- Importamos tu nuevo modal modificado
 import { EmpleadosHorarioDialog } from "@/features/empleados-domesticos/components/horarios-empleado-domestico";
 
 export default function MisEmpleadosPage() {
@@ -18,7 +19,8 @@ export default function MisEmpleadosPage() {
     search, 
     setSearch, 
     modalEdit, 
-    modalHorario 
+    modalHorario,
+    modalBaja // <-- Desestructuramos el estado y funciones de control para la suspensión/baja
   } = useResidenteEmpleados("123");
 
   return (
@@ -34,7 +36,7 @@ export default function MisEmpleadosPage() {
         </div>
       </div>
 
-      {/* Buscador opcional (puedes usar el de shadcn si gustas) */}
+      {/* Buscador opcional */}
       <div className="flex items-center py-4">
         <input
           placeholder="Buscar empleado..."
@@ -50,18 +52,33 @@ export default function MisEmpleadosPage() {
           isLoading={isLoading}
           onEdit={modalEdit.handleEditClick}
           onVerHorario={modalHorario.handleVerHorario}
+          onBaja={modalBaja.handleBajaClick} // <-- Pasamos la función a la tabla para abrir el modal desde las acciones
         />
       </div>
 
+      {/* Modal de Edición */}
       <ModalEditarEmpleado
-      empleado={modalEdit.selectedEmpleado}
-      isOpen={modalEdit.isOpen}
-      onClose={() => modalEdit.setIsOpen(false)}
-      onSave={modalEdit.save}       // <-- Conexión con la mutación del Hook
-      isSaving={modalEdit.isSaving} // <-- Muestra el spinner si está guardando
-    />
+        empleado={modalEdit.selectedEmpleado}
+        isOpen={modalEdit.isOpen}
+        onClose={() => modalEdit.setIsOpen(false)}
+        onSave={modalEdit.save}       // <-- Conexión con la mutación del Hook
+        isSaving={modalEdit.isSaving} // <-- Muestra el spinner si está guardando
+      />
 
-      {/* Modal de Horarios (el de Joan) */}
+      {/* Modal de Baja / Suspensión Temporal (El que modificamos anteriormente) */}
+      <ModalBajaEmpleado
+        open={modalBaja.isOpen}
+        onOpenChange={modalBaja.setIsOpen}
+        selectedEmpleado={modalBaja.selectedEmpleado}
+        mode={modalBaja.mode} // "deactivate" o "reactivate" gestionado por el hook según el estado actual del empleado
+        motivo={modalBaja.motivo}
+        onMotivoChange={modalBaja.setMotivo}
+        isDeleting={modalBaja.isDeleting}
+        deleteError={modalBaja.deleteError}
+        onConfirm={modalBaja.confirm} // <-- Ejecuta la actualización/baja temporal en tu backend
+      />
+
+      {/* Modal de Horarios */}
       <EmpleadosHorarioDialog
         nombre={modalEdit.selectedEmpleado?.nombre || ""}
         horarios={modalEdit.selectedEmpleado?.servicio?.horarios || []}
