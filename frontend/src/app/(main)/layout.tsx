@@ -1,4 +1,5 @@
 import { LayoutWrapper } from "@/components/layout/LayoutWrapper";
+import { RouteGuard } from "@/features/auth/components/RouteGuard";
 
 export default function MainLayout({
   children,
@@ -6,8 +7,10 @@ export default function MainLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="min-h-full flex flex-col">
-      <LayoutWrapper>{children}</LayoutWrapper>
-    </div>
+    <RouteGuard type="protected">
+      <div className="min-h-full flex flex-col">
+        <LayoutWrapper>{children}</LayoutWrapper>
+      </div>
+    </RouteGuard>
   );
 }
