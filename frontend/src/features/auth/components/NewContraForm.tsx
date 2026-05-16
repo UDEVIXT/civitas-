@@ -82,7 +82,7 @@ export function NuevaContrasena({ onSubmit }: NuevaContrasenaProps) {
                             <button
                                 type="button"
                                 onClick={() => setShowPassword((v) => !v)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                                 tabIndex={-1}
                             >
                                 {showPassword ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
@@ -111,7 +111,7 @@ export function NuevaContrasena({ onSubmit }: NuevaContrasenaProps) {
                             <button
                                 type="button"
                                 onClick={() => setShowConfirm((v) => !v)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                                 tabIndex={-1}
                             >
                                 {showConfirm ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
@@ -130,7 +130,7 @@ export function NuevaContrasena({ onSubmit }: NuevaContrasenaProps) {
 
                     <Button
                         type="submit"
-                        className="w-full bg-amber-400 hover:bg-amber-500 text-white font-semibold"
+                        className="w-full bg-amber-400 hover:bg-amber-500 text-white font-semibold cursor-pointer"
                         size="lg"
                         disabled={isLoading}
                     >
@@ -139,7 +139,7 @@ export function NuevaContrasena({ onSubmit }: NuevaContrasenaProps) {
 
                     <div className="text-center text-sm text-muted-foreground pt-1">
                         Volver a{" "}
-                        <a href="/login" className="text-amber-500 hover:text-amber-600 font-medium hover:underline transition-colors">
+                        <a href="/login" className="text-amber-500 hover:text-amber-600 font-medium hover:underline transition-colors cursor-pointer">
                             Inicio de sesión
                         </a>
                     </div>

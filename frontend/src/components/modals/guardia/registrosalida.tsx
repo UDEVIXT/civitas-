@@ -126,8 +126,8 @@ export function ModalSalidaProveedor({ isOpen, onClose, onSuccess, accesoId, vis
                 </div>
 
                 <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
-                    <Button onClick={handleSalida} disabled={loading || (!accesoId && !inputId)}>
+                    <Button variant="outline" onClick={onClose} disabled={loading} className="cursor-pointer">Cancelar</Button>
+                    <Button className="cursor-pointer" onClick={handleSalida} disabled={loading || (!accesoId && !inputId)}>
                         {loading ? "Registrando..." : "Confirmar Salida"}
                     </Button>
                 </div>

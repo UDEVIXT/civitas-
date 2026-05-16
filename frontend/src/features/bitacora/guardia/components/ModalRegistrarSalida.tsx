@@ -91,10 +91,10 @@ export function ModalRegistrarSalida({
                 </div>
 
                 <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-2">
-                    <Button variant="outline" onClick={onClose} disabled={isLoading} className="w-full sm:w-auto">
+                    <Button variant="outline" onClick={onClose} disabled={isLoading} className="w-full sm:w-auto cursor-pointer">
                         Cancelar
                     </Button>
-                    <Button onClick={handleConfirm} disabled={isLoading} className="w-full sm:w-auto">
+                    <Button onClick={handleConfirm} disabled={isLoading} className="w-full sm:w-auto cursor-pointer">
                         {isLoading ? "Registrando..." : "Confirmar Salida"}
                     </Button>
                 </div>

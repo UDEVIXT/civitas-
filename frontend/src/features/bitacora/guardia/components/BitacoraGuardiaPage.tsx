@@ -185,8 +185,8 @@ export function BitacoraGuardiaPage() {
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsMassModalOpen(false)} disabled={isMassLoading}>Cancelar</Button>
-            <Button onClick={confirmMassExit} disabled={isMassLoading || selectedIds.length === 0}>
+            <Button variant="outline" onClick={() => setIsMassModalOpen(false)} disabled={isMassLoading} className="cursor-pointer">Cancelar</Button>
+            <Button onClick={confirmMassExit} disabled={isMassLoading || selectedIds.length === 0} className="cursor-pointer">
               {isMassLoading ? "Registrando..." : `Confirmar ${selectedIds.length} Salidas`}
             </Button>
           </div>

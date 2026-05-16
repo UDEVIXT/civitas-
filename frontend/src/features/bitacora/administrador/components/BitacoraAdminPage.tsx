@@ -153,7 +153,7 @@ export function BitacoraAdminPage() {
           <p className="text-center max-w-md text-sm mb-6">
             {error}
           </p>
-          <Button onClick={loadData} variant="outline">
+          <Button onClick={loadData} variant="outline" className="cursor-pointer">
             Reintentar conexión
           </Button>
         </div>

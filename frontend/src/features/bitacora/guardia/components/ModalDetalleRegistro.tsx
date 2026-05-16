@@ -235,7 +235,7 @@ export function ModalDetalleRegistro({
                 {(!registro.fecha_salida || registro.fecha_salida === "-") && (
                   <Button
                     size="sm"
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto cursor-pointer"
                     onClick={() => {
                       onRegisterExitClick?.(registro);
                       onClose();
@@ -361,7 +361,7 @@ export function ModalDetalleRegistro({
         </div>
 
         <DialogFooter className="mt-4">
-          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
+          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto cursor-pointer">
             Cerrar
           </Button>
         </DialogFooter>

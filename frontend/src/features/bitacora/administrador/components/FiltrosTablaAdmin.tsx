@@ -152,7 +152,7 @@ export function FiltrosTablaAdmin({
 
         <Button
           variant="outline"
-          className="h-9 px-3 ml-auto lg:ml-0"
+          className="h-9 px-3 ml-auto lg:ml-0 cursor-pointer"
           onClick={handleClear}
         >
           <X className="h-4 w-4 sm:mr-2" />
@@ -175,7 +175,7 @@ function DatePickerWithRange({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className={`justify-start px-3 h-9 font-normal w-full sm:w-[240px] lg:w-[220px] ${
+          className={`justify-start cursor-pointer px-3 h-9 font-normal w-full sm:w-[240px] lg:w-[220px] ${
             !date ? "text-muted-foreground" : ""
           }`}
         >
