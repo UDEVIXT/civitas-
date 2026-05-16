@@ -9,6 +9,7 @@ import { useReverseGeocoding } from '../hooks/useGeo';
 import { useIncidenciaForm } from '../hooks/useIncidenciaForm';
 import { useSubmitIncidencia } from '../hooks/useSubmitIncidencia';
 import { useCallback, useEffect } from 'react';
+import { toast } from "sonner"
 
 function IncidenciasView() {
     const { position, setPosition } = useLocationStore();
@@ -94,7 +95,6 @@ function IncidenciasView() {
         }
     }, [setField, errors, setErrors]);
 
-    // Update ubicacion field when address is loaded
     useEffect(() => {
         if (address && position && setField) {
             setField('ubicacion', {
@@ -104,6 +104,19 @@ function IncidenciasView() {
             });
         }
     }, [address, position, setField]);
+
+    useEffect(() => {
+        if (submitMutation.isSuccess && submitMutation.data?.success) {
+            toast.success("Reporte creado exitosamente");
+        }
+    }, [submitMutation.isSuccess, submitMutation.data]);
+
+    useEffect(() => {
+        if (submitMutation.isError) {
+            const error = submitMutation.error as any;
+            toast.error(error.response?.data?.message || 'Error al crear el reporte');
+        }
+    }, [submitMutation.isError, submitMutation.error]);
 
     return (
         <IncidenciaDialog
