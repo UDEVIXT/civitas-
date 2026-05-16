@@ -1,12 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { submitIncidencia } from '../api/incidencia';
 import { useIncidenciaForm } from './useIncidenciaForm';
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner"
 
 export const useSubmitIncidencia = () => {
     const queryClient = useQueryClient();
     const { resetForm, setIsSubmitting } = useIncidenciaForm();
-    const { toast } = useToast();
 
     return useMutation({
         mutationFn: submitIncidencia,
@@ -20,19 +19,12 @@ export const useSubmitIncidencia = () => {
                 queryClient.invalidateQueries({ queryKey: ['reportes'] });
                 queryClient.invalidateQueries({ queryKey: ['incidencias'] });
 
-                toast({
-                    title: "Éxito",
-                    description: "Reporte enviado con éxito",
-                });
+                toast.success("Reporte creado exitosamente");
             }
         },
         onError: (error: any) => {
             console.error('Error al enviar:', error);
-            toast({
-                title: "Error",
-                description: error.response?.data?.message || 'Error al crear el reporte',
-                variant: "destructive",
-            });
+            toast.error(error.response?.data?.message || 'Error al crear el reporte');
         },
         onSettled: () => {
             setIsSubmitting(false);

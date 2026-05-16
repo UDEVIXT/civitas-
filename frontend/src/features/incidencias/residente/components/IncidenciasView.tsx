@@ -29,7 +29,7 @@ function IncidenciasView() {
     const handleFile = useCallback((files: File[]) => {
         if (files && setField) {
             setTimeout(() => {
-                setField('evidencia', files);
+                setField('imagen', files);
             }, 0);
         }
     }, [setField]);
