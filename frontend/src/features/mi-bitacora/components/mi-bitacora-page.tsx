@@ -1,20 +1,18 @@
 "use client";
 
 import * as React from "react";
-import {
-  Search,
-  AlertCircle,
-  Star,
-  X,
-  QrCode,
-} from "lucide-react";
+import { AlertCircle, QrCode, Search, Star, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-import { getMiBitacora, getMiBitacoraDetalle, actualizarFrecuenciaVisitante } from "../data/bitacora";
+import {
+  actualizarFrecuenciaVisitante,
+  getMiBitacora,
+  getMiBitacoraDetalle,
+} from "../data/bitacora";
 import type {
   MiBitacoraDetalle,
   MiBitacoraItem,
@@ -34,6 +32,11 @@ const personTypeOptions: Array<{ label: string; value: "all" | PersonaBitacora }
   { label: "Proveedores", value: "proveedor" },
 ];
 
+const sortOptions: Array<{ label: string; value: SortDirection }> = [
+  { label: "Más reciente", value: "desc" },
+  { label: "Más antiguo", value: "asc" },
+];
+
 const personTypeLabels: Record<PersonaBitacora, string> = {
   visitante: "Visitante",
   empleado: "Empleado doméstico",
@@ -49,6 +52,7 @@ const personTypeStyles: Record<PersonaBitacora, string> = {
 function getInitials(nombre?: string | null): string {
   const value = (nombre || "").trim();
   if (!value) return "--";
+
   return value
     .split(" ")
     .slice(0, 2)
@@ -66,16 +70,16 @@ function getAvatarColor(nombre?: string | null): string {
     "bg-rose-100 text-rose-700",
   ];
   const value = nombre || "";
-  if (value.length === 0) return colors[0];
+  if (!value.length) return colors[0];
   return colors[value.charCodeAt(0) % colors.length];
 }
 
 function formatDateTime(value: string | null) {
-  if (!value) {
-    return "Pendiente";
-  }
+  if (!value || value === "-") return "Pendiente";
 
   const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Pendiente";
+
   const day = String(date.getDate()).padStart(2, "0");
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const year = date.getFullYear();
@@ -86,16 +90,12 @@ function formatDateTime(value: string | null) {
 }
 
 function toIsoDateRange(dateValue: string, range: "start" | "end") {
-  if (!dateValue) {
-    return undefined;
-  }
-
-  const time = range === "start" ? "T00:00:00.000Z" : "T23:59:59.999Z";
-  return `${dateValue}${time}`;
+  if (!dateValue) return undefined;
+  return `${dateValue}${range === "start" ? "T00:00:00.000Z" : "T23:59:59.999Z"}`;
 }
 
-function getRecordName(record: any) {
-  return record?.nombre_persona || record?.acceso?.visitante?.nombre || "";
+function getRecordName(record: MiBitacoraItem | MiBitacoraDetalle) {
+  return record.nombre_persona || "";
 }
 
 export function MiBitacoraPage({
@@ -137,7 +137,7 @@ export function MiBitacoraPage({
     async (isRefresh = false) => {
       if (!residentUserId.trim() && !residentName.trim()) {
         setData(null);
-        setError("Ingresa un ID o nombre de residente para consultar su bitacora.");
+        setError("Ingresa un ID o nombre de residente para consultar su bitácora.");
         return;
       }
 
@@ -166,11 +166,9 @@ export function MiBitacoraPage({
           setDetailError(null);
         }
       } catch (cause) {
-        const message =
-          cause instanceof Error
-            ? cause.message
-            : "No fue posible cargar la bitacora por un problema tecnico.";
-        setError(message);
+        setError(
+          cause instanceof Error ? cause.message : "No fue posible cargar la bitácora por un problema técnico.",
+        );
       } finally {
         setLoading(false);
       }
@@ -192,11 +190,9 @@ export function MiBitacoraPage({
       );
       setSelectedDetail(response.data);
     } catch (cause) {
-      const message =
-        cause instanceof Error
-          ? cause.message
-          : "No se pudo cargar el detalle del registro.";
-      setDetailError(message);
+      setDetailError(
+        cause instanceof Error ? cause.message : "No se pudo cargar el detalle del registro.",
+      );
     } finally {
       setDetailLoading(false);
     }
@@ -231,29 +227,19 @@ export function MiBitacoraPage({
         setSelectedDetail(response.data);
       }
 
-      setTimeout(() => {
-        setUpdateFrecuenciaMessage(null);
-      }, 3000);
+      window.setTimeout(() => setUpdateFrecuenciaMessage(null), 3000);
     } catch (cause) {
-      const message =
-        cause instanceof Error
-          ? cause.message
-          : "No fue posible actualizar la frecuencia.";
       setUpdateFrecuenciaMessage({
         type: "error",
-        message,
+        message: cause instanceof Error ? cause.message : "No fue posible actualizar la frecuencia.",
       });
-
-      setTimeout(() => {
-        setUpdateFrecuenciaMessage(null);
-      }, 4000);
+      window.setTimeout(() => setUpdateFrecuenciaMessage(null), 4000);
     } finally {
       setUpdatingFrecuenciaId(null);
     }
   }
 
   React.useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchList(false);
   }, [fetchList]);
 
@@ -279,7 +265,6 @@ export function MiBitacoraPage({
           <main className="flex-1 px-4 py-4 sm:px-5 sm:py-5 lg:px-6">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h1 className="text-[36px] font-semibold leading-none text-[#1f1f1f]">Bitácora de accesos</h1>
-
               <div className="relative w-full sm:w-[280px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#9b9b9b]" />
                 <Input
@@ -318,12 +303,27 @@ export function MiBitacoraPage({
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
+
+              <select
+                value={sort}
+                onChange={(event) => {
+                  setSort(event.target.value as SortDirection);
+                  setPage(1);
+                }}
+                className="h-8 rounded-md border border-[#d2d2d2] bg-white px-2 text-xs text-[#2c2c2c]"
+              >
+                {sortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
               </select>
 
               <Input
                 type="date"
                 value={dateFrom}
-                onChange={(event) => { setDateFrom(event.target.value); setPage(1); }}
+                onChange={(event) => {
+                  setDateFrom(event.target.value);
+                  setPage(1);
+                }}
                 className="h-8 w-[140px] rounded-md border-[#d2d2d2] bg-white px-2 text-xs"
                 title="Desde"
               />
@@ -331,25 +331,19 @@ export function MiBitacoraPage({
               <Input
                 type="date"
                 value={dateTo}
-                onChange={(event) => { setDateTo(event.target.value); setPage(1); }}
+                onChange={(event) => {
+                  setDateTo(event.target.value);
+                  setPage(1);
+                }}
                 className="h-8 w-[140px] rounded-md border-[#d2d2d2] bg-white px-2 text-xs"
                 title="Hasta"
               />
-
-              <Button
-                onClick={() => void fetchList(true)}
-                disabled={loading || refreshing}
-                className="ml-auto h-8 gap-1 rounded-md bg-[#efb700] px-3 text-xs font-semibold text-[#1f1f1f] hover:bg-[#e2aa00]"
-              >
-                <RefreshCw className={cn("size-3", refreshing && "animate-spin")} />
-                Actualizar
-              </Button>
             </div>
 
             {error ? (
               <div className="mb-3 rounded-md border border-red-200 bg-red-50 p-3">
                 <div className="flex items-start gap-2">
-                  <AlertCircle className="mt-0.5 size-4 flex-shrink-0 text-red-600" />
+                  <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-600" />
                   <p className="text-sm text-red-700">{error}</p>
                 </div>
               </div>
@@ -385,7 +379,6 @@ export function MiBitacoraPage({
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[980px] table-fixed text-sm">
                       <colgroup>
-                        <col className="w-10" />
                         <col className="w-[220px]" />
                         <col className="w-[180px]" />
                         <col className="w-[180px]" />
@@ -396,7 +389,9 @@ export function MiBitacoraPage({
                       </colgroup>
                       <thead className="bg-[#f5f5f5]">
                         <tr className="border-b border-[#dfdfdf] text-[#4f4f4f]">
-                          <th className="px-2 py-3 text-center font-medium"><input type="checkbox" className="h-4 w-4 rounded border-[#c7c7c7]" /></th>
+                          <th className="px-2 py-3 text-center font-medium">
+                            <input type="checkbox" className="h-4 w-4 rounded border-[#c7c7c7]" />
+                          </th>
                           <th className="px-3 py-3 text-left font-medium">Name</th>
                           <th className="px-3 py-3 text-left font-medium">Tipo</th>
                           <th className="px-3 py-3 text-left font-medium">Hora Entrada</th>
@@ -409,10 +404,14 @@ export function MiBitacoraPage({
                       <tbody className="divide-y divide-[#ececec]">
                         {records.map((record) => (
                           <tr key={record.id_bitacora} className="bg-white text-[#303030] hover:bg-[#fafafa]">
-                            <td className="px-2 py-3 text-center align-middle"><input type="checkbox" className="h-4 w-4 rounded border-[#c7c7c7]" /></td>
+                            <td className="px-2 py-3 text-center align-middle">
+                              <input type="checkbox" className="h-4 w-4 rounded border-[#c7c7c7]" />
+                            </td>
                             <td className="px-3 py-3 align-middle">
                               <div className="flex items-center gap-2.5">
-                                <div className={cn("flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-semibold", getAvatarColor(getRecordName(record)))}>{getInitials(getRecordName(record))}</div>
+                                <div className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold", getAvatarColor(getRecordName(record)))}>
+                                  {getInitials(getRecordName(record))}
+                                </div>
                                 <span className="truncate text-sm font-medium">{getRecordName(record)}</span>
                               </div>
                             </td>
@@ -432,7 +431,14 @@ export function MiBitacoraPage({
                             <td className="px-3 py-3 align-middle text-sm text-[#444444]">{record.guardia?.nombre ?? record.guardia?.id_guardia ?? "-"}</td>
                             <td className="px-3 py-3 align-middle">
                               <div className="flex items-center justify-end gap-1">
-                                <button type="button" className="rounded p-1 text-[#666666] transition-colors hover:bg-[#f1f1f1] hover:text-[#2b2b2b]" onClick={() => void onSelectRecord(record)} title="Ver detalle"><Search className="size-4" /></button>
+                                <button
+                                  type="button"
+                                  className="rounded p-1 text-[#666666] transition-colors hover:bg-[#f1f1f1] hover:text-[#2b2b2b]"
+                                  onClick={() => void onSelectRecord(record)}
+                                  title="Ver detalle"
+                                >
+                                  <Search className="size-4" />
+                                </button>
                               </div>
                             </td>
                           </tr>
@@ -442,13 +448,47 @@ export function MiBitacoraPage({
                   </div>
 
                   <div className="flex items-center justify-between border-t border-[#dfdfdf] px-4 py-3 text-xs text-[#5c5c5c]">
-                    <button type="button" onClick={() => setPage((prev) => Math.max(1, prev - 1))} disabled={currentPage === 1} className={cn("rounded-md border border-[#d2d2d2] bg-white px-3 py-1.5", currentPage === 1 ? "cursor-not-allowed opacity-50" : "hover:bg-[#f8f8f8]")}>Previous</button>
+                    <button
+                      type="button"
+                      onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className={cn(
+                        "rounded-md border border-[#d2d2d2] bg-white px-3 py-1.5",
+                        currentPage === 1 ? "cursor-not-allowed opacity-50" : "hover:bg-[#f8f8f8]",
+                      )}
+                    >
+                      Previous
+                    </button>
+
                     <div className="flex items-center gap-1">
                       {visiblePages.map((pageNumber) => (
-                        <button key={pageNumber} type="button" onClick={() => setPage(pageNumber)} className={cn("h-6 min-w-6 rounded px-2 text-xs", pageNumber === currentPage ? "bg-[#f2e9ff] font-semibold text-[#7c5dd8]" : "text-[#666666] hover:bg-[#f6f6f6]")}>{pageNumber}</button>
+                        <button
+                          key={pageNumber}
+                          type="button"
+                          onClick={() => setPage(pageNumber)}
+                          className={cn(
+                            "h-6 min-w-6 rounded px-2 text-xs",
+                            pageNumber === currentPage
+                              ? "bg-[#f2e9ff] font-semibold text-[#7c5dd8]"
+                              : "text-[#666666] hover:bg-[#f6f6f6]",
+                          )}
+                        >
+                          {pageNumber}
+                        </button>
                       ))}
                     </div>
-                    <button type="button" onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages} className={cn("rounded-md border border-[#d2d2d2] bg-white px-3 py-1.5", currentPage === totalPages ? "cursor-not-allowed opacity-50" : "hover:bg-[#f8f8f8]")}>Next</button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className={cn(
+                        "rounded-md border border-[#d2d2d2] bg-white px-3 py-1.5",
+                        currentPage === totalPages ? "cursor-not-allowed opacity-50" : "hover:bg-[#f8f8f8]",
+                      )}
+                    >
+                      Next
+                    </button>
                   </div>
                 </>
               )}
@@ -456,43 +496,69 @@ export function MiBitacoraPage({
 
             {selected ? (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
-                  <div className="sticky top-0 bg-white border-b border-[#d3d3d3] flex items-center justify-between gap-4 px-6 py-5">
+                <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+                  <div className="sticky top-0 flex items-center justify-between gap-4 border-b border-[#d3d3d3] bg-white px-6 py-5">
                     <div className="flex-1">
                       <h2 className="text-2xl font-bold text-slate-900">Detalle del Acceso</h2>
                       <p className="mt-1 text-sm text-slate-600">Información completa del registro seleccionado</p>
                     </div>
-                    <button type="button" onClick={() => setSelected(null)} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900">
+                    <button
+                      type="button"
+                      onClick={() => setSelected(null)}
+                      className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                    >
                       <X className="size-6" />
                     </button>
                   </div>
 
                   <div className="p-6">
                     {detailLoading ? (
-                      <div className="flex items-center justify-center py-16"><p className="font-medium text-slate-600">Cargando detalle...</p></div>
+                      <div className="flex items-center justify-center py-16">
+                        <p className="font-medium text-slate-600">Cargando detalle...</p>
+                      </div>
                     ) : detailError ? (
-                      <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4"><p className="text-sm text-red-700">{detailError}</p></div>
+                      <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
+                        <p className="text-sm text-red-700">{detailError}</p>
+                      </div>
                     ) : selectedDetail ? (
                       <>
-                        <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                           <div className="flex items-start gap-4">
-                            <div className={cn("flex size-20 flex-shrink-0 items-center justify-center rounded-full text-2xl font-bold", getAvatarColor(selectedDetail?.nombre_persona))}>{getInitials(selectedDetail?.nombre_persona)}</div>
+                            <div className={cn("flex size-20 shrink-0 items-center justify-center rounded-full text-2xl font-bold", getAvatarColor(selectedDetail.nombre_persona))}>
+                              {getInitials(selectedDetail.nombre_persona)}
+                            </div>
                             <div>
-                              <p className="text-xl font-semibold text-slate-900">{selectedDetail?.nombre_persona}</p>
+                              <p className="text-xl font-semibold text-slate-900">{selectedDetail.nombre_persona}</p>
                               <div className="mt-2 flex flex-wrap gap-2">
-                                <Badge className={cn("", personTypeStyles[selectedDetail.tipo_persona])}>{personTypeLabels[selectedDetail.tipo_persona]}</Badge>
-                                {selectedDetail.es_frecuente ? <Badge className="border-emerald-200 bg-emerald-100 text-emerald-700"><Star className="mr-1 size-3" fill="currentColor" />Frecuente</Badge> : null}
+                                <Badge className={cn("", personTypeStyles[selectedDetail.tipo_persona])}>
+                                  {personTypeLabels[selectedDetail.tipo_persona]}
+                                </Badge>
+                                {selectedDetail.es_frecuente ? (
+                                  <Badge className="border-emerald-200 bg-emerald-100 text-emerald-700">
+                                    <Star className="mr-1 size-3" fill="currentColor" />Frecuente
+                                  </Badge>
+                                ) : null}
                               </div>
                             </div>
                           </div>
-                          <Button type="button" variant={selectedDetail.es_frecuente ? "default" : "outline"} onClick={() => void onToggleFrecuencia(selected.id_bitacora, selectedDetail.es_frecuente)} disabled={updatingFrecuenciaId === selected.id_bitacora} className={cn("gap-2 whitespace-nowrap", selectedDetail.es_frecuente ? "bg-emerald-500 hover:bg-emerald-600" : "border-slate-300 hover:border-slate-400")}>
+
+                          <Button
+                            type="button"
+                            variant={selectedDetail.es_frecuente ? "default" : "outline"}
+                            onClick={() => void onToggleFrecuencia(selected.id_bitacora, selectedDetail.es_frecuente)}
+                            disabled={updatingFrecuenciaId === selected.id_bitacora}
+                            className={cn(
+                              "gap-2 whitespace-nowrap",
+                              selectedDetail.es_frecuente ? "bg-emerald-500 hover:bg-emerald-600" : "border-slate-300 hover:border-slate-400",
+                            )}
+                          >
                             <Star className={cn("size-4", selectedDetail.es_frecuente && "fill-current")} />
                             {selectedDetail.es_frecuente ? "Remover" : "Marcar frecuente"}
                           </Button>
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                          <div className="lg:col-span-2 space-y-4">
+                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                          <div className="space-y-4 lg:col-span-2">
                             <div className="grid grid-cols-2 gap-3">
                               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                                 <p className="text-xs font-medium uppercase tracking-wide text-slate-600">Entrada</p>
@@ -507,11 +573,11 @@ export function MiBitacoraPage({
                             <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                               <h3 className="mb-3 font-semibold text-slate-900">Detalles de Acceso</h3>
                               <div className="space-y-3 text-sm">
-                                <div className="flex justify-between">
+                                <div className="flex justify-between gap-4">
                                   <span className="text-slate-600">Método:</span>
                                   <Badge className="px-2 py-1">{selectedDetail.metodo_acceso}</Badge>
                                 </div>
-                                <div className="flex justify-between">
+                                <div className="flex justify-between gap-4">
                                   <span className="text-slate-600">Guardia:</span>
                                   <span className="font-medium text-slate-900">{selectedDetail.guardia?.nombre ?? selectedDetail.guardia?.id_guardia ?? "-"}</span>
                                 </div>
@@ -537,25 +603,33 @@ export function MiBitacoraPage({
 
                             <div className="space-y-3">
                               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                                <p className="text-sm font-medium text-slate-900 mb-2">Nota de Entrada</p>
-                                <p className="text-sm text-slate-700 leading-relaxed">{selectedDetail.detalle.notas_guardia_entrada || <span className="text-slate-400">Sin notas registradas</span>}</p>
+                                <p className="mb-2 text-sm font-medium text-slate-900">Nota de Entrada</p>
+                                <p className="text-sm leading-relaxed text-slate-700">
+                                  {selectedDetail.detalle.notas_guardia_entrada || <span className="text-slate-400">Sin notas registradas</span>}
+                                </p>
                               </div>
                               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                                <p className="text-sm font-medium text-slate-900 mb-2">Nota de Salida</p>
-                                <p className="text-sm text-slate-700 leading-relaxed">{selectedDetail.detalle.notas_guardia_salida || <span className="text-slate-400">Sin notas registradas</span>}</p>
+                                <p className="mb-2 text-sm font-medium text-slate-900">Nota de Salida</p>
+                                <p className="text-sm leading-relaxed text-slate-700">
+                                  {selectedDetail.detalle.notas_guardia_salida || <span className="text-slate-400">Sin notas registradas</span>}
+                                </p>
                               </div>
                             </div>
                           </div>
 
                           <div className="lg:col-span-1">
-                            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 h-full flex flex-col">
+                            <div className="flex h-full flex-col rounded-lg border border-slate-200 bg-slate-50 p-4">
                               <h3 className="mb-3 font-semibold text-slate-900">Foto del Visitante</h3>
                               {selectedDetail.detalle.foto_visitante ? (
                                 // eslint-disable-next-line @next/next/no-img-element
-                                <img src={selectedDetail.detalle.foto_visitante} alt={`Foto de ${selectedDetail.nombre_persona}`} className="w-full rounded-lg object-cover flex-1" />
+                                <img
+                                  src={selectedDetail.detalle.foto_visitante}
+                                  alt={`Foto de ${selectedDetail.nombre_persona}`}
+                                  className="w-full flex-1 rounded-lg object-cover"
+                                />
                               ) : (
                                 <div className="flex flex-1 items-center justify-center rounded-lg border-2 border-dashed border-slate-300">
-                                  <p className="text-center text-xs text-slate-500 px-2">No hay foto disponible</p>
+                                  <p className="px-2 text-center text-xs text-slate-500">No hay foto disponible</p>
                                 </div>
                               )}
                             </div>

@@ -5,6 +5,13 @@ services:
       dockerfile: Dockerfile.dev
     ports:
       - '3000:3000'
+    env_file:
+      - .env
+    environment:
+      DOCKER_CONTAINER: 'true'
+      DATABASE_URL: postgresql://civitas:civitas123@postgres:5432/civitas
+    depends_on:
+      - postgres
     volumes:
       - .:/usr/src/app
     networks:

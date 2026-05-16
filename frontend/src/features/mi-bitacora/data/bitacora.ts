@@ -1,8 +1,46 @@
 import type {
   MiBitacoraDetalleResponse,
+  MiBitacoraDetalle,
   MiBitacoraFilters,
   MiBitacoraResponse,
 } from "../types";
+
+function mapDetalleResponse(payload: MiBitacoraDetalleResponse): MiBitacoraDetalle {
+  const detail = payload.data as unknown as {
+    id?: string;
+    nombre?: string;
+    tipo_persona?: "visitante" | "empleado" | "proveedor";
+    fecha_entrada?: string;
+    fecha_salida?: string | null;
+    metodo_acceso?: "QR" | "lista" | "manual";
+    guardia_registro?: string;
+    avatar_url?: string | null;
+    qr_utilizado?: string | null;
+    notas?: string | null;
+  };
+
+  return {
+    id_bitacora: detail.id ?? payload.data.id_bitacora,
+    nombre_persona: payload.data.nombre_persona ?? detail.nombre ?? "",
+    tipo_persona: payload.data.tipo_persona,
+    fecha_hora_entrada: payload.data.fecha_hora_entrada ?? detail.fecha_entrada ?? "",
+    fecha_hora_salida:
+      payload.data.fecha_hora_salida ?? (detail.fecha_salida && detail.fecha_salida !== "-" ? detail.fecha_salida : null),
+    metodo_acceso: payload.data.metodo_acceso ?? detail.metodo_acceso ?? "manual",
+    guardia: payload.data.guardia ?? {
+      id_guardia: "",
+      nombre: detail.guardia_registro ?? "-",
+    },
+    es_frecuente: payload.data.es_frecuente ?? (detail.metodo_acceso === "lista"),
+    detalle: {
+      foto_visitante: payload.data.detalle?.foto_visitante ?? detail.avatar_url ?? null,
+      qr_utilizado: payload.data.detalle?.qr_utilizado ?? detail.qr_utilizado ?? null,
+      notas_guardia_entrada:
+        payload.data.detalle?.notas_guardia_entrada ?? detail.notas ?? null,
+      notas_guardia_salida: payload.data.detalle?.notas_guardia_salida ?? null,
+    },
+  };
+}
 
 function buildQuery(filters: MiBitacoraFilters) {
   const params = new URLSearchParams();
@@ -87,7 +125,10 @@ export async function getMiBitacoraDetalle(
     throw new Error(payload.message ?? "No fue posible cargar el detalle.");
   }
 
-  return payload;
+  return {
+    ...payload,
+    data: mapDetalleResponse(payload),
+  };
 }
 
 export async function actualizarFrecuenciaVisitante(
