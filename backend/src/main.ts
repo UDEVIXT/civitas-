@@ -3,10 +3,11 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
+  app.getHttpAdapter().getInstance().set('trust proxy', true);
   app.setGlobalPrefix('api');
   app.use(cookieParser());
   app.useGlobalPipes(
@@ -27,7 +28,7 @@ async function bootstrap() {
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   });
-  
+
   const config = new DocumentBuilder()
     .setTitle('Civitas API')
     .setDescription('Documentación')
@@ -37,7 +38,7 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
-  
+
   await app.listen(process.env.PORT ?? 3001, '0.0.0.0');
 }
 bootstrap();

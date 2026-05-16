@@ -2,14 +2,14 @@ import apiClient from "@/api/axios";
 
 export const actualizarEmpleadoResidente = async (id: string, data: any) => {
   try {
-    const response = await apiClient.put(`/empleado/${id}`, {
-      accion: "actualizacion_residente", // Etiqueta para el backend
+    // Forzamos el uso de tu ruta limpia sin espacios accidentales
+    const response = await apiClient.put(`/mi-empleado/${id.trim()}`, {
+      accion: "actualizacion_residente", 
       data: {
         nombre: data.nombre,
         telefono: data.telefono,
-        url_imagen: data.foto,
+        foto: data.foto, 
         cargo: data.cargo,
-        // Mandamos las horas por separado como se configuró en el modal
         hora_entrada: data.hora_entrada,
         hora_salida: data.hora_salida,
         dias_autorizados: data.dias_autorizados,
