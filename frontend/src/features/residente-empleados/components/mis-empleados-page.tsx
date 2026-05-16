@@ -1,17 +1,17 @@
 "use client";
 
 import * as React from "react";
-// Importamos hook personalizado para gestionar empleados del residente
+// Importamos el hook personalizado para gestionar empleados del residente
 import { useResidenteEmpleados } from "../hooks/useResidenteEmpleados"; 
 
 // Componentes UI
 import { TablaMisEmpleados } from "./TablaMisEmpleados";
 import { ModalEditarEmpleado } from "./ModalEditarEmpleado";
-import { ModalBajaEmpleado } from "./ModalBajaEmpleado"; // <-- Importamos tu nuevo modal modificado
+import { ModalBajaEmpleado } from "./ModalBajaEmpleado"; 
 import { EmpleadosHorarioDialog } from "@/features/empleados-domesticos/components/horarios-empleado-domestico";
 
 export default function MisEmpleadosPage() {
-  // Aquí usamos useResidenteEmpleados.ts . El "123" es un ejemplo, 
+  // Aquí usamos useResidenteEmpleados.ts. El "123" es un ejemplo, 
   // luego lo cambiaremos por el ID real del usuario logueado.
   const { 
     empleados, 
@@ -20,7 +20,7 @@ export default function MisEmpleadosPage() {
     setSearch, 
     modalEdit, 
     modalHorario,
-    modalBaja // <-- Desestructuramos el estado y funciones de control para la suspensión/baja
+    modalBaja 
   } = useResidenteEmpleados("123");
 
   return (
@@ -36,13 +36,13 @@ export default function MisEmpleadosPage() {
         </div>
       </div>
 
-      {/* Buscador opcional */}
+      {/* Buscador */}
       <div className="flex items-center py-4">
         <input
           placeholder="Buscar empleado..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm p-2 border rounded-md"
+          className="max-w-sm p-2 border rounded-md bg-white text-sm"
         />
       </div>
 
@@ -52,7 +52,7 @@ export default function MisEmpleadosPage() {
           isLoading={isLoading}
           onEdit={modalEdit.handleEditClick}
           onVerHorario={modalHorario.handleVerHorario}
-          onBaja={modalBaja.handleBajaClick} // <-- Pasamos la función a la tabla para abrir el modal desde las acciones
+          onBaja={modalBaja.handleBajaClick} 
         />
       </div>
 
@@ -61,27 +61,28 @@ export default function MisEmpleadosPage() {
         empleado={modalEdit.selectedEmpleado}
         isOpen={modalEdit.isOpen}
         onClose={() => modalEdit.setIsOpen(false)}
-        onSave={modalEdit.save}       // <-- Conexión con la mutación del Hook
-        isSaving={modalEdit.isSaving} // <-- Muestra el spinner si está guardando
+        onSave={modalEdit.save}       
+        isSaving={modalEdit.isSaving} 
       />
 
-      {/* Modal de Baja / Suspensión Temporal (El que modificamos anteriormente) */}
+      {/* Modal de Baja / Suspensión Temporal */}
       <ModalBajaEmpleado
         open={modalBaja.isOpen}
         onOpenChange={modalBaja.setIsOpen}
         selectedEmpleado={modalBaja.selectedEmpleado}
-        mode={modalBaja.mode} // "deactivate" o "reactivate" gestionado por el hook según el estado actual del empleado
+        mode={modalBaja.mode} 
         motivo={modalBaja.motivo}
         onMotivoChange={modalBaja.setMotivo}
         isDeleting={modalBaja.isDeleting}
         deleteError={modalBaja.deleteError}
-        onConfirm={modalBaja.confirm} // <-- Ejecuta la actualización/baja temporal en tu backend
+        onConfirm={modalBaja.confirm} 
       />
 
       {/* Modal de Horarios */}
+      {/* CORRECCIÓN: Apuntar a modalHorario en lugar de modalEdit */}
       <EmpleadosHorarioDialog
-        nombre={modalEdit.selectedEmpleado?.nombre || ""}
-        horarios={modalEdit.selectedEmpleado?.servicio?.horarios || []}
+        nombre={modalHorario.selectedEmpleado?.nombre || ""}
+        horarios={modalHorario.selectedEmpleado?.servicio?.horarios || []}
         open={modalHorario.isOpen}
         onOpenChange={modalHorario.setIsOpen}
       />

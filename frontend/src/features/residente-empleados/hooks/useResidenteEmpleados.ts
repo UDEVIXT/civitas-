@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useToast } from "@/hooks/use-toast"; // Asegúrate de usar useToast() si es el hook de shadcn
+import { useToast } from "@/hooks/use-toast"; 
 
 // Importamos las funciones de la API
 import {
@@ -14,19 +14,19 @@ import {
 import { actualizarEmpleadoResidente } from "../api/residente-api";
 import type { EmpleadoDomestico } from "@/features/empleados-domesticos/types";
 
-export function useResidenteEmpleados() {
+// CORRECCIÓN 1: Regresamos el idResidente requerido para filtrar los datos en la consulta
+export function useResidenteEmpleados(idResidente: string) {
   const queryClient = useQueryClient();
-  const { toast } = useToast(); // Instanciamos el toast correctamente
+  const { toast } = useToast(); 
   
   // Estados para la UI
   const [search, setSearch] = useState("");
-  const [selectedEmpleado, setSelectedEmpleado] =
-    useState<EmpleadoDomestico | null>(null);
+  const [selectedEmpleado, setSelectedEmpleado] = useState<EmpleadoDomestico | null>(null);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isHorarioModalOpen, setIsHorarioModalOpen] = useState(false);
   
-  // Nuevos estados para el Modal de Baja/Suspensión
+  // Estados para el Modal de Baja/Suspensión
   const [isBajaModalOpen, setIsBajaModalOpen] = useState(false);
   const [bajaMode, setBajaMode] = useState<"deactivate" | "reactivate">("deactivate");
   const [motivoBaja, setMotivoBaja] = useState("");
@@ -34,23 +34,21 @@ export function useResidenteEmpleados() {
   
   const debouncedSearch = useDebounce(search, 300);
 
-  // 1. OBTENER EMPLEADOS (Quitamos isActive: true para poder ver y reactivar a los suspendidos)
+  // CORRECCIÓN 2: Restauramos los filtros dinámicos y agregamos variables clave a la queryKey
   const { data, isLoading } = useQuery({
-    queryKey: ["residente-empleados"],
-    queryFn: () => obtenerEmpleadosDomesticos(),
+    queryKey: ["residente-empleados", idResidente, debouncedSearch],
+    queryFn: () => obtenerEmpleadosDomesticos(
+      { byResidenteId: idResidente }, 
+      debouncedSearch
+    ),
+    enabled: !!idResidente, // Evita llamadas en falso si el ID no se ha cargado
   });
 
   // 2. MUTACIÓN PARA ACTUALIZAR DATOS GENERALES
   const updateMutation = useMutation({
     mutationFn: (values: any) => {
-      if (!selectedEmpleado) {
-        return Promise.reject();
-      }
-
-      return actualizarEmpleadoResidente(
-        selectedEmpleado.id_visitante,
-        values,
-      );
+      if (!selectedEmpleado) return Promise.reject();
+      return actualizarEmpleadoResidente(selectedEmpleado.id_visitante, values);
     },
     onSuccess: (res) => {
       if (res.success) {
@@ -64,46 +62,44 @@ export function useResidenteEmpleados() {
     }
   });
 
-  // 3. NUEVA MUTACIÓN PARA SUSPENDER O REACTIVAR (Cambio de Estado)
+  // 3. MUTACIÓN PARA SUSPENDER O REACTIVAR
+  // CORRECCIÓN 3: Ajustamos el tipado para aceptar el objeto que realmente envía handleConfirmBaja
   const bajaMutation = useMutation({
-  mutationFn: (values: { motivo?: string }) => {
-    if (!selectedEmpleado) return Promise.reject();
+    mutationFn: (values: { activo: boolean; motivo?: string }) => {
+      if (!selectedEmpleado) return Promise.reject();
 
-    return cambiarEstadoEmpleado(
-      selectedEmpleado.id_visitante,
-      bajaMode === "deactivate" ? "baja" : "reactivacion",
-      values.motivo,
-    );
-  },
-
-  onSuccess: (res) => {
-    if (res.success) {
-      queryClient.invalidateQueries({ queryKey: ["residente-empleados"] });
-      setIsBajaModalOpen(false);
-      setMotivoBaja("");
-      setBajaError(null);
-
-      toast({
-        title:
-          bajaMode === "deactivate"
-            ? "Acceso Suspendido"
-            : "Acceso Reactivado",
-        description:
-          bajaMode === "deactivate"
-            ? "El empleado ha sido suspendido temporalmente."
-            : "Los permisos del empleado han sido restaurados.",
-      });
-    } else {
-      setBajaError(
-        res.message || "Ocurrió un error al procesar el cambio de estado",
+      // Usamos la nueva función del endpoint que trajo tu compañero
+      return cambiarEstadoEmpleado(
+        selectedEmpleado.id_visitante,
+        bajaMode === "deactivate" ? "baja" : "reactivacion",
+        values.motivo,
       );
-    }
-  },
+    },
+onSuccess: (res) => {
+  if (res.success) {
+    queryClient.invalidateQueries({ queryKey: ["residente-empleados"] });
+    setIsBajaModalOpen(false);
+    setMotivoBaja("");
+    setBajaError(null);
 
-  onError: () => {
-    setBajaError("Error de conexión con el servidor. Inténtalo de nuevo.");
-  },
-});
+    toast({
+      title: bajaMode === "deactivate" ? "Acceso Suspendido" : "Acceso Reactivado",
+      description: bajaMode === "deactivate"
+        ? "El empleado ha sido suspendido temporalmente."
+        : "Los permisos del empleado han sido restaurados.",
+    });
+  } else {
+    // CAMBIO AQUÍ: Añadimos 'as any' a la respuesta para poder leer la propiedad sin errores
+    const respuestaConMensaje = res as any;
+    setBajaError(
+      respuestaConMensaje.message || "Ocurrió un error al procesar el cambio de estado"
+    );
+  }
+},
+    onError: () => {
+      setBajaError("Error de conexión con el servidor. Inténtalo de nuevo.");
+    },
+  });
 
   // Manejadores de eventos
   const handleEditClick = (empleado: EmpleadoDomestico) => {
@@ -116,13 +112,11 @@ export function useResidenteEmpleados() {
     setIsHorarioModalOpen(true);
   };
 
-
   const handleBajaClick = (empleado: EmpleadoDomestico) => {
     setSelectedEmpleado(empleado);
     setMotivoBaja("");
     setBajaError(null);
     
-    // Si 'activo' es false, significa que está suspendido, por lo que el modo será "reactivate"
     const esInactivo = empleado.servicio?.activo === false;
     setBajaMode(esInactivo ? "reactivate" : "deactivate");
     
@@ -157,7 +151,6 @@ export function useResidenteEmpleados() {
       selectedEmpleado,
       handleVerHorario,
     },
-    // Retornamos el nuevo objeto estructurado para el ModalBajaEmpleado
     modalBaja: {
       isOpen: isBajaModalOpen,
       setIsOpen: setIsBajaModalOpen,
