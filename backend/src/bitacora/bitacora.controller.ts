@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   BadRequestException,
+  Req,
 } from '@nestjs/common';
 
 import { BitacoraService } from './bitacora.service';
@@ -88,9 +89,6 @@ export class BitacoraController {
       data: result,
     };
   }
-
-  
-
   // ---------------------------------------------------------
   // REGISTRAR SALIDA A -> (Todos) POR ROL (GUARDIA)
   // ---------------------------------------------------------
@@ -101,12 +99,15 @@ export class BitacoraController {
     @Body()
     dto: {
       id_bitacora?: string | string[];
-      id_guardia: string;
       comentario_salida?: string;
     },
-  ) {
-    const { id_bitacora, id_guardia, comentario_salida } = dto;
 
+    @Req() req: any,
+  ) {
+    const { id_bitacora, comentario_salida } = dto;
+
+    const id_guardia = req.user.userId;
+    //console.log('ID GUARDIA DESDE TOKEN:', id_guardia, 'ID_BITACORA:', id_bitacora, 'COMENTARIO_SALIDA:', comentario_salida);
     if (
       !id_bitacora ||
       (Array.isArray(id_bitacora) && id_bitacora.length === 0)
@@ -122,7 +123,10 @@ export class BitacoraController {
       comentario_salida,
     );
 
-    const idsProcesados = Array.isArray(id_bitacora) ? id_bitacora : [id_bitacora];
+    const idsProcesados = Array.isArray(id_bitacora)
+      ? id_bitacora
+      : [id_bitacora];
+
     bitacoraUpdates$.next({
       tipo_evento: 'PROVEEDOR_SALIDA',
       ids_afectados: idsProcesados,
