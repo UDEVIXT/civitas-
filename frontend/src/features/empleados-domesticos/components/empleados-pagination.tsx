@@ -25,7 +25,7 @@ export function EmpleadosPagination({
 
   return (
     <Pagination className="mx-0 w-auto">
-      <PaginationContent>
+      <PaginationContent className="flex flex-wrap items-center justify-center gap-1 sm:gap-2">
         <PaginationItem>
           <PaginationPrevious
             type="button"
