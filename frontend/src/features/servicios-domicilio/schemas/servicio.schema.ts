@@ -1,27 +1,32 @@
 import * as z from "zod";
 
+// Obtenemos la fecha de hoy en formato YYYY-MM-DD para la validación
+const hoy = new Date().toISOString().split("T")[0];
+
 export const servicioDomicilioSchema = z.object({
-  // CA003: Tipo de servicio (Gas, Agua, etc.)
-  id_tipo_servicio: z.string()
-    .min(1, "Selecciona un tipo de servicio"),
+  // CA003: Tipo de servicio ahora es texto libre
+  tipo_servicio: z.string()
+    .trim()
+    .min(1, "El tipo de servicio es obligatorio")
+    .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, "Solo se permiten letras"),
 
   // CA003: Empresa o Proveedor
   nombre_empresa: z.string()
     .trim()
     .min(1, "El nombre de la empresa o proveedor es obligatorio"),
 
-  // Control de frecuencia para el NTH001
   frecuencia: z.enum(["UNICA_VEZ", "RECURRENTE", "PROGRAMADO"]),
 
-  // CA003: Fecha de la visita (Obligatoria si es Única vez)
+  // CA003: Fecha de la visita con validación de no pasado
   fecha_visita: z.string()
-    .min(1, "La fecha de la visita es obligatoria"),
+    .min(1, "La fecha de la visita es obligatoria")
+    .refine((fecha) => fecha >= hoy, {
+      message: "No puedes programar un servicio en el pasado",
+    }),
 
-  // CA003: Horario estimado (Formato de hora HH:MM)
   hora_estimada: z.string()
     .min(1, "El horario estimado es obligatorio"),
 
-  // CA003 & CA004: Nombre del técnico (Opcional, pero si se escribe, solo letras)
   nombre_tecnico: z.string()
     .trim()
     .optional()
@@ -29,21 +34,16 @@ export const servicioDomicilioSchema = z.object({
       message: "El nombre del técnico solo puede contener letras",
     }),
 
-  // CA003 & CA004: Número de identificación o placas (Opcional, alfanumérico con guiones)
   placas: z.string()
     .trim()
     .toUpperCase()
     .optional()
     .refine((val) => !val || /^[a-zA-Z0-9-\s]+$/.test(val), {
-      message: "Formato de placas inválido (solo letras, números y guiones)",
+      message: "Formato de placas inválido",
     }),
 
-  // Notas adicionales opcionales para la caseta
   notas: z.string().trim().optional(),
-  
-  // URL de foto opcional para identificar al proveedor
   foto: z.string().trim().optional(),
 });
 
-// Exportamos el tipo inferido para usarlo en React Hook Form
 export type ServicioDomicilioFormValues = z.infer<typeof servicioDomicilioSchema>;
