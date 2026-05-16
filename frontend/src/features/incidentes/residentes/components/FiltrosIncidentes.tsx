@@ -160,21 +160,21 @@ export function FiltrosIncidentes({ filters, onFilterChange }: FiltrosIncidentes
   };
 
   return (
-    <div className="flex items-center justify-between gap-4">
-      <div className="flex items-center gap-4">
-        <div className="relative">
+    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row lg:flex-row items-start md:items-center lg:items-center gap-3 w-full lg:w-auto">
+        <div className="relative w-full md:w-auto lg:w-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="search"
             placeholder="Buscar incidente..."
             value={filters.busqueda || ''}
             onChange={(e) => handleBusquedaChange(e.target.value)}
-            className="flex h-9 w-60 rounded-md border border-input bg-background pl-9 pr-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="flex h-9 w-full md:w-60 lg:w-60 rounded-md border border-input bg-background pl-9 pr-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>
 
         <Select value={filters.estado || 'Todos'} onValueChange={handleEstadoChange}>
-          <SelectTrigger className="w-36 h-9">
+          <SelectTrigger className="w-full md:w-36 lg:w-36 h-9">
             <SelectValue placeholder="Estado" />
           </SelectTrigger>
           <SelectContent>
@@ -186,13 +186,13 @@ export function FiltrosIncidentes({ filters, onFilterChange }: FiltrosIncidentes
           </SelectContent>
         </Select>
 
-        <DatePickerWithRange 
-          filters={filters} 
-          onFiltersChange={onFilterChange} 
+        <DatePickerWithRange
+          filters={filters}
+          onFiltersChange={onFilterChange}
         />
 
         <Select value={filters.ordenarPor || 'reciente'} onValueChange={handleOrdenarPorChange}>
-          <SelectTrigger className="w-36 h-9">
+          <SelectTrigger className="w-full md:w-36 lg:w-36 h-9">
             <ArrowUpDown className="h-4 w-4 mr-2 text-muted-foreground" />
             <SelectValue placeholder="Ordenar por" />
           </SelectTrigger>
@@ -205,9 +205,9 @@ export function FiltrosIncidentes({ filters, onFilterChange }: FiltrosIncidentes
           </SelectContent>
         </Select>
 
-        <button 
+        <button
           onClick={handleLimpiarFiltros}
-          className="h-9 px-4 py-2 bg-gray-200 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+          className="h-9 px-4 py-2 bg-gray-200 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 w-full md:w-auto lg:w-auto"
         >
           Limpiar Filtros
         </button>
