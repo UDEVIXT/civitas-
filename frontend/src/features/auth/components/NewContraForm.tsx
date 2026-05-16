@@ -3,13 +3,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 
 interface NuevaContrasenaProps {
-    onSubmit?: (data: { password: string; confirmPassword: string }) => Promise<void>;
+    onSubmit?: (data: { password: string }) => Promise<void>;
 }
 
 export function NuevaContrasena({ onSubmit }: NuevaContrasenaProps) {
@@ -44,10 +43,9 @@ export function NuevaContrasena({ onSubmit }: NuevaContrasenaProps) {
 
         setIsLoading(true);
         try {
-            await onSubmit?.({ password, confirmPassword });
+            await onSubmit?.({ password });
         } catch (error) {
             console.error(error);
-            toast.error("Error al actualizar la contraseña");
         } finally {
             setIsLoading(false);
         }
@@ -57,10 +55,14 @@ export function NuevaContrasena({ onSubmit }: NuevaContrasenaProps) {
         <div className="flex-1 flex items-center justify-center px-4 py-8 h-full">
             <div className="w-full max-w-sm space-y-8">
 
-                {/* Título */}
-                <h1 className="text-2xl font-bold text-center text-foreground">
-                    Crea tu nueva contraseña
-                </h1>
+                <div className="text-center space-y-2">
+                    <h1 className="text-2xl font-bold text-foreground">
+                        Crea tu nueva contraseña
+                    </h1>
+                    <p className="text-sm text-muted-foreground">
+                        Ingresa una contraseña segura y fácil de recordar.
+                    </p>
+                </div>
 
                 <form className="space-y-4" onSubmit={handleSubmit}>
 
@@ -122,12 +124,10 @@ export function NuevaContrasena({ onSubmit }: NuevaContrasenaProps) {
                         )}
                     </div>
 
-                    {/* Hint */}
                     <p className="text-xs text-muted-foreground text-center">
-                        Mínimo 8 caracteres, mayúsculas
+                        Mínimo 8 caracteres, mayúsculas y números
                     </p>
 
-                    {/* Botón */}
                     <Button
                         type="submit"
                         className="w-full bg-amber-400 hover:bg-amber-500 text-white font-semibold"
@@ -137,18 +137,14 @@ export function NuevaContrasena({ onSubmit }: NuevaContrasenaProps) {
                         {isLoading ? <Spinner /> : "Actualizar contraseña"}
                     </Button>
 
-                    {/* Volver al login */}
                     <div className="text-center text-sm text-muted-foreground pt-1">
                         Volver a{" "}
-                    <a
-                        href="/login"
-                        className="text-amber-500 hover:text-amber-600 font-medium hover:underline transition-colors"
-                    >
-                        Inicio de sesión
-                    </a>
-                </div>
-            </form>
+                        <a href="/login" className="text-amber-500 hover:text-amber-600 font-medium hover:underline transition-colors">
+                            Inicio de sesión
+                        </a>
+                    </div>
+                </form>
+            </div>
         </div>
-    </div>
     );
 }
