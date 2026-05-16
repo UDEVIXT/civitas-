@@ -42,6 +42,10 @@ apiClient.interceptors.response.use(
     };
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+      if (originalRequest.url?.includes("/auth/refresh")) {
+        return Promise.reject(error);
+      }
+
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
