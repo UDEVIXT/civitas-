@@ -124,8 +124,8 @@ React.useEffect(() => {
         hora_entrada: horaEntradaReal,
         hora_salida: horaSalidaReal,
         dias_autorizados: diasSeleccionados,
-        cargo: cargoReal, // 👈 Ahora sí se pre-selecciona "Limpieza", "Nana", etc.
-        notas: "", // Inicializado vacío temporalmente si Joan no incluye notas en la query
+        cargo: cargoReal, //se pre-selecciona "Limpieza", "Nana", etc.
+        notas: "", // Inicializado vacío temporalmente 
         foto: empleado.url_imagen || "",
       });
     }
