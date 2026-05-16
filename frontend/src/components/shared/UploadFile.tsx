@@ -1,11 +1,15 @@
 "use client";
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
+
+// Icons
 import { Upload, X, ImageIcon, AlertCircle, File as FileIcon, FileText, Camera, Image as ImageIcon2, RefreshCw } from "lucide-react";
+
+// Components UI
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const MAX_ITEMS = 3;
 
@@ -310,6 +314,9 @@ export function ImageUpload({ type, onDataChange, label }: ImageUploadProps) {
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle>¿Cómo quieres subir tu {config.label}?</DialogTitle>
+                        <DialogDescription>
+                            Elige entre tomar una foto con la cámara o seleccionar un archivo de tu galería
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="grid grid-cols-2 gap-4 py-4">
                         <Button
@@ -354,9 +361,12 @@ export function ImageUpload({ type, onDataChange, label }: ImageUploadProps) {
                 <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
                         <DialogTitle>Tomar foto</DialogTitle>
+                        <DialogDescription>
+                            Usa la cámara para capturar una foto. Puedes cambiar entre cámara frontal y trasera
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="flex flex-col gap-4">
-                        <div className="relative bg-black rounded-lg overflow-hidden" style={{ minHeight: '300px' }}>
+                        <div className="relative bg-black rounded-lg overflow-hidden min-h-75">
                             <video
                                 ref={videoRef}
                                 autoPlay
