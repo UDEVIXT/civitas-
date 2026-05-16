@@ -25,7 +25,7 @@ const initialFormData: Partial<IncidenciaFormData> = {
     descripcion: '',
     ubicacion: undefined,
     solucionEsperada: '',
-    evidencia: [],
+    imagen: [],
 };
 
 export const useIncidenciaForm = create<FormState>((set, get) => ({

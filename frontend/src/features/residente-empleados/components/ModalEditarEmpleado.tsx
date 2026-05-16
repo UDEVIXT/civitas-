@@ -5,50 +5,72 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2 } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { EmpleadoDomestico } from "@/features/empleados-domesticos/types";
-import {
-  eliminarEmpleadoDomestico,
-  activarEmpleadoDomestico,
-} from "@/features/empleados-domesticos/api/empleados";
 
+// Tipos base para iterar la tabla
+const DIAS_SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"] as const;
+
+// 1. Esquema de un día individual
+const horarioDiaSchema = z.object({
+  dia: z.enum(DIAS_SEMANA),
+  activo: z.boolean(),
+  hora_entrada: z.string(),
+  hora_salida: z.string(),
+});
+
+// 2. Esquema principal + Validaciones estrictas
 const formSchema = z.object({
-  estado: z.enum(["Activo", "Inactivo"]),
-  motivo: z
-    .string()
-    .min(5, {
-      message: "El motivo debe tener al menos 5 caracteres.",
-    })
-    .max(200, {
-      message: "El motivo no puede exceder los 200 caracteres.",
-    }),
+  nombre: z.string()
+    .trim()
+    .min(1, "Campo obligatorio")
+    .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, "Solo se permiten letras"),
+  
+  telefono: z.string()
+    .trim()
+    .min(1, "Campo obligatorio")
+    .regex(/^\d+$/, "Solo se permiten números")
+    .length(10, "El teléfono debe tener exactamente 10 dígitos"),
+  
+  cargo: z.string()
+    .trim()
+    .min(1, "Campo obligatorio")
+    .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, "Solo se permiten letras"),
+  
+  notas: z.string().optional(),
+  foto: z.string().optional(),
+  horarios: z.array(horarioDiaSchema),
+}).superRefine((data, ctx) => {
+  let tieneDiasActivos = false;
+
+  data.horarios.forEach((horario, index) => {
+    if (horario.activo) {
+      tieneDiasActivos = true;
+      // VALIDACIÓN CA005: Inconsistencia de horarios
+      if (horario.hora_entrada >= horario.hora_salida) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "La salida debe ser después de la entrada",
+          path: ["horarios", index, "hora_salida"],
+        });
+      }
+    }
+  });
+
+  if (!tieneDiasActivos) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Debes autorizar al menos un día de acceso",
+      path: ["horarios"],
+    });
+  }
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -57,158 +79,253 @@ interface ModalEditarEmpleadoProps {
   empleado: EmpleadoDomestico | null;
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSave: (values: any) => void;
+  isSaving?: boolean;
 }
 
-export function ModalEditarEmpleado({
-  empleado,
-  isOpen,
-  onClose,
-  onSuccess,
-}: ModalEditarEmpleadoProps) {
-  const queryClient = useQueryClient();
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
-
-  const { mutate: updateStatus, isPending } = useMutation({
-    mutationFn: async (values: FormValues) => {
-      if (!empleado) return;
-      const isReactivating = values.estado === "Activo";
-
-      const res = isReactivating
-        ? await activarEmpleadoDomestico(empleado.id_visitante, values.motivo)
-        : await eliminarEmpleadoDomestico(empleado.id_visitante, values.motivo);
-
-      if (res && !res.success) {
-        throw new Error(res.message || "Error al actualizar");
-      }
-      return res;
-    },
-    onSuccess: () => {
-      setErrorMessage(null);
-      queryClient.invalidateQueries({ queryKey: ["empleados-domesticos"] });
-      onSuccess?.();
-      onClose();
-    },
-    onError: (err: any) => {
-      setErrorMessage(err.message || "Ocurrió un error inesperado");
-    },
-  });
+export function ModalEditarEmpleado({ empleado, isOpen, onClose, onSave, isSaving }: ModalEditarEmpleadoProps) {
+  // Plantilla por defecto para los 7 días
+  const horariosPorDefecto = DIAS_SEMANA.map(dia => ({
+    dia,
+    activo: false,
+    hora_entrada: "08:00",
+    hora_salida: "16:00"
+  }));
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      estado: "Activo",
-      motivo: "",
+      nombre: "",
+      telefono: "",
+      cargo: "",
+      notas: "",
+      foto: "",
+      horarios: horariosPorDefecto,
     },
   });
 
   React.useEffect(() => {
     if (empleado) {
-      setErrorMessage(null);
+      const telefonoLimpio = (empleado.telefono || "").replace(/\D/g, "");
+ 
+      const servicioAny = empleado.servicio as any;
+      const empleadoAny = empleado as any;
+
+      const cargoReal = servicioAny?.tipo_servicio?.nombre || servicioAny?.cargo || "";
+
+      // Diccionario para traducir de la BD al UI
+      const mapeoDiasInverso: Record<string, string> = {
+        'LUNES': 'Lunes', 'MARTES': 'Martes', 'MIERCOLES': 'Miércoles',
+        'JUEVES': 'Jueves', 'VIERNES': 'Viernes', 'SABADO': 'Sábado', 'DOMINGO': 'Domingo'
+      };
+
+      const listaHorariosBD: any[] = servicioAny?.horarios || [];
+
+      // Reconstruimos la tabla de 7 días cruzando con los datos de la BD
+      const horariosMapeados = DIAS_SEMANA.map(diaUI => {
+        const horarioBD = listaHorariosBD.find(h => mapeoDiasInverso[h.dia_semana] === diaUI);
+        
+        if (horarioBD && horarioBD.activo) {
+          const dEntrada = new Date(horarioBD.hora_inicio);
+          const dSalida = new Date(horarioBD.hora_fin);
+          return {
+            dia: diaUI,
+            activo: true,
+            hora_entrada: `${String(dEntrada.getUTCHours()).padStart(2, '0')}:${String(dEntrada.getUTCMinutes()).padStart(2, '0')}`,
+            hora_salida: `${String(dSalida.getUTCHours()).padStart(2, '0')}:${String(dSalida.getUTCMinutes()).padStart(2, '0')}`,
+          };
+        }
+
+        return {
+          dia: diaUI,
+          activo: false,
+          hora_entrada: "08:00",
+          hora_salida: "16:00"
+        };
+      });
+
       form.reset({
-        estado: empleado.servicio?.activo ? "Activo" : "Inactivo",
-        motivo: "",
+        nombre: empleado.nombre || "",
+        telefono: telefonoLimpio,
+        cargo: cargoReal,
+        notas: servicioAny?.notas || empleadoAny.motivo || "", 
+        foto: empleado.url_imagen || "",
+        horarios: horariosMapeados,
       });
     }
   }, [empleado, form]);
 
-  async function onSubmit(values: FormValues) {
-    updateStatus(values);
-  }
+  const onSubmit = (values: FormValues) => {
+    onSave(values);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Editar Empleado Doméstico</DialogTitle>
-          <DialogDescription>
-            Actualiza el estado de acceso para{" "}
-            <strong>{empleado?.nombre}</strong>.
-          </DialogDescription>
+      <DialogContent className="w-[95vw] sm:max-w-[550px] p-4 sm:p-6 max-h-[95vh] overflow-y-auto overflow-x-hidden rounded-2xl">
+        <DialogHeader className="border-b pb-4 mb-4">
+          <DialogTitle className="text-xl font-bold text-center text-gray-800">
+            Editar Perfil y Accesos
+          </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {errorMessage && (
-              <div className="rounded-lg bg-red-50 p-3 text-xs text-red-600 border border-red-100">
-                {errorMessage}
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            
+            {/* Header con Foto */}
+            <div className="flex flex-col items-center justify-center gap-3 bg-gray-50 p-4 rounded-xl text-center">
+              <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-4 border-white shadow-md">
+                <AvatarImage src={form.watch("foto") || "/placeholder-user.jpg"} />
+                <AvatarFallback className="bg-amber-100 text-amber-700 font-bold text-2xl">
+                  {empleado?.nombre?.charAt(0) || "E"}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col gap-0.5">
+                <p className="text-base sm:text-lg font-extrabold text-gray-950 tracking-tight">
+                  {form.watch("nombre") || "Sin nombre"}
+                </p>
               </div>
-            )}
-            <div className="space-y-2">
-              <FormLabel>Empleado</FormLabel>
-              <Input
-                value={empleado?.nombre || ""}
-                disabled
-                className="bg-muted"
-              />
             </div>
 
-            <FormField
-              control={form.control}
-              name="estado"
-              render={({ field }) => (
+            {/* Datos Personales (Apilados verticalmente con Filtros de Teclado) */}
+            <div className="flex flex-col gap-4">
+              <FormField control={form.control} name="nombre" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Estado de Acceso</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona un estado" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Activo">
-                        Activo (Permitir acceso)
-                      </SelectItem>
-                      <SelectItem value="Inactivo">
-                        Inactivo (Bloquear acceso)
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="motivo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Motivo del cambio</FormLabel>
+                  <FormLabel className="font-bold">Nombre Completo *</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Ej: Cambio de horario, fin de contrato, vacaciones..."
-                      className="resize-none"
-                      {...field}
+                    <Input 
+                      placeholder="Ej. Juan Pérez" 
+                      {...field} 
+                      onChange={(e) => {
+                        // Borra instantáneamente todo lo que no sean letras o espacios
+                        const valorLimpio = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
+                        field.onChange(valorLimpio);
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
-              )}
-            />
+              )} />
 
-            <DialogFooter className="pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                disabled={isPending}
-              >
+              <FormField control={form.control} name="telefono" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-bold">Teléfono *</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="tel" 
+                      maxLength={10} 
+                      placeholder="10 dígitos" 
+                      {...field} 
+                      onChange={(e) => {
+                        // Borra instantáneamente todo lo que no sean números
+                        const valorLimpio = e.target.value.replace(/\D/g, "");
+                        field.onChange(valorLimpio);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="cargo" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-bold">Tipo de Empleado / Cargo *</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Ej. Chofer, Jardinero..." 
+                      {...field} 
+                      onChange={(e) => {
+                        // Borra instantáneamente todo lo que no sean letras o espacios
+                        const valorLimpio = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
+                        field.onChange(valorLimpio);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+
+            {/* Tabla de Horarios */}
+            <div className="space-y-3">
+              <div>
+                <h3 className="font-bold text-sm">Horario de Acceso Permitido *</h3>
+                <p className="text-xs text-muted-foreground">Define las horas de entrada y salida para cada día de la semana.</p>
+              </div>
+              
+              <div className="hidden sm:grid grid-cols-[100px_60px_1fr_1fr] gap-4 px-2 py-1 bg-gray-100 rounded-t-md text-xs font-semibold text-gray-600">
+                <div>Día</div>
+                <div className="text-center">Activo</div>
+                <div>Entrada</div>
+                <div>Salida</div>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:gap-1">
+                {form.watch("horarios").map((horario, index) => (
+                  <div key={horario.dia} className="grid grid-cols-1 sm:grid-cols-[100px_60px_1fr_1fr] items-center gap-2 sm:gap-4 p-3 sm:p-2 bg-gray-50 sm:bg-transparent rounded-lg border sm:border-none">
+                    
+                    <div className="flex items-center justify-between sm:justify-start gap-2">
+                      <span className="text-sm font-medium">{horario.dia}</span>
+                      <FormField control={form.control} name={`horarios.${index}.activo`} render={({ field }) => (
+                        <FormControl>
+                          <Checkbox checked={field.value} onCheckedChange={field.onChange} className="sm:hidden" />
+                        </FormControl>
+                      )} />
+                    </div>
+
+                    <div className="hidden sm:flex justify-center">
+                      <FormField control={form.control} name={`horarios.${index}.activo`} render={({ field }) => (
+                        <FormControl>
+                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      )} />
+                    </div>
+
+                    <FormField control={form.control} name={`horarios.${index}.hora_entrada`} render={({ field }) => (
+                      <FormItem className="space-y-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500 sm:hidden w-12">Entrada</span>
+                          <FormControl><Input type="time" disabled={!form.watch(`horarios.${index}.activo`)} className="h-8 w-full min-w-0" {...field} /></FormControl>
+                        </div>
+                      </FormItem>
+                    )} />
+
+                    <FormField control={form.control} name={`horarios.${index}.hora_salida`} render={({ field }) => (
+                      <FormItem className="space-y-0 relative">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500 sm:hidden w-12">Salida</span>
+                          <FormControl><Input type="time" disabled={!form.watch(`horarios.${index}.activo`)} className="h-8 w-full min-w-0" {...field} /></FormControl>
+                        </div>
+                        <FormMessage className="text-[10px] absolute -bottom-4 left-0 sm:left-auto" />
+                      </FormItem>
+                    )} />
+                  </div>
+                ))}
+              </div>
+              {form.formState.errors.horarios?.root && (
+                <p className="text-sm font-medium text-destructive">{form.formState.errors.horarios.root.message}</p>
+              )}
+            </div>
+
+            <FormField control={form.control} name="notas" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="font-bold">Notas Adicionales <span className="text-xs font-normal text-gray-400">(Opcional)</span></FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Ej. Entra por la puerta de servicio..." className="resize-none" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            {/* Botones */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t mt-6">
+              <Button type="button" variant="outline" onClick={onClose} className="flex-1 order-2 sm:order-1" disabled={isSaving}>
                 Cancelar
               </Button>
-              <Button
-                type="submit"
-                disabled={isPending}
-                className="bg-amber-600 hover:bg-amber-700"
-              >
-                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Guardar Cambios
+              <Button type="submit" disabled={isSaving} className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold order-1 sm:order-2">
+                {isSaving ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : "Guardar Cambios"}
               </Button>
-            </DialogFooter>
+            </div>
+            
           </form>
         </Form>
       </DialogContent>

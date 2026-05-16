@@ -1,3 +1,4 @@
+//BitacoraGuardiaPage.tsx
 "use client";
 
 import * as React from "react";
@@ -117,8 +118,15 @@ export function BitacoraGuardiaPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <h1 className="text-2xl font-bold">Bitacora de Accesos</h1>
+    <div className="container mx-auto py-6 px-4 sm:px-6 space-y-6">
+      <div>
+        <h1 className="text-xl sm:text-2xl font-bold">
+          Historial de Accesos (Guardia)
+        </h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          Supervisa todas las entradas y autoriza las salidas de la residencia.
+        </p>
+      </div>
       <FiltrosTabla
         filters={filters}
         onChange={handleFilterChange}

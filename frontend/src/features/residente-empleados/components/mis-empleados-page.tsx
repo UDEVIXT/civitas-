@@ -1,21 +1,38 @@
 "use client";
 
-//Vista para mostrar los empleados domésticos del residente, con un modal para editar permisos.
 import * as React from "react";
-import { TablaMisEmpleados } from "@/features/residente-empleados/components/TablaMisEmpleados";
-import { ModalEditarEmpleado } from "@/features/residente-empleados/components/ModalEditarEmpleado";
-import { EmpleadosHorarioDialog } from "@/features/empleados-domesticos/components/horarios-empleado-domestico";
-import { useEmpleadoDomesticos } from "@/features/empleados-domesticos/hooks/useEmpleadoDomestico";
+import { useResidenteEmpleados } from "../hooks/useResidenteEmpleados"; 
+// 1. Importa el hook de autenticación que maneja el equipo
+import { useAuth } from "@/features/auth/hooks/useAuth"; 
+
+import { TablaMisEmpleados } from "./TablaMisEmpleados";
+import { ModalEditarEmpleado } from "./ModalEditarEmpleado";
+import { MiEmpleadoHorarioDialog } from "./MiEmpleadoHorarioDialog";
 
 export default function MisEmpleadosPage() {
-  const { empleados, loading, modalEdit, modalHorario } =
-    useEmpleadoDomesticos();
+  // 2. Obtén el usuario logueado dinámicamente
+  const { user } = useAuth(); 
+
+  // 3. Le pasas el ID dinámico
+  // const idResidenteActivo = user?.id_residente ? String(user.id_residente) : "";
+  const idResidenteActivo = "c70e1942-e3a8-4b97-959b-b1e051b85aa0";
+
+  const { 
+    empleados, 
+    isLoading, 
+    search, 
+    setSearch, 
+    modalEdit, 
+    modalHorario 
+  } = useResidenteEmpleados(idResidenteActivo);
+
+  console.log("Lo que llega al hook:", empleados);
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
+    <div className="flex-1 space-y-4 p-4 sm:p-8 pt-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
             Mis Empleados Domésticos
           </h2>
           <p className="text-muted-foreground">
@@ -24,37 +41,39 @@ export default function MisEmpleadosPage() {
         </div>
       </div>
 
+      {/* Buscador opcional (puedes usar el de shadcn si gustas) */}
+      <div className="flex items-center py-4">
+        <input
+          placeholder="Buscar empleado..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-sm p-2 border rounded-md"
+        />
+      </div>
+
       <div className="space-y-4">
-        {loading && empleados.length === 0 ? (
-          <div className="flex h-[400px] items-center justify-center rounded-2xl border border-dashed">
-            <div className="flex flex-col items-center gap-2">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-600/30 border-t-amber-600" />
-              <p className="text-sm text-muted-foreground">
-                Cargando tu personal...
-              </p>
-            </div>
-          </div>
-        ) : (
-          <TablaMisEmpleados
-            items={empleados}
-            isLoading={loading}
-            onEdit={modalEdit.handleActionClick}
-            onVerHorario={modalHorario.handleVerHorario}
-          />
-        )}
+        <TablaMisEmpleados
+          items={empleados}
+          isLoading={isLoading}
+          onEdit={modalEdit.handleEditClick}
+          onVerHorario={modalHorario.handleVerHorario}
+        />
       </div>
 
       <ModalEditarEmpleado
-        empleado={modalEdit.selectedEmpleado}
-        isOpen={modalEdit.isOpen}
-        onClose={() => modalEdit.setIsEditModalOpen(false)}
-      />
+      empleado={modalEdit.selectedEmpleado}
+      isOpen={modalEdit.isOpen}
+      onClose={() => modalEdit.setIsOpen(false)}
+      onSave={modalEdit.save}       // <-- Conexión con la mutación del Hook
+      isSaving={modalEdit.isSaving} // <-- Muestra el spinner si está guardando
+    />
 
-      <EmpleadosHorarioDialog
-        nombre={modalHorario.nombreEmpleado}
-        horarios={modalHorario.horarios}
+      {/* Modal de Horarios (el de Joan) */}
+      <MiEmpleadoHorarioDialog
+        nombre={modalEdit.selectedEmpleado?.nombre || ""}
+        horarios={modalEdit.selectedEmpleado?.servicio?.horarios || []}
         open={modalHorario.isOpen}
-        onOpenChange={modalHorario.setIsHorarioModalOpen}
+        onOpenChange={modalHorario.setIsOpen}
       />
     </div>
   );

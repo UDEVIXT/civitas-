@@ -13,6 +13,7 @@ import { IncidenciasModule } from './incidencias/incidencias.module';
 import { ResidenteModule } from './residente/residente.module';
 import { ViviendaModule } from './vivienda/vivienda.module';
 import { APP_GUARD } from '@nestjs/core/constants';
+import { MiEmpleadoModule } from './mis-empleados/mi-empleado.module'; 
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -27,10 +28,11 @@ import { APP_GUARD } from '@nestjs/core/constants';
     IncidenciasModule,
     ResidenteModule,
     ViviendaModule,
+    MiEmpleadoModule, 
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
-        limit: 5,
+        limit: 50,
       },
     ]),
   ],

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Map, MapControls, MapMarker, MarkerContent } from "@/components/ui/map";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Card } from "@/components/ui/card";
@@ -6,6 +6,7 @@ import { FieldError as CustomFieldError } from '@/components/ui/field-error';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Locate, MapPin } from "lucide-react";
+import MapLibreGL from "maplibre-gl";
 
 interface AddressSuggestion {
   display_name: string;
@@ -37,6 +38,7 @@ export function LocationPicker({
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+  const mapRef = useRef<MapLibreGL.Map | null>(null);
 
   const handleLocationSelect = useCallback((coords: { longitude: number; latitude: number }) => {
     setCurrentCoords(coords);
@@ -48,6 +50,22 @@ export function LocationPicker({
       setCurrentCoords(selectedCoords);
     }
   }, [selectedCoords]);
+
+  // Move map when currentCoords change
+  useEffect(() => {
+    if (currentCoords && mapRef.current) {
+      // Small delay to ensure map is fully loaded
+      setTimeout(() => {
+        if (mapRef.current && !mapRef.current.isMoving()) {
+          mapRef.current.flyTo({
+            center: [currentCoords.longitude, currentCoords.latitude],
+            zoom: 14,
+            duration: 1000
+          });
+        }
+      }, 100);
+    }
+  }, [currentCoords]);
 
   useEffect(() => {
     if (manualAddress.trim().length < 3) {
@@ -170,6 +188,7 @@ export function LocationPicker({
       <FieldLabel>Ubicación de tu reporte</FieldLabel>
       <div className="flex gap-2">
         <Button
+          type="button"
           variant="outline"
           size="sm"
           onClick={() => {
@@ -207,6 +226,7 @@ export function LocationPicker({
             className="flex-1"
           />
           <Button
+            type="button"
             variant="outline"
             onClick={() => handleAddressSearch()}
             disabled={isSearchingAddress || !manualAddress.trim()}
@@ -240,8 +260,9 @@ export function LocationPicker({
 
       {/* Map */}
       <Card className="h-52 p-0 overflow-hidden relative">
-        <Map 
-          center={currentCoords ? [currentCoords.longitude, currentCoords.latitude] : [-0.1276, 51.5074]} 
+        <Map
+          ref={mapRef}
+          center={currentCoords ? [currentCoords.longitude, currentCoords.latitude] : [-0.1276, 51.5074]}
           zoom={currentCoords ? 14 : 11}
           onClick={onMapClick}
         >
