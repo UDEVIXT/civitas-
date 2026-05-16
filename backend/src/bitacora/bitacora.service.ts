@@ -10,6 +10,7 @@ export class BitacoraService {
   constructor(private prisma: PrismaService) {}
 
   // Ver bitacora con filtros de búsqueda, tipo, residencia, fecha, ordenamiento y paginación
+// Ver bitacora con filtros de búsqueda, tipo, residencia, fecha, ordenamiento y paginación
   async obtenerBitacora(filters: {
     search?: string;
     tipo?: string;
@@ -23,8 +24,8 @@ export class BitacoraService {
   }) {
     const { search, tipo, residencia, fecha_inicio, fecha_fin, ordenar, estado, page, limit } = filters;
 
-    // 1. CORRECCIÓN: Iniciar el where vacío para no excluir a los residentes con visitante en null
     const where: any = {};
+    const accesoFiltros: any[] = []; // <-- ARREGLO: Aquí apilaremos los filtros sin sobrescribirlos
 
     // FILTRO ESTADO
     if (estado === 'dentro') {
@@ -33,17 +34,51 @@ export class BitacoraService {
       where.fecha_hora_salida = { not: null };
     }
 
-    // SEARCH
+    // FILTRO FECHAS
+    if (fecha_inicio || fecha_fin) {
+      where.fecha_hora_entrada = {};
+      if (fecha_inicio) where.fecha_hora_entrada.gte = new Date(fecha_inicio);
+      if (fecha_fin) where.fecha_hora_entrada.lte = new Date(fecha_fin);
+    }
+
+    // SEARCH (Búsqueda por Nombre)
     if (search) {
-      where.acceso = {
-        ...where.acceso,
+      accesoFiltros.push({
         OR: [
-          // Busca en el nombre del visitante
+          // 1. Si es visitante, busca en su nombre
           { visitante: { nombre: { contains: search, mode: 'insensitive' } } },
-          // Busca en el nombre del residente directo
-          { usuario: { persona: { nombre: { contains: search, mode: 'insensitive' } } } }
+          
+          // 2. Si NO es visitante (residente directo), busca en el nombre del usuario
+          {
+            AND: [
+              { id_visitante: null }, // <-- AISLAMIENTO CRÍTICO
+              { usuario: { persona: { nombre: { contains: search, mode: 'insensitive' } } } }
+            ]
+          }
         ]
-      };
+      });
+    }
+
+    // FILTRO RESIDENCIA (Búsqueda por Propiedad)
+    if (residencia) {
+      accesoFiltros.push({
+        OR: [
+          // 1. Si es visitante, evaluamos a la vivienda de a quién visita
+          {
+            visitante: {
+              residente: { vivienda: { numero_vivienda: { startsWith: residencia, mode: 'insensitive' } } }
+            }
+          },
+          
+          // 2. Si NO es visitante (residente directo), evaluamos su propia vivienda
+          {
+            AND: [
+              { id_visitante: null }, // <-- AISLAMIENTO CRÍTICO
+              { usuario: { residentes: { some: { vivienda: { numero_vivienda: { startsWith: residencia, mode: 'insensitive' } } } } } }
+            ]
+          }
+        ]
+      });
     }
 
     // FILTRO TIPO
@@ -51,8 +86,7 @@ export class BitacoraService {
       const tipoNormalizado = tipo.toLowerCase();
       switch (tipoNormalizado) {
         case 'proveedor':
-          where.acceso = {
-            ...where.acceso,
+          accesoFiltros.push({
             visitante: {
               servicio: {
                 tipo_servicio: {
@@ -67,11 +101,10 @@ export class BitacoraService {
                 }
               }
             }
-          };
+          });
           break;
         case 'empleado_domestico':
-          where.acceso = {
-            ...where.acceso,
+          accesoFiltros.push({
             visitante: {
               servicio: {
                 tipo_servicio: {
@@ -79,47 +112,29 @@ export class BitacoraService {
                 }
               },
             },
-          };
+          });
           break;
         case 'visitante':
-          where.acceso = {
-            ...where.acceso,
+          accesoFiltros.push({
             visitante: { es_frecuente: false, id_servicio: null },
-          };
+          });
           break;
         case 'residente':
-          where.acceso = {
-            ...where.acceso,
-            id_visitante: null, // Busca los accesos directos sin visitante
-          };
+          accesoFiltros.push({
+            id_visitante: null, 
+          });
           break;
         default:
-          where.acceso = {
-            ...where.acceso,
+          accesoFiltros.push({
             visitante: { servicio: { tipo_servicio: { categoria: tipo } } },
-          };
+          });
           break;
       }
     }
 
-    // FILTRO RESIDENCIA
-    if (residencia) {
-      where.acceso = {
-        ...where.acceso,
-        OR: [
-          // Si es visitante, busca la vivienda del residente asociado
-          { visitante: { residente: { vivienda: { numero_vivienda: { contains: residencia, mode: 'insensitive' } } } } },
-          // Si es un acceso directo de residente, busca su propia vivienda
-          { usuario: { residentes: { some: { vivienda: { numero_vivienda: { contains: residencia, mode: 'insensitive' } } } } } }
-        ]
-      };
-    }
-
-    // FILTRO FECHAS
-    if (fecha_inicio || fecha_fin) {
-      where.fecha_hora_entrada = {};
-      if (fecha_inicio) where.fecha_hora_entrada.gte = new Date(fecha_inicio);
-      if (fecha_fin) where.fecha_hora_entrada.lte = new Date(fecha_fin);
+    // Si recolectamos filtros de acceso, los unimos todos con un AND seguro
+    if (accesoFiltros.length > 0) {
+      where.acceso = { AND: accesoFiltros };
     }
 
     // ORDENAMIENTO
@@ -138,7 +153,6 @@ export class BitacoraService {
             select: {
               codigo_qr: true,
               fecha_expiracion: true,
-              // 2. CORRECCIÓN: Extraer los datos del usuario para pintar el nombre del residente
               usuario: {
                 select: {
                   persona: { select: { nombre: true } },
@@ -183,7 +197,6 @@ export class BitacoraService {
       const expiracion = item.acceso.fecha_expiracion;
       const tiempoExcedido = item.fecha_hora_salida === null && expiracion && new Date(expiracion) < ahora;
 
-      // 3. CORRECCIÓN: Lógica con encadenamiento opcional para evitar el error TS(18047)
       const visitante = item.acceso.visitante;
       const isResidenteDirecto = !visitante;
 
@@ -200,7 +213,6 @@ export class BitacoraService {
 
       return {
         id: item.id_bitacora,
-        // Si no hay visitante, tomamos el nombre del residente
         nombre: isResidenteDirecto ? item.acceso.usuario?.persona?.nombre : visitante.nombre,
         empresa: visitante?.servicio?.nombre_empresa ?? 'N/A',
         servicio_nombre: visitante?.servicio?.nombre_servicio ?? 'N/A',
@@ -213,8 +225,6 @@ export class BitacoraService {
           : (visitante.es_frecuente ? 'empleado_domestico' : (visitante.servicio?.tipo_servicio?.categoria ?? 'visitante')),
 
         residente_asociado: {
-          // Si es residente directo, buscamos su propia vivienda en el arreglo. 
-          // Si es visitante, buscamos la vivienda del residente al que visita.
           nombre: isResidenteDirecto 
             ? (item.acceso.usuario?.residentes?.[0]?.vivienda?.numero_vivienda ?? 'Sin asignar') 
             : (visitante?.residente?.vivienda?.numero_vivienda ?? '-'),
