@@ -7,7 +7,10 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { useToast } from "@/hooks/use-toast"; // Asegúrate de usar useToast() si es el hook de shadcn
 
 // Importamos las funciones de la API
-import { obtenerEmpleadosDomesticos } from "@/features/empleados-domesticos/api/empleados";
+import {
+  obtenerEmpleadosDomesticos,
+  cambiarEstadoEmpleado,
+} from "@/features/residente-empleados/api/residente-api";
 import { actualizarEmpleadoResidente } from "../api/residente-api";
 import type { EmpleadoDomestico } from "@/features/empleados-domesticos/types";
 
@@ -33,12 +36,8 @@ export function useResidenteEmpleados() {
 
   // 1. OBTENER EMPLEADOS (Quitamos isActive: true para poder ver y reactivar a los suspendidos)
   const { data, isLoading } = useQuery({
-    queryKey: ["residente-empleados", idResidente, debouncedSearch],
-    queryFn: () => obtenerEmpleadosDomesticos(
-      { byResidenteId: idResidente }, // Removido isActive fijo para listar suspendidos también
-      debouncedSearch
-    ),
-    enabled: !!idResidente,
+    queryKey: ["residente-empleados"],
+    queryFn: () => obtenerEmpleadosDomesticos(),
   });
 
   // 2. MUTACIÓN PARA ACTUALIZAR DATOS GENERALES
@@ -67,32 +66,44 @@ export function useResidenteEmpleados() {
 
   // 3. NUEVA MUTACIÓN PARA SUSPENDER O REACTIVAR (Cambio de Estado)
   const bajaMutation = useMutation({
-    mutationFn: (values: { activo: boolean; motivo?: string }) => {
-      if (!selectedEmpleado) return Promise.reject();
-      // Reutiliza la API de actualización enviando el nuevo estado de actividad
-      return actualizarEmpleadoResidente(selectedEmpleado.id_visitante, values);
-    },
-    onSuccess: (res) => {
-      if (res.success) {
-        queryClient.invalidateQueries({ queryKey: ["residente-empleados"] });
-        setIsBajaModalOpen(false);
-        setMotivoBaja("");
-        setBajaError(null);
-        
-        toast({
-          title: bajaMode === "deactivate" ? "Acceso Suspendido" : "Acceso Reactivado",
-          description: bajaMode === "deactivate" 
-            ? "El empleado ha sido suspendido temporalmente." 
+  mutationFn: (values: { motivo?: string }) => {
+    if (!selectedEmpleado) return Promise.reject();
+
+    return cambiarEstadoEmpleado(
+      selectedEmpleado.id_visitante,
+      bajaMode === "deactivate" ? "baja" : "reactivacion",
+      values.motivo,
+    );
+  },
+
+  onSuccess: (res) => {
+    if (res.success) {
+      queryClient.invalidateQueries({ queryKey: ["residente-empleados"] });
+      setIsBajaModalOpen(false);
+      setMotivoBaja("");
+      setBajaError(null);
+
+      toast({
+        title:
+          bajaMode === "deactivate"
+            ? "Acceso Suspendido"
+            : "Acceso Reactivado",
+        description:
+          bajaMode === "deactivate"
+            ? "El empleado ha sido suspendido temporalmente."
             : "Los permisos del empleado han sido restaurados.",
-        });
-      } else {
-        setBajaError(res.message || "Ocurrió un error al procesar el cambio de estado.");
-      }
-    },
-    onError: () => {
-      setBajaError("Error de conexión con el servidor. Inténtalo de nuevo.");
+      });
+    } else {
+      setBajaError(
+        res.message || "Ocurrió un error al procesar el cambio de estado",
+      );
     }
-  });
+  },
+
+  onError: () => {
+    setBajaError("Error de conexión con el servidor. Inténtalo de nuevo.");
+  },
+});
 
   // Manejadores de eventos
   const handleEditClick = (empleado: EmpleadoDomestico) => {
