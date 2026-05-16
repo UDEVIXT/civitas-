@@ -2,6 +2,7 @@
 
 // Componentes
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,10 +20,12 @@ export function LoginForm() {
   const [usuario, setUsuario] = useState("");
   const [password, setPassword] = useState("");
   const [recordarme, setRecordarme] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
   const { login } = useAuth();
+  const router = useRouter();
 
   async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -47,7 +50,9 @@ export function LoginForm() {
     setIsLoading(true);
     try {
       await login({ usuario, password, recordarme });
+      router.push("/");
     } catch (error: unknown) {
+      setIsLoading(false);
       console.error(error);
 
       const axiosError = error as {
@@ -60,9 +65,8 @@ export function LoginForm() {
       } else {
         toast.error("Error al iniciar sesión");
       }
-    } finally {
-      setIsLoading(false);
     }
+    setIsLoading(false);
   }
 
   return (
@@ -97,14 +101,25 @@ export function LoginForm() {
             <div className="flex items-center justify-between">
               <Label htmlFor="password">Contraseña</Label>
             </div>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              aria-invalid={errors.password ? "true" : undefined}
-              aria-describedby={errors.password ? "password-error" : undefined}
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                aria-invalid={errors.password ? "true" : undefined}
+                aria-describedby={errors.password ? "password-error" : undefined}
+                className="pr-9"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
+              </button>
+            </div>
             {errors.password && (
               <p id="password-error" className="text-sm text-destructive">
                 {errors.password}
@@ -122,7 +137,7 @@ export function LoginForm() {
                 </Label>
               </div>
               <a
-                href="#"
+                href="/recuperar-contrasena"
                 className="text-sm text-primary hover:underline font-semibold"
               >
                 ¿Olvidaste la contraseña?

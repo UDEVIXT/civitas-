@@ -1,4 +1,3 @@
-/** Modal para editar información de un empleado del rol residente **/
 "use client";
 
 import * as React from "react";
@@ -6,25 +5,38 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea"; // Asegúrate de tener este componente
+import { Checkbox } from "@/components/ui/checkbox"; // Asegúrate de tener este componente
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { EmpleadoDomestico } from "@/features/empleados-domesticos/types";
 
+const DIAS_SEMANA = [
+  { id: "Lunes", label: "L" },
+  { id: "Martes", label: "M" },
+  { id: "Miércoles", label: "M" },
+  { id: "Jueves", label: "J" },
+  { id: "Viernes", label: "V" },
+  { id: "Sábado", label: "S" },
+  { id: "Domingo", label: "D" },
+];
+
 const formSchema = z.object({
   nombre: z.string().min(1, "El nombre es obligatorio"),
-  telefono: z.string().length(10, "Deben ser exactamente 10 dígitos"),
-  hora_entrada: z.string().min(1, "Requerido"),
-  hora_salida: z.string().min(1, "Requerido"),
+  telefono: z.string().length(10, "El teléfono debe tener 10 dígitos"),
+  hora_entrada: z.string().min(1, "La hora de entrada es obligatoria"),
+  hora_salida: z.string().min(1, "La hora de salida es obligatoria"),
+  dias_autorizados: z.array(z.string()).min(1, "Debes seleccionar al menos un día"),
   cargo: z.string().min(1, "Selecciona un cargo"),
+  notas: z.string().optional(),
   foto: z.string().optional(),
 }).refine((data) => data.hora_entrada < data.hora_salida, {
-  message: "La salida debe ser después de la entrada",
+  message: "Error: La hora de salida debe ser posterior a la de entrada",
   path: ["hora_salida"],
 });
 
@@ -38,14 +50,7 @@ interface ModalEditarEmpleadoProps {
   isSaving?: boolean;
 }
 
-export function ModalEditarEmpleado({ 
-  empleado, 
-  isOpen, 
-  onClose, 
-  onSave, 
-  isSaving 
-}: ModalEditarEmpleadoProps) {
-
+export function ModalEditarEmpleado({ empleado, isOpen, onClose, onSave, isSaving }: ModalEditarEmpleadoProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -53,28 +58,78 @@ export function ModalEditarEmpleado({
       telefono: "",
       hora_entrada: "08:00",
       hora_salida: "16:00",
+      dias_autorizados: [],
       cargo: "",
+      notas: "",
       foto: "",
     },
   });
 
-  React.useEffect(() => {
+ /* React.useEffect(() => {
     if (empleado) {
+      const telefonoLimpio = (empleado.telefono || "").replace(/\D/g, "");
       form.reset({
         nombre: empleado.nombre || "",
-        telefono: empleado.telefono || "",
+        telefono: telefonoLimpio || "" ,
         hora_entrada: (empleado.servicio as any)?.hora_entrada || "08:00",
         hora_salida: (empleado.servicio as any)?.hora_salida || "16:00",
+        dias_autorizados: (empleado.servicio as any)?.dias_autorizados || [],
         cargo: (empleado.servicio as any)?.cargo || "Nana",
+        notas: (empleado.servicio as any)?.notas || "",
         foto: empleado.url_imagen || "",
       });
     }
   }, [empleado, form]);
+*/
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>, onChange: (val: string) => void) => {
-    const value = e.target.value.replace(/\D/g, "").slice(0, 10);
-    onChange(value);
-  };
+React.useEffect(() => {
+    if (empleado) {
+      const telefonoLimpio = (empleado.telefono || "").replace(/\D/g, "");
+
+      // 1. Extraemos el cargo real desde la relación tipo_servicio
+      const cargoReal = empleado.servicio?.tipo_servicio?.nombre || "Limpieza";
+
+      // 2. Extraemos los días activos mapeándolos de MAYÚSCULAS a formato Checkbox (Ej: "LUNES" -> "Lunes")
+      const mapeoDiasInverso: Record<string, string> = {
+        'LUNES': 'Lunes',
+        'MARTES': 'Martes',
+        'MIERCOLES': 'Miércoles',
+        'JUEVES': 'Jueves',
+        'VIERNES': 'Viernes',
+        'SABADO': 'Sábado',
+        'DOMINGO': 'Domingo'
+      };
+      
+      const listaHorarios = empleado.servicio?.horarios || [];
+      const diasSeleccionados = listaHorarios.map((h: any) => mapeoDiasInverso[h.dia_semana]).filter(Boolean);
+
+      // 3. Formateamos las horas ISO/UTC a formato "HH:MM" de 24 horas para el <input type="time" />
+      const formatearHoraInput = (dateValue: any) => {
+        if (!dateValue) return "08:00";
+        // Si viene un string ISO completo o un objeto Date, extraemos la hora UTC limpia
+        const d = new Date(dateValue);
+        const horas = String(d.getUTCHours()).padStart(2, '0');
+        const minutos = String(d.getUTCMinutes()).padStart(2, '0');
+        return `${horas}:${minutos}`;
+      };
+
+      // Tomamos la hora del primer horario disponible de la lista como base
+      const primerHorario = listaHorarios[0];
+      const horaEntradaReal = primerHorario ? formatearHoraInput(primerHorario.hora_inicio) : "08:00";
+      const horaSalidaReal = primerHorario ? formatearHoraInput(primerHorario.hora_fin) : "16:00";
+
+      form.reset({
+        nombre: empleado.nombre || "",
+        telefono: telefonoLimpio || "",
+        hora_entrada: horaEntradaReal,
+        hora_salida: horaSalidaReal,
+        dias_autorizados: diasSeleccionados,
+        cargo: cargoReal, // 👈 Ahora sí se pre-selecciona "Limpieza", "Nana", etc.
+        notas: "", // Inicializado vacío temporalmente si Joan no incluye notas en la query
+        foto: empleado.url_imagen || "",
+      });
+    }
+  }, [empleado, form]);
 
   const onSubmit = (values: FormValues) => {
     onSave(values);
@@ -82,71 +137,132 @@ export function ModalEditarEmpleado({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      {/* RESPONSIVE: Ancho adaptable y scroll interno */}
-      <DialogContent className="w-[95vw] sm:max-w-[450px] p-4 sm:p-6 max-h-[90vh] overflow-y-auto rounded-2xl">
-        <DialogHeader className="flex flex-col items-center border-b pb-4 mb-4">
-          <DialogTitle className="text-xl font-semibold text-gray-800">
-            Editar Información
+      <DialogContent className="w-[95vw] sm:max-w-[500px] p-4 sm:p-6 max-h-[95vh] overflow-y-auto rounded-2xl">
+        <DialogHeader className="border-b pb-4 mb-4">
+          <DialogTitle className="text-xl font-bold text-center text-gray-800">
+            Editar Perfil de Empleado
           </DialogTitle>
-          
-          <div className="flex flex-col items-center mt-4 space-y-2">
-            <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-2 border-gray-100 shadow-sm">
-              <AvatarImage src={form.watch("foto") || "/placeholder-user.jpg"} />
-              <AvatarFallback className="bg-amber-100 text-amber-700 font-bold">
-                {empleado?.nombre?.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-            <p className="text-sm text-gray-500 font-medium text-center">
-              {form.watch("nombre") || "Cargando..."} <br className="sm:hidden" /> 
-              <span className="hidden sm:inline">-</span> {form.watch("cargo")}
-            </p>
-          </div>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             
-            {/* Campo: Nombre */}
+            {/* Header con Foto */}
+            <div className="flex flex-col items-center justify-center gap-3 bg-gray-50 p-4 rounded-xl mb-4 text-center">
+              <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-4 border-white shadow-md">
+                <AvatarImage src={form.watch("foto") || "/placeholder-user.jpg"} />
+                <AvatarFallback className="bg-amber-100 text-amber-700 font-bold text-2xl">
+                  {empleado?.nombre?.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col gap-0.5">
+                <p className="text-base sm:text-lg font-extrabold text-gray-950 tracking-tight">
+                  {form.watch("nombre") || "Sin nombre"}
+                </p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 bg-gray-100 px-3 py-0.5 rounded-full inline-block mx-auto">
+                  {form.watch("cargo")}
+                </p>
+              </div>
+            </div>
+
+            {/* Nombre Completo */}
             <FormField
               control={form.control}
               name="nombre"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 font-semibold">Nombre Completo:</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
+                  <FormLabel className="font-bold">Nombre Completo <span className="text-xs font-normal text-red-500">*</span></FormLabel>
+                  <FormControl><Input placeholder="Ej. Juan Pérez" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            {/* Campo: Teléfono */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Teléfono */}
+              <FormField
+                control={form.control}
+                name="telefono"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-bold">Teléfono <span className="text-xs font-normal text-red-500">*</span></FormLabel>
+                    <FormControl><Input type="tel" maxLength={10} {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Cargo */}
+              <FormField
+                control={form.control}
+                name="cargo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-bold">Tipo de Empleado <span className="text-xs font-normal text-red-500">*</span></FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value="Nana">Nana</SelectItem>
+                        <SelectItem value="Limpieza">Limpieza</SelectItem>
+                        <SelectItem value="Chofer">Chofer</SelectItem>
+                        <SelectItem value="Cuidador">Cuidador</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Días Autorizados (CA003) */}
             <FormField
               control={form.control}
-              name="telefono"
-              render={({ field }) => (
+              name="dias_autorizados"
+              render={() => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 font-semibold">Teléfono:</FormLabel>
-                  <FormControl>
-                    <Input 
-                      {...field} 
-                      type="tel"
-                      placeholder="10 dígitos"
-                      onChange={(e) => handlePhoneChange(e, field.onChange)} 
-                    />
-                  </FormControl>
+                  <div className="mb-2">
+                    <FormLabel className="font-bold">Días Autorizados <span className="text-xs font-normal text-red-500">*</span></FormLabel>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {DIAS_SEMANA.map((dia) => (
+                      <FormField
+                        key={dia.id}
+                        control={form.control}
+                        name="dias_autorizados"
+                        render={({ field }) => {
+                          const isChecked = field.value?.includes(dia.id);
+                          return (
+                            <FormItem key={dia.id} className="flex items-center space-x-2 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={isChecked}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([...field.value, dia.id])
+                                      : field.onChange(field.value?.filter((value) => value !== dia.id));
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="text-xs font-medium cursor-pointer">{dia.label}</FormLabel>
+                            </FormItem>
+                          );
+                        }}
+                      />
+                    ))}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            {/* RESPONSIVE GRID: 1 columna en móvil, 2 en PC para las horas */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Horario Autorizado (CA005) */}
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="hora_entrada"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 font-semibold">Entrada</FormLabel>
+                    <FormLabel className="font-bold text-xs">Entrada <span className="text-red-500">*</span></FormLabel>
                     <FormControl><Input type="time" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -157,7 +273,7 @@ export function ModalEditarEmpleado({
                 name="hora_salida"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 font-semibold">Salida</FormLabel>
+                    <FormLabel className="font-bold text-xs">Salida <span className="text-red-500">*</span></FormLabel>
                     <FormControl><Input type="time" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -165,52 +281,45 @@ export function ModalEditarEmpleado({
               />
             </div>
 
-            {/* Campo: Cargo */}
+            {/* Notas Adicionales (CA003) */}
             <FormField
               control={form.control}
-              name="cargo"
+              name="notas"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 font-semibold">Cargo:</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Nana">Nana</SelectItem>
-                      <SelectItem value="Limpieza">Limpieza</SelectItem>
-                      <SelectItem value="Chofer">Chofer</SelectItem>
-                      <SelectItem value="Cuidador">Cuidador</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormLabel className="font-bold">Notas Adicionales <span className="text-xs font-normal text-gray-400">(Opcional)</span></FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Ej. Entra por la puerta de servicio..." className="resize-none" {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            {/* Campo: Foto */}
+            {/* Foto URL */}
             <FormField
               control={form.control}
               name="foto"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 font-semibold">Foto (URL):</FormLabel>
+                  <FormLabel className="font-bold">URL de Foto <span className="text-xs font-normal text-gray-400">(Opcional)</span></FormLabel>
                   <FormControl><Input placeholder="https://..." {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="flex flex-col sm:flex-row gap-3 pt-6">
-              <Button type="button" variant="outline" onClick={onClose} className="order-2 sm:order-1 flex-1" disabled={isSaving}>
+            {/* Botones */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              <Button type="button" variant="outline" onClick={onClose} className="flex-1 order-2 sm:order-1" disabled={isSaving}>
                 Cancelar
               </Button>
               <Button 
                 type="submit" 
                 disabled={isSaving}
-                className="order-1 sm:order-2 flex-1 bg-[#F1B111] hover:bg-[#D49B0D] text-white font-bold"
+                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold order-1 sm:order-2"
               >
-                {isSaving ? <Loader2 className="animate-spin" /> : "Guardar"}
+                {isSaving ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : "Guardar Cambios"}
               </Button>
             </div>
           </form>
