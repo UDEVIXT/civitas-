@@ -34,12 +34,14 @@ export function RecuperarContrasena() {
 
         setIsLoading(true);
         try {
-            await apiClient.post("/auth/recuperar-contrasena", { 
-                email: usuario 
+            // IMPORTANTE: Asegúrate de que el endpoint coincida con lo que programaste en NestJS
+            await apiClient.post("/auth/forgot-password", { 
+                identificador: usuario // Usamos 'identificador' porque así lo declaramos en el DTO de NestJS
             });
-            toast.success("Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña.");
-            // Redirigir a la pantalla de correo enviado
-            router.push("/recuperar-contrasena/correoenviado");
+            toast.success("Si el correo está registrado, recibirás instrucciones.");
+            
+            // Redirigimos pasando el correo en la URL
+            router.push(`/recuperar-contrasena/correoenviado?email=${encodeURIComponent(usuario)}`);
         } catch (error: unknown) {
             console.error(error);
 
