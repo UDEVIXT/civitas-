@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as ToasterProvider } from "sonner";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useSocket } from "@/features/auth/hooks/useSocket";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,6 +26,11 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function SocketInitializer() {
+  useSocket();
+  return null;
+}
+
 type RootLayoutClientProps = Readonly<{
   children: React.ReactNode;
 }>;
@@ -32,7 +38,10 @@ type RootLayoutClientProps = Readonly<{
 export default function RootLayoutClient({ children }: RootLayoutClientProps) {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthInitializer>{children}</AuthInitializer>
+      <AuthInitializer>
+        {children}
+        <SocketInitializer />
+      </AuthInitializer>
       <Toaster />
       <ToasterProvider richColors />
     </QueryClientProvider>

@@ -137,7 +137,7 @@ export function LoginForm() {
                 </Label>
               </div>
               <a
-                href="#"
+                href="/recuperar-contrasena"
                 className="text-sm text-primary hover:underline font-semibold"
               >
                 ¿Olvidaste la contraseña?
