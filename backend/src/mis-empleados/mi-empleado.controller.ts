@@ -10,13 +10,14 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 
+// Importamos tu servicio especializado de la carpeta mis-empleados
 import { EmpleadoService } from './mi-empleado.service';
 
-@Controller('empleado')
+@Controller('mi-empleado') // 1. Cambiado para que sea tu endpoint exclusivo
 export class EmpleadoController {
   constructor(private empleadoService: EmpleadoService) {}
 
-  @Get()
+@Get()
   async findAll(
     @Query('search') search?: string,
     @Query('page') page = '1',
@@ -32,26 +33,27 @@ export class EmpleadoController {
         : isActiveValue === 'false'
           ? false
           : undefined;
-    const byResidenteIdNum = byResidenteId
-      ? parseInt(byResidenteId, 10)
-      : undefined;
-    const byViviendaIdNum = byViviendaId
-      ? parseInt(byViviendaId, 10)
-      : undefined;
 
+    // 1. Declaramos las variables correctamente aquí arriba como strings
+    const byResidenteIdValue = byResidenteId || undefined;
+    const byViviendaIdValue = byViviendaId || undefined;
+
+    // 2. Pasamos solo las propiedades y sus valores dentro del objeto
     return this.empleadoService.obtenerEmpleados({
       search,
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
       isActive: isActiveBool,
-      byResidenteId: byResidenteIdNum,
-      byViviendaId: byViviendaIdNum,
+      byResidenteId: byResidenteIdValue,
+      byViviendaId: byViviendaIdValue,   
     });
   }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return { message: `Empleado ${id}` };
+      return { message: `Empleado ${id}` };
   }
+
   @Post()
   create() {
     return { message: 'Empleado creado' };
@@ -60,50 +62,34 @@ export class EmpleadoController {
   @Put(':id')
   async update(
     @Param('id') id: string,
-    @Body() body: { activo?: boolean; motivo?: string },
+    @Body() body: { accion?: string; data?: any; activo?: boolean; motivo?: string },
   ) {
-    const { activo, motivo } = body;
+    const { accion, data, activo, motivo } = body;
 
-    if (activo === undefined) {
-      throw new BadRequestException('El campo "activo" es requerido');
-    }
-
-    if (activo === false) {
-      if (!motivo || !motivo.trim()) {
-        throw new BadRequestException('El motivo es requerido');
+    // ESCENARIO A: Tu actualización personalizada desde el modal del residente
+    if (accion === 'actualizacion_residente') {
+      if (!data || !data.nombre) {
+        throw new BadRequestException('El nombre del empleado es obligatorio para actualizar');
       }
-      return this.empleadoService.eliminarEmpleado(id, motivo);
+      // Llamamos al servicio pasando los datos estructurados del modal
+      return this.empleadoService.actualizarEmpleado(id, data);
     }
 
-    return this.empleadoService.reactivarEmpleado(id);
-  }
-
-
-/*
-  @Put(':id')
-  async update(@Param('id') id: string, @Body() body: any) {
-    const { data } = body;
-
-    // Escenario A: Solo cambio de estado (Baja/Reactivación)
-    if (data.activo !== undefined && !data.nombre) {
-      if (data.activo === false) {
-        if (!data.motivo?.trim())
-          throw new BadRequestException('El motivo es requerido');
-        return this.empleadoService.eliminarEmpleado(id, data.motivo);
+    // ESCENARIO B: Cambio de estado rápido (Baja / Reactivación tradicional)
+    if (activo !== undefined) {
+      if (activo === false) {
+        if (!motivo || !motivo.trim()) {
+          throw new BadRequestException('El motivo de la baja es requerido');
+        }
+        return this.empleadoService.eliminarEmpleado(id, motivo);
       }
       return this.empleadoService.reactivarEmpleado(id);
     }
 
-    // Escenario B: Edición completa (HU-1.5.4)
-    if (!data.nombre || !data.horarios || !Array.isArray(data.horarios)) {
-      throw new BadRequestException(
-        'El nombre y los horarios son obligatorios para editar',
-      );
-    }
-
-    return this.empleadoService.actualizarEmpleado(id, body);
+    // Si no entra en ninguna condición válida
+    throw new BadRequestException('Petición no reconocida. Verifica los parámetros enviados.');
   }
-*/
+
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.empleadoService.eliminarEmpleado(id);

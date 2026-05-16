@@ -12,9 +12,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuthGateway } from '../notificacion/gateways/auth.gateway';
 import { Request } from 'express';
 
-function detectarDispositivo(
-  userAgent?: string,
-) {
+function detectarDispositivo(userAgent?: string) {
   if (!userAgent) {
     return 'Desconocido';
   }
@@ -46,7 +44,12 @@ export class AuthService {
     private readonly authGateway: AuthGateway,
   ) {}
 
-  async login(req: Request, nombre_usuario: string, password: string, recordarme = false) {
+  async login(
+    req: Request,
+    nombre_usuario: string,
+    password: string,
+    recordarme = false,
+  ) {
     try {
       const user = await this.prisma.usuario.findUnique({
         where: {
@@ -79,8 +82,7 @@ export class AuthService {
         throw new UnauthorizedException('Credenciales incorrectas');
       }
 
-      const sesionesActivas =
-      await this.prisma.sesion.count({
+      const sesionesActivas = await this.prisma.sesion.count({
         where: {
           id_usuario: user.id_usuario,
           activo: true,
@@ -96,20 +98,18 @@ export class AuthService {
       const refreshExpiresIn = recordarme ? '30d' : '7d';
 
       const [accessToken, refreshToken] = await Promise.all([
-          this.jwtService.signAsync(payload, {
-            secret:
-              process.env.JWT_ACCESS_SECRET,
+        this.jwtService.signAsync(payload, {
+          secret: process.env.JWT_ACCESS_SECRET,
 
-            expiresIn: '15m',
-          }),
+          expiresIn: '15m',
+        }),
 
-          this.jwtService.signAsync(payload, {
-            secret:
-              process.env.JWT_REFRESH_SECRET,
+        this.jwtService.signAsync(payload, {
+          secret: process.env.JWT_REFRESH_SECRET,
 
-            expiresIn: refreshExpiresIn,
-          }),
-        ]);
+          expiresIn: refreshExpiresIn,
+        }),
+      ]);
 
       const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
 
@@ -120,23 +120,16 @@ export class AuthService {
           activo: true,
           ip: req.ip,
 
-          user_agent:
-            req.headers['user-agent'],
+          user_agent: req.headers['user-agent'],
 
-          dispositivo:
-            detectarDispositivo(
-              req.headers['user-agent'],
-            ),
+          dispositivo: detectarDispositivo(req.headers['user-agent']),
         },
       });
 
       if (sesionesActivas > 0) {
-        this.authGateway.notifyNewLogin(user.id_usuario,
-          {
-            message:
-              'Nuevo inicio de sesión detectado en otro dispositivo.',
-          },
-        );
+        this.authGateway.notifyNewLogin(user.id_usuario, {
+          message: 'Nuevo inicio de sesión detectado en otro dispositivo.',
+        });
       }
 
       return {
@@ -151,6 +144,7 @@ export class AuthService {
         },
       };
     } catch (error) {
+      console.error('Error en login:', error);
       if (error instanceof HttpException) {
         throw error;
       }
@@ -167,22 +161,16 @@ export class AuthService {
     }
 
     try {
-      const payload =
-        await this.jwtService.verifyAsync(
-          refreshToken,
-          {
-            secret:
-              process.env.JWT_REFRESH_SECRET,
-          },
-        );
+      const payload = await this.jwtService.verifyAsync(refreshToken, {
+        secret: process.env.JWT_REFRESH_SECRET,
+      });
 
-      const sesiones =
-        await this.prisma.sesion.findMany({
-          where: {
-            id_usuario: payload.sub,
-            activo: true,
-          },
-        });
+      const sesiones = await this.prisma.sesion.findMany({
+        where: {
+          id_usuario: payload.sub,
+          activo: true,
+        },
+      });
 
       let tokenValido = false;
 
@@ -205,16 +193,11 @@ export class AuthService {
         role: payload.role,
       };
 
-      const accessToken =
-        await this.jwtService.signAsync(
-          newPayload,
-          {
-            secret:
-              process.env.JWT_ACCESS_SECRET,
+      const accessToken = await this.jwtService.signAsync(newPayload, {
+        secret: process.env.JWT_ACCESS_SECRET,
 
-            expiresIn: '15m',
-          },
-        );
+        expiresIn: '15m',
+      });
 
       return {
         accessToken,
@@ -227,15 +210,17 @@ export class AuthService {
   // 1. Genera y guarda el código (Cumple CA001, CA002, CA003)
   async forgotPassword(identificador: string) {
     try {
-      // Nota: Aquí busco por 'nombre_usuario'. Si en tu BD tienes 'correo' o 'telefono', 
+      // Nota: Aquí busco por 'nombre_usuario'. Si en tu BD tienes 'correo' o 'telefono',
       // ajusta el 'where' para buscar en esos campos específicos.
       const user = await this.prisma.usuario.findFirst({
-        where: { nombre_usuario: identificador }, 
+        where: { nombre_usuario: identificador },
       });
 
       if (!user) {
         // CA002: Mensaje indicando que no existe el usuario
-        throw new NotFoundException('No existe un usuario registrado con esa información.');
+        throw new NotFoundException(
+          'No existe un usuario registrado con esa información.',
+        );
       }
 
       // Generar un código numérico seguro de 6 dígitos
@@ -255,12 +240,18 @@ export class AuthService {
       });
 
       // CA003: Simulación de envío del código (Aquí luego irá nodemailer o Twilio)
-      console.log(`[SIMULACIÓN - CORREO/SMS] Enviando código de recuperación al usuario ${identificador}: ${codigo}`);
+      console.log(
+        `[SIMULACIÓN - CORREO/SMS] Enviando código de recuperación al usuario ${identificador}: ${codigo}`,
+      );
 
-      return { message: 'Si el dato existe, se ha enviado un código de verificación.' };
+      return {
+        message: 'Si el dato existe, se ha enviado un código de verificación.',
+      };
     } catch (error) {
       if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Error al procesar la solicitud de recuperación.');
+      throw new InternalServerErrorException(
+        'Error al procesar la solicitud de recuperación.',
+      );
     }
   }
 
@@ -274,16 +265,23 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('El código es incorrecto o no pertenece a este usuario.');
+      throw new UnauthorizedException(
+        'El código es incorrecto o no pertenece a este usuario.',
+      );
     }
 
     // CA004: Validación matemática de la fecha de expiración
     if (user.resetPasswordExpires && user.resetPasswordExpires < new Date()) {
-      throw new UnauthorizedException('El código ha expirado. Por favor, solicite uno nuevo.');
+      throw new UnauthorizedException(
+        'El código ha expirado. Por favor, solicite uno nuevo.',
+      );
     }
 
     // CA005: El código es correcto y vigente
-    return { success: true, message: 'Código verificado correctamente. Puede cambiar su contraseña.' };
+    return {
+      success: true,
+      message: 'Código verificado correctamente. Puede cambiar su contraseña.',
+    };
   }
 
   // 3. Restablece la contraseña y limpia la BD (Cumple CA006, CA007)
@@ -297,7 +295,9 @@ export class AuthService {
     }
 
     if (user.resetPasswordExpires && user.resetPasswordExpires < new Date()) {
-      throw new UnauthorizedException('El código ha expirado. Por favor, solicite uno nuevo.');
+      throw new UnauthorizedException(
+        'El código ha expirado. Por favor, solicite uno nuevo.',
+      );
     }
 
     try {
@@ -314,9 +314,14 @@ export class AuthService {
         },
       });
 
-      return { success: true, message: 'Su contraseña ha sido actualizada exitosamente.' };
+      return {
+        success: true,
+        message: 'Su contraseña ha sido actualizada exitosamente.',
+      };
     } catch (error) {
-      throw new InternalServerErrorException('Error al actualizar la contraseña.');
+      throw new InternalServerErrorException(
+        'Error al actualizar la contraseña.',
+      );
     }
   }
 
@@ -325,12 +330,11 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token requerido');
     }
 
-    const sesiones =
-      await this.prisma.sesion.findMany({
-        where: {
-          activo: true,
-        },
-      });
+    const sesiones = await this.prisma.sesion.findMany({
+      where: {
+        activo: true,
+      },
+    });
 
     for (const sesion of sesiones) {
       const match = await bcrypt.compare(refreshToken, sesion.refresh_token);
@@ -338,8 +342,7 @@ export class AuthService {
       if (match) {
         await this.prisma.sesion.update({
           where: {
-            id_sesion:
-              sesion.id_sesion,
+            id_sesion: sesion.id_sesion,
           },
 
           data: {

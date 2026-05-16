@@ -11,7 +11,12 @@ import {
   BadRequestException,
   UsePipes,
   ValidationPipe,
+  UseGuards,
 } from '@nestjs/common';
+
+import { AuthGuard } from '@nestjs/passport/dist/auth.guard';
+import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
+import { Roles } from 'src/auth/decorators/roles/roles.decorator';
 
 //Services
 import { EmpleadoService } from './empleado.service';
@@ -27,6 +32,8 @@ export class EmpleadoController {
   constructor(private empleadoService: EmpleadoService) {}
 
   @Get()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Administrador')
   async findAll(
     @Query('search') search?: string,
     @Query('page') page = '1',
@@ -55,14 +62,20 @@ export class EmpleadoController {
     });
   }
   @Get(':id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Administrador')
   findOne(@Param('id') id: string) {
     return { message: `Empleado ${id}` };
   }
   @Post()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Administrador')
   create() {
     return { message: 'Empleado creado' };
   }
   @Put(':id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Administrador')
   @UsePipes(new ValidationPipe())
   async update(@Param('id') id: string, @Body() body: UpdateEmpleadoDto) {
     const requestData: EmpleadoEditRequest = body;
@@ -88,6 +101,8 @@ export class EmpleadoController {
   }
 
   @Delete(':id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Administrador')
   @UsePipes(new ValidationPipe())
   remove(@Param('id') id: string) {
     return this.empleadoService.eliminarEmpleado(id);
