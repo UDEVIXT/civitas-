@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Query,
   Controller,
@@ -8,15 +9,31 @@ import {
   Delete,
   Body,
   BadRequestException,
+  UsePipes,
+  ValidationPipe,
+  UseGuards,
 } from '@nestjs/common';
 
+import { AuthGuard } from '@nestjs/passport/dist/auth.guard';
+import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
+import { Roles } from 'src/auth/decorators/roles/roles.decorator';
+
+//Services
 import { EmpleadoService } from './empleado.service';
+
+//DTOs
+import { UpdateEmpleadoDto } from './dto/update-empleado.dto';
+
+//types
+import { EmpleadoEditRequest } from './types';
 
 @Controller('empleado')
 export class EmpleadoController {
   constructor(private empleadoService: EmpleadoService) {}
 
   @Get()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Administrador')
   async findAll(
     @Query('search') search?: string,
     @Query('page') page = '1',
@@ -32,51 +49,61 @@ export class EmpleadoController {
         : isActiveValue === 'false'
           ? false
           : undefined;
-    const byResidenteIdNum = byResidenteId
-      ? parseInt(byResidenteId, 10)
-      : undefined;
-    const byViviendaIdNum = byViviendaId
-      ? parseInt(byViviendaId, 10)
-      : undefined;
+    const byResidenteIdValue = byResidenteId || undefined;
+    const byViviendaIdValue = byViviendaId || undefined;
 
     return this.empleadoService.obtenerEmpleados({
       search,
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
       isActive: isActiveBool,
-      byResidenteId: byResidenteIdNum,
-      byViviendaId: byViviendaIdNum,
+      byResidenteId: byResidenteIdValue,
+      byViviendaId: byViviendaIdValue,
     });
   }
   @Get(':id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Administrador')
   findOne(@Param('id') id: string) {
     return { message: `Empleado ${id}` };
   }
   @Post()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Administrador')
   create() {
     return { message: 'Empleado creado' };
   }
   @Put(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() body: { activo?: boolean; motivo?: string },
-  ) {
-    const { activo, motivo } = body;
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Administrador')
+  @UsePipes(new ValidationPipe())
+  async update(@Param('id') id: string, @Body() body: UpdateEmpleadoDto) {
+    const requestData: EmpleadoEditRequest = body;
 
-    if (activo === undefined) {
-      throw new BadRequestException('El campo "activo" es requerido');
+    const accion = requestData.accion || 'edicion';
+    const data = requestData.data;
+
+    // Escenario A: Solo cambio de estado (Baja/Reactivación)
+    if (accion === 'baja' || accion === 'reactivacion') {
+      return accion == 'baja'
+        ? this.empleadoService.eliminarEmpleado(id, data?.motivo)
+        : this.empleadoService.reactivarEmpleado(id);
     }
 
-    if (activo === false) {
-      if (!motivo || !motivo.trim()) {
-        throw new BadRequestException('El motivo es requerido');
-      }
-      return this.empleadoService.eliminarEmpleado(id, motivo);
+    // Escenario B: Edición completa (HU-1.5.4)
+    if (!data.nombre || !data.horarios || !Array.isArray(data.horarios)) {
+      throw new BadRequestException(
+        'El nombre y los horarios son obligatorios para editar',
+      );
     }
 
-    return this.empleadoService.reactivarEmpleado(id);
+    return this.empleadoService.actualizarEmpleado(id, body);
   }
+
   @Delete(':id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Administrador')
+  @UsePipes(new ValidationPipe())
   remove(@Param('id') id: string) {
     return this.empleadoService.eliminarEmpleado(id);
   }

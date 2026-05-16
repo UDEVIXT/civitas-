@@ -3,7 +3,7 @@ import { faker } from '@faker-js/faker';
 
 export async function seedHorariosAccesoServicios(prisma: PrismaClient) {
   const servicios = await prisma.servicio.findMany();
-  
+
   const todosLosDias = Object.values(DiaSemana);
   const diasLaborables = [
     DiaSemana.LUNES,
@@ -21,7 +21,7 @@ export async function seedHorariosAccesoServicios(prisma: PrismaClient) {
       const horaInicio = new Date('1970-01-01T08:00:00.000Z');
       const horaFin = new Date('1970-01-01T18:00:00.000Z');
 
-      // Variar un poco las horas con faker
+      // Variar un poco las horas con faker usando UTC
       horaInicio.setUTCHours(faker.number.int({ min: 6, max: 10 }));
       horaFin.setUTCHours(faker.number.int({ min: 16, max: 21 }));
 
@@ -37,7 +37,7 @@ export async function seedHorariosAccesoServicios(prisma: PrismaClient) {
         hora_inicio: horaInicio,
         hora_fin: horaFin,
         id_servicio: servicio.id_servicio,
-        activo: faker.datatype.boolean(0.9), // 90% activos
+        activo: faker.datatype.boolean(0.8), //80% activos
       };
 
       if (horarioExistente) {
