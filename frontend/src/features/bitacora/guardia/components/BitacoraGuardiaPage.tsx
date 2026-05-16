@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { ModalRegistrarSalida } from "../components/ModalRegistrarSalida";
 import { bitacoraService } from "@/services/bitacora.service";
+import { toast } from "sonner";
 
 export function BitacoraGuardiaPage() {
   const [isMounted, setIsMounted] = React.useState(false);
@@ -103,6 +104,9 @@ export function BitacoraGuardiaPage() {
       handleSuccess();
     } catch (error) {
       console.error("Error al registrar salidas masivas:", error);
+      toast.error("Error al registrar las salidas masivas. Intenta nuevamente.", {
+        description: "Ocurrió un error al registrar las salidas masivas. Por favor, intenta nuevamente.",
+      });
     } finally {
       setIsMassLoading(false);
     }

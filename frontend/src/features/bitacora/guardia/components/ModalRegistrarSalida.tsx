@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { BitacoraRegistro } from "../api/bitacora";
 import { bitacoraService } from "@/services/bitacora.service";
+import { toast } from "sonner";
 
 interface ModalRegistrarSalidaProps {
     isOpen: boolean;
@@ -34,8 +35,9 @@ export function ModalRegistrarSalida({
             await bitacoraService.registrarSalida(registro.id.toString(), comentario);
             onSuccess();
         } catch (error) {
-            console.error("Error al registrar salida:", error);
-            alert("Ocurrió un error al registrar la salida");
+            toast.error("Error al registrar la salida", {
+                description: "Ocurrió un error al registrar la salida. Por favor, intenta nuevamente.",
+            });
         } finally {
             setIsLoading(false);
         }

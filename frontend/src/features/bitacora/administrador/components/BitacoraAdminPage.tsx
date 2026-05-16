@@ -7,6 +7,7 @@ import { bitacoraService } from "@/services/bitacora.service";
 import { BitacoraRegistro } from "../../guardia/api/bitacora";
 import { AlertCircle } from "lucide-react"; // NUEVO por drk
 import { Button } from "@/components/ui/button"; // NUEVO por drk
+import { toast } from "sonner";
 
 export function BitacoraAdminPage() {
   const [isMounted, setIsMounted] = React.useState(false);
@@ -71,9 +72,11 @@ export function BitacoraAdminPage() {
         total_pages: response.meta.total_pages,
         total: response.meta.total,
       });
-      console.log("Bitácora cargada:", response.data);
     } catch (err) {
       console.error("Error cargando bitácora:", err);
+      toast.error("Error al cargar el historial", {
+        description: "No se pudo cargar el historial de accesos debido a un problema técnico. Verifica tu conexión o intenta más tarde.",
+      });
       // Capturamos el error para mostrarlo en la UI
       setError("No se pudo cargar el historial de accesos debido a un problema técnico. Verifica tu conexión o intenta más tarde."); 
     } finally {
