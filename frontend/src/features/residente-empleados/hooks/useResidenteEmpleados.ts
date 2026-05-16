@@ -7,8 +7,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { useToast } from "@/hooks/use-toast"; 
 
 // Importamos las funciones de la API
-import { obtenerEmpleadosDomesticos } from "@/features/empleados-domesticos/api/empleados";
-import { actualizarEmpleadoResidente } from "../api/residente-api";
+import { actualizarEmpleadoResidente, obtenerMisEmpleados } from "../api/residente-api";
 import type { EmpleadoDomestico } from "@/features/empleados-domesticos/types";
 
 export function useResidenteEmpleados(idResidente: string) {
@@ -26,7 +25,7 @@ export function useResidenteEmpleados(idResidente: string) {
   // 1. OBTENER EMPLEADOS
   const { data, isLoading } = useQuery({
     queryKey: ["residente-empleados", idResidente, debouncedSearch],
-    queryFn: () => obtenerEmpleadosDomesticos(
+    queryFn: () => obtenerMisEmpleados(
       { byResidenteId: idResidente, isActive: true },
       debouncedSearch
     ),
