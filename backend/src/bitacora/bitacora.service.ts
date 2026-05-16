@@ -379,6 +379,7 @@ export class BitacoraService {
         placas: visitante?.servicio?.placas || undefined,
         qr_utilizado: registro.acceso.codigo_qr || null,
         notas: registro.comentario ?? 'Sin comentarios',
+        comentario_salida: registro.comentario_salida || null,
         hora_validacion: registro.fecha_hora_entrada,
       };
     }
