@@ -11,7 +11,7 @@ import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthGateway } from '../notificacion/gateways/auth.gateway';
 import { Request } from 'express';
-
+import { MailerService } from '@nestjs-modules/mailer';
 function detectarDispositivo(userAgent?: string) {
   if (!userAgent) {
     return 'Desconocido';
@@ -42,6 +42,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly authGateway: AuthGateway,
+    private readonly mailerService: MailerService,
   ) {}
 
   async login(
@@ -239,19 +240,25 @@ export class AuthService {
         },
       });
 
-      // CA003: Simulación de envío del código (Aquí luego irá nodemailer o Twilio)
-      console.log(
-        `[SIMULACIÓN - CORREO/SMS] Enviando código de recuperación al usuario ${identificador}: ${codigo}`,
-      );
+      await this.mailerService.sendMail({
+        to: user.correo, // Asumiendo que el 'identificador' es un correo
+        subject: 'Código de Recuperación - Civitas',
+        template: './recuperacion', // Busca recuperacion.hbs
+        context: {
+          nombre: user.nombre_usuario,
+          codigo: codigo,
+        },
+      });
 
       return {
         message: 'Si el dato existe, se ha enviado un código de verificación.',
       };
     } catch (error) {
+      // --- AÑADE ESTA LÍNEA PARA VER EL ERROR REAL EN LA TERMINAL ---
+      console.error('ERROR REAL DE CORREO:', error); 
+      
       if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException(
-        'Error al procesar la solicitud de recuperación.',
-      );
+      throw new InternalServerErrorException('Error al procesar la solicitud de recuperación.');
     }
   }
 
