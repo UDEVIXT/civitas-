@@ -11,7 +11,6 @@ export class BitacoraService {
   constructor(private prisma: PrismaService) {}
 
   // Ver bitacora con filtros de búsqueda, tipo, residencia, fecha, ordenamiento y paginación
-// Ver bitacora con filtros de búsqueda, tipo, residencia, fecha, ordenamiento y paginación
   async obtenerBitacora(filters: {
     search?: string;
     tipo?: string;
@@ -220,6 +219,7 @@ export class BitacoraService {
         cargo_empleado: visitante?.servicio?.cargo ?? 'Sin cargo',
         placas: visitante?.servicio?.placas ?? 'Sin placas',
         motivo: visitante?.motivo ?? 'Sin motivo especificado',
+        comentario_salida: item.comentario_salida ?? '',
 
         tipo_persona: isResidenteDirecto 
           ? 'residente' 
