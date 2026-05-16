@@ -28,8 +28,8 @@ export function EmpleadosHorarioDialog({
 }: EmpleadosHorarioDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl rounded-2xl p-0">
-        <div className="flex items-start gap-4 px-6 pb-6 pt-6">
+      <DialogContent className="w-[95vw] max-w-xl rounded-2xl p-0">
+        <div className="flex flex-col gap-4 px-6 pb-6 pt-6 sm:flex-row sm:items-start">
           <div className="flex size-12 items-center justify-center rounded-full bg-blue-50">
             <Clock className="size-6 text-blue-500" />
           </div>
@@ -49,10 +49,10 @@ export function EmpleadosHorarioDialog({
               ? horarios.map((horario: HorarioServicio) => (
                   <div
                     key={horario.dia_semana}
-                    className="flex justify-between py-2"
+                    className="flex flex-col gap-1 py-2 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <span>{capitalizeFirstLetter(horario.dia_semana)}</span>
-                    <span>
+                    <span className="text-foreground">
                       {new Date(horario.hora_inicio).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
@@ -68,8 +68,12 @@ export function EmpleadosHorarioDialog({
               : "No hay horarios disponibles."}
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="px-6 pb-6">
+          <Button
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={() => onOpenChange(false)}
+          >
             Cerrar
           </Button>
         </DialogFooter>
