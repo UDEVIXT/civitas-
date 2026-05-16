@@ -1,5 +1,26 @@
 import apiClient from "@/api/axios";
 
+
+export const getEmpleadosResidente = async (residenteId: string, search: string = "") => {
+  try {
+    console.log("📡 [API CLIENT] Enviando GET a /mi-empleado. Params ->", { byResidenteId: residenteId, search });
+    
+    const response = await apiClient.get('mi-empleado', { // 💡 Consejo: Quítale el '/' inicial si ves que falla
+      params: {
+        byResidenteId: residenteId,
+        search: search || undefined,
+        limit: 10,
+      },
+    });
+
+    console.log("✅ [API CLIENT] Respuesta exitosa del servidor:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ [API CLIENT] Error en la petición Axios:", error.response || error);
+    throw error;
+  }
+};
+
 export const actualizarEmpleadoResidente = async (id: string, data: any) => {
   try {
     // Forzamos el uso de tu ruta limpia sin espacios accidentales
@@ -24,3 +45,4 @@ export const actualizarEmpleadoResidente = async (id: string, data: any) => {
     };
   }
 };
+

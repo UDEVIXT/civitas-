@@ -2,6 +2,7 @@
 
 import * as React from "react";
 // Importamos hook personalizado para gestionar empleados del residente
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useResidenteEmpleados } from "../hooks/useResidenteEmpleados"; 
 
 // Componentes UI
@@ -11,6 +12,7 @@ import { MiEmpleadoHorarioDialog } from "./MiEmpleadoHorarioDialog";
 export default function MisEmpleadosPage() {
   // Aquí usamos useResidenteEmpleados.ts . El "123" es un ejemplo, 
   // luego lo cambiaremos por el ID real del usuario logueado.
+  const { user } = useAuth();
   const { 
     empleados, 
     isLoading, 
@@ -18,8 +20,7 @@ export default function MisEmpleadosPage() {
     setSearch, 
     modalEdit, 
     modalHorario 
-  } = useResidenteEmpleados("0cbfda24-5249-4b56-8b96-47ac05b9e066");
-
+  } = useResidenteEmpleados((user as any)?.id_residente || (user as any)?.id_usuario || "");
   return (
     <div className="flex-1 space-y-4 p-4 sm:p-8 pt-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">

@@ -7,9 +7,11 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { useToast } from "@/hooks/use-toast"; // Quitamos el import de toast directo
 
 // Importamos las funciones de la API
-import { obtenerEmpleadosDomesticos } from "@/features/empleados-domesticos/api/empleados";
 import { actualizarEmpleadoResidente } from "../api/residente-api";
 import type { EmpleadoDomestico } from "@/features/empleados-domesticos/types";
+import { getEmpleadosResidente } from "../api/residente-api"; // Ajusta la ruta de importación si es necesario
+
+
 
 export function useResidenteEmpleados(idResidente: string) {
   const queryClient = useQueryClient();
@@ -24,15 +26,21 @@ export function useResidenteEmpleados(idResidente: string) {
   const debouncedSearch = useDebounce(search, 300);
 
   // 1. OBTENER EMPLEADOS
-  const { data, isLoading } = useQuery({
+// 1. OBTENER EMPLEADOS
+
+console.log("🚀 [HOOK] El idResidente que llega al hook es:", idResidente);
+
+  const { data, isLoading, error } = useQuery({
     queryKey: ["residente-empleados", idResidente, debouncedSearch],
-    queryFn: () => obtenerEmpleadosDomesticos(
-      { byResidenteId: idResidente, isActive: true },
-      debouncedSearch
-    ),
-    enabled: !!idResidente,
+    queryFn: () => {
+      console.log("🔥 [HOOK] ¡useQuery se disparó! Llamando a getEmpleadosResidente con ID:", idResidente);
+      return getEmpleadosResidente(idResidente, debouncedSearch);
+    },
   });
 
+  if (error) {
+    console.error("🚨 [HOOK] Error atrapado en React Query:", error);
+  }
 // 2. ACTUALIZAR EMPLEADO
   const updateMutation = useMutation({
     mutationFn: (values: any) => {
