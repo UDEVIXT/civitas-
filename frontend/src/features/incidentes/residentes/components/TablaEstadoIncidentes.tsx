@@ -11,16 +11,14 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, Calendar, Plus, AlertTriangle } from "lucide-react";
+import { Clock, Calendar, Plus } from "lucide-react";
 
 import { FiltrosIncidentes } from "./FiltrosIncidentes";
-import { useIncidencias } from "../hooks/useIncidentes";
-import { Incidente, EstadoIncidencia, IncidenciasFiltros } from "../api/incidencias";
+import { Incidente, EstadoIncidencia } from "../api/incidencias";
 import { ModalDetalleIncidente } from "./ModalDetalleIncidente";
 
 interface TablaEstadoIncidentesProps {
-  /** Si se pasa, usa estos datos en lugar de llamar al backend */
-  data?: Incidente[];
+  data: Incidente[];
 }
 
 interface FiltrosState {
@@ -77,76 +75,7 @@ const formatFecha = (fechaISO: string) => {
 
 const PAGE_SIZE = 6;
 
-// ── Subcomponente que usa el hook (solo cuando no hay data por prop) ──
-function TablaConBackend({ filters, onFilterChange }: {
-  filters: FiltrosState;
-  onFilterChange: (f: FiltrosState) => void;
-}) {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  const filtrosBackend: IncidenciasFiltros = {
-    page: currentPage,
-    limit: PAGE_SIZE,
-    ordenarPor: filters.ordenarPor,
-    ...(filters.estado && filters.estado !== 'Todos' && {
-      estado: estadoFiltroToBackend[filters.estado],
-    }),
-    ...(filters.busqueda && { search: filters.busqueda }),
-    ...(filters.fechaDesde && { fechaInicio: filters.fechaDesde }),
-    ...(filters.fechaHasta && { fechaFin: filters.fechaHasta }),
-  };
-
-  const { data: response, isLoading, isError } = useIncidencias(filtrosBackend);
-
-  const handleFilterChange = (newFilters: FiltrosState) => {
-    setCurrentPage(1);
-    onFilterChange(newFilters);
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-          <p className="text-sm text-muted-foreground">Cargando incidentes...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-          <p className="text-sm text-red-600">Error al cargar los incidentes. Por favor intenta nuevamente.</p>
-        </div>
-      </div>
-    );
-  }
-
-  const incidentes = response?.data ?? [];
-  const meta = response?.meta;
-  const totalPages = meta?.total_pages ?? 1;
-  const total = meta?.total ?? 0;
-
-  return (
-    <FilasYPaginacion
-      incidentes={incidentes}
-      filters={filters}
-      onFilterChange={handleFilterChange}
-      currentPage={currentPage}
-      totalPages={totalPages}
-      total={total}
-      onPageChange={setCurrentPage}
-      selectedId={selectedId}
-      onSelectId={setSelectedId}
-    />
-  );
-}
-
-// ── Subcomponente que filtra localmente (cuando recibe data por prop) ──
+// ── Subcomponente que filtra localmente ──
 function TablaLocal({ data, filters, onFilterChange }: {
   data: Incidente[];
   filters: FiltrosState;
@@ -371,9 +300,5 @@ export function TablaEstadoIncidentes({ data }: TablaEstadoIncidentesProps) {
     ordenarPor: 'reciente',
   });
 
-  if (data) {
-    return <TablaLocal data={data} filters={filters} onFilterChange={setFilters} />;
-  }
-
-  return <TablaConBackend filters={filters} onFilterChange={setFilters} />;
+  return <TablaLocal data={data} filters={filters} onFilterChange={setFilters} />;
 }

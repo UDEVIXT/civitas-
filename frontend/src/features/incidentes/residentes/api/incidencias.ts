@@ -19,58 +19,26 @@ export interface Incidente {
   titulo: string;
   descripcion: string;
   estado: EstadoIncidencia;
-  prioridad?: PrioridadIncidencia;
+  prioridad?: string;
   es_anonimo: boolean;
   fecha_creacion: string;
   updatedAt: string;
   id_residente: string;
-  historial: HistorialIncidencia[];
-  ubicacion?: string;
-  fotos?: string[];
-  nombre_residente?: string;
-}
-
-export interface IncidenciasResponse {
-  success: boolean;
-  data: Incidente[];
-  meta: {
-    total: number;
-    page: number;
-    limit: number;
-    total_pages: number;
-  };
-}
-
-export interface IncidenciaDetalleResponse {
-  success: boolean;
-  data: Incidente;
+  historial?: HistorialIncidencia[];
+  _count?: { historial: number };
 }
 
 export interface IncidenciasFiltros {
-  page?: number;
-  limit?: number;
+  residenteId?: string;
   estado?: EstadoIncidencia;
-  search?: string;
-  fechaInicio?: string;
-  fechaFin?: string;
-  ordenarPor?: "reciente" | "antiguo";
   [key: string]: any;
 }
 
 export const obtenerIncidencias = async (
   filtros: IncidenciasFiltros = {}
-): Promise<IncidenciasResponse> => {
-  const response = await apiClient.get<IncidenciasResponse>("/incidencias", {
+): Promise<Incidente[]> => {
+  const response = await apiClient.get<Incidente[]>("/incidencias", {
     params: filtros,
   });
-  return response.data;
-};
-
-export const obtenerDetalleIncidencia = async (
-  id: string
-): Promise<IncidenciaDetalleResponse> => {
-  const response = await apiClient.get<IncidenciaDetalleResponse>(
-    `/incidencias/${id}`
-  );
   return response.data;
 };
