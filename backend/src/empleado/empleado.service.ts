@@ -211,7 +211,6 @@ export class EmpleadoService {
         return { statusCode: 200, message: 'Empleado actualizado con éxito' };
       });
     } catch (error: any) {
-      console.error('Error en actualizarEmpleado:', error);
       throw new InternalServerErrorException({
         message: 'No se pudo actualizar el registro',
         error: error.message,
@@ -297,7 +296,6 @@ export class EmpleadoService {
         return { success: true, statusCode: 200, message: 'Empleado actualizado con éxito' };
       });
     } catch (error: any) {
-      console.error('Error en actualizarEmpleado:', error);
       throw new InternalServerErrorException({
         message: 'No se pudo actualizar el registro debido a un error en el servidor.',
         error: error.message,
@@ -339,7 +337,6 @@ export class EmpleadoService {
       }
 
       // Error 500: Error inesperado
-      console.error('Error en eliminarEmpleado:', error);
       throw new InternalServerErrorException(
         'Ocurrió un error inesperado al intentar dar de baja al empleado. Por favor, inténtelo de nuevo más tarde.',
       );
@@ -366,8 +363,7 @@ export class EmpleadoService {
         statusCode: 200,
         message: `El empleado ${servicio.nombre} ha sido reactivado exitosamente.`,
       };
-    } catch (error) {
-      console.error('Error en reactivarEmpleado:', error);
+    } catch {
       throw new InternalServerErrorException(
         'Ocurrió un error inesperado al intentar reactivar al empleado. Por favor, inténtelo de nuevo más tarde.',
       );
