@@ -17,7 +17,6 @@ export const obtenerEmpleadosDomesticos = async (
       ...filtros,
     },
   });
-  console.log("Response from API:", response.data);
   return response.data;
 };
 
