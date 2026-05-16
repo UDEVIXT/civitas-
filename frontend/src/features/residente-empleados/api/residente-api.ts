@@ -22,3 +22,24 @@ export const actualizarEmpleadoResidente = async (id: string, data: any) => {
     };
   }
 };
+
+export const obtenerMisEmpleados = async (
+  search?: string,
+  page = 1,
+  limit = 7,
+  isActive = true,
+) => {
+  const response = await apiClient.get(
+    "/empleado-general/mis-empleados",
+    {
+      params: {
+        search,
+        page,
+        limit,
+        isActive,
+      },
+    }
+  );
+
+  return response.data;
+};

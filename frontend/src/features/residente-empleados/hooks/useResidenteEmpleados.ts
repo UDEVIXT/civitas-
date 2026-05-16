@@ -11,13 +11,15 @@ import { obtenerEmpleadosDomesticos } from "@/features/empleados-domesticos/api/
 import { actualizarEmpleadoResidente } from "../api/residente-api";
 import type { EmpleadoDomestico } from "@/features/empleados-domesticos/types";
 
-export function useResidenteEmpleados(idResidente: string) {
+export function useResidenteEmpleados() {
   const queryClient = useQueryClient();
   const { toast } = useToast(); // Instanciamos el toast correctamente
   
   // Estados para la UI
   const [search, setSearch] = useState("");
-  const [selectedEmpleado, setSelectedEmpleado] = useState<EmpleadoDomestico | null>(null);
+  const [selectedEmpleado, setSelectedEmpleado] =
+    useState<EmpleadoDomestico | null>(null);
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isHorarioModalOpen, setIsHorarioModalOpen] = useState(false);
   
@@ -42,8 +44,14 @@ export function useResidenteEmpleados(idResidente: string) {
   // 2. MUTACIÓN PARA ACTUALIZAR DATOS GENERALES
   const updateMutation = useMutation({
     mutationFn: (values: any) => {
-      if (!selectedEmpleado) return Promise.reject();
-      return actualizarEmpleadoResidente(selectedEmpleado.id_visitante, values);
+      if (!selectedEmpleado) {
+        return Promise.reject();
+      }
+
+      return actualizarEmpleadoResidente(
+        selectedEmpleado.id_visitante,
+        values,
+      );
     },
     onSuccess: (res) => {
       if (res.success) {

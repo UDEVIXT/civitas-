@@ -1,11 +1,17 @@
 import {
   Controller,
   Get,
-  Param,
   Query,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 
 import { EmpleadoGeneralService } from './empleado-general.service';
+
+import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
+
+import type { Request } from 'express';
 
 @Controller('empleado-general')
 export class EmpleadoGeneralController {
@@ -13,14 +19,18 @@ export class EmpleadoGeneralController {
     private empleadoGeneralService: EmpleadoGeneralService,
   ) {}
 
-  @Get('mis-empleados/:idResidente')
+  @Get('mis-empleados')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   async obtenerMisEmpleados(
-    @Param('idResidente') idResidente: string,
+    @Req() req: Request,
     @Query('search') search?: string,
     @Query('page') page = '1',
     @Query('limit') limit = '7',
     @Query('isActive') isActive?: string,
   ) {
+    // 🔥 usuario real autenticado
+    const userId = req.user!['userId'];
+
     const isActiveValue = isActive?.toLowerCase();
 
     const isActiveBool =
@@ -31,7 +41,7 @@ export class EmpleadoGeneralController {
           : undefined;
 
     return this.empleadoGeneralService.obtenerMisEmpleados(
-      idResidente,
+      userId,
       {
         search,
         page: parseInt(page, 10),
