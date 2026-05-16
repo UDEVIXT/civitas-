@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const MAX_ITEMS = 3;
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
 
 const uploadConfig = {
     image: {
@@ -75,6 +76,11 @@ export function ImageUpload({ type, onDataChange, label }: ImageUploadProps) {
 
         if (!isValid) {
             setError(`Formato no válido.`);
+            return;
+        }
+
+        if (file.size > MAX_FILE_SIZE) {
+            setError(`El archivo excede el tamaño máximo de 10MB.`);
             return;
         }
 
