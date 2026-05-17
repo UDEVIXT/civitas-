@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AlertCircle, QrCode, Search, Star, X } from "lucide-react";
+import { AlertCircle, QrCode, Search, Star, X, ChevronUp, ChevronDown, Clock, Calendar } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,11 +17,11 @@ import {
 import type {
   MiBitacoraDetalle,
   MiBitacoraItem,
-  MiBitacoraResponse,
   PersonaBitacora,
 } from "../types";
 
 type SortDirection = "asc" | "desc";
+type SortField = 'fecha_hora_entrada' | 'fecha_hora_salida' | 'metodo' | null;
 
 const PAGE_SIZE = 10;
 const REFRESH_INTERVAL_MS = 15000;
@@ -99,6 +99,57 @@ function getRecordName(record: MiBitacoraItem | MiBitacoraDetalle) {
   return record.nombre_persona || "";
 }
 
+function getSortValue(
+  record: MiBitacoraItem,
+  sortField: SortField,
+  sort: SortDirection,
+): number | string {
+  if (sortField === 'metodo') {
+    const order: Record<MiBitacoraItem['metodo_acceso'], number> = {
+      QR: 0,
+      lista: 1,
+      manual: 2,
+    };
+
+    return order[record.metodo_acceso] ?? 99;
+  }
+
+  if (sortField === 'fecha_hora_salida') {
+    if (!record.fecha_hora_salida) {
+      return sort === 'asc' ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+    }
+
+    return new Date(record.fecha_hora_salida).getTime();
+  }
+
+  return new Date(record.fecha_hora_entrada).getTime();
+}
+
+function sortBitacoraRecords(
+  records: MiBitacoraItem[],
+  sortField: SortField,
+  sort: SortDirection,
+) {
+  const direction = sort === 'asc' ? 1 : -1;
+
+  return [...records].sort((a, b) => {
+    const aValue = getSortValue(a, sortField, sort);
+    const bValue = getSortValue(b, sortField, sort);
+
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      const numericDiff = aValue - bValue;
+      if (numericDiff !== 0) return numericDiff * direction;
+    } else if (aValue < bValue) {
+      return -1 * direction;
+    } else if (aValue > bValue) {
+      return 1 * direction;
+    }
+
+    const dateDiff = new Date(a.fecha_hora_entrada).getTime() - new Date(b.fecha_hora_entrada).getTime();
+    return dateDiff * direction;
+  });
+}
+
 export function MiBitacoraPage({
 }: {}) {
   const { user } = useAuth();
@@ -107,13 +158,16 @@ export function MiBitacoraPage({
   const [search, setSearch] = React.useState("");
   const [personType, setPersonType] = React.useState<"all" | PersonaBitacora>("all");
   const [sort, setSort] = React.useState<SortDirection>("desc");
+  const [sortField, setSortField] = React.useState<SortField>('fecha_hora_entrada');
   const [dateFrom, setDateFrom] = React.useState("");
   const [dateTo, setDateTo] = React.useState("");
   const [page, setPage] = React.useState(1);
 
-  const [data, setData] = React.useState<MiBitacoraResponse | null>(null);
+  const [allRecords, setAllRecords] = React.useState<MiBitacoraItem[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [isUpdating, setIsUpdating] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const hasLoadedRef = React.useRef(false);
 
   const [selected, setSelected] = React.useState<MiBitacoraItem | null>(null);
   const [selectedDetail, setSelectedDetail] = React.useState<MiBitacoraDetalle | null>(null);
@@ -134,29 +188,43 @@ export function MiBitacoraPage({
   const fetchList = React.useCallback(
     async (isRefresh = false) => {
       if (!residentUserId.trim()) {
-        setData(null);
+        setAllRecords([]);
+        hasLoadedRef.current = false;
         setError("No se pudo identificar al residente autenticado.");
         return;
       }
 
       try {
-        if (!isRefresh) {
+        const isInitialLoad = !hasLoadedRef.current;
+        if (!isRefresh && isInitialLoad) {
           setLoading(true);
+        } else {
+          setIsUpdating(true);
         }
         setError(null);
 
-        const response = await getMiBitacora({
+        const baseFilters = {
           search,
           personType: personType === "all" ? undefined : personType,
           dateFrom: toIsoDateRange(dateFrom, "start"),
           dateTo: toIsoDateRange(dateTo, "end"),
-          sort,
-          page,
+          page: 1,
           limit: PAGE_SIZE,
-        });
+        };
 
-        setData(response);
-        if (response.data.length === 0) {
+        const firstResponse = await getMiBitacora(baseFilters);
+        const totalPagesFromApi = firstResponse.meta.totalPages ?? 1;
+
+        const extraRequests = Array.from({ length: Math.max(0, totalPagesFromApi - 1) }, (_, index) =>
+          getMiBitacora({ ...baseFilters, page: index + 2 }),
+        );
+
+        const extraResponses = extraRequests.length > 0 ? await Promise.all(extraRequests) : [];
+        const combinedRecords = [firstResponse, ...extraResponses].flatMap((response) => response.data);
+
+        setAllRecords(combinedRecords);
+        hasLoadedRef.current = true;
+        if (combinedRecords.length === 0) {
           setSelected(null);
           setSelectedDetail(null);
           setDetailError(null);
@@ -167,9 +235,10 @@ export function MiBitacoraPage({
         );
       } finally {
         setLoading(false);
+        setIsUpdating(false);
       }
     },
-    [dateFrom, dateTo, page, personType, residentUserId, search, sort],
+    [dateFrom, dateTo, personType, residentUserId, search],
   );
 
   async function onSelectRecord(record: MiBitacoraItem) {
@@ -241,12 +310,26 @@ export function MiBitacoraPage({
     return () => window.clearInterval(interval);
   }, [fetchList]);
 
-  const records = data?.data ?? [];
-  const totalPages = data?.meta.totalPages ?? 1;
-  const currentPage = data?.meta.page ?? 1;
+  const sortedRecords = React.useMemo(
+    () => sortBitacoraRecords(allRecords, sortField, sort),
+    [allRecords, sortField, sort],
+  );
+  const totalPages = Math.max(1, Math.ceil(sortedRecords.length / PAGE_SIZE));
+  const currentPage = page;
+  const records = sortedRecords.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const pages = Array.from({ length: totalPages }, (_, index) => index + 1);
   const visiblePages = pages.slice(Math.max(0, currentPage - 2), Math.min(pages.length, currentPage + 3));
   const residentTag = residentUserId.trim() || "Residente";
+
+  function toggleSort(field: SortField) {
+    if (sortField === field) {
+      setSort((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSort('desc');
+    }
+    setPage(1);
+  }
 
   return (
     <div className="min-h-screen bg-[#ececec] p-2 sm:p-4">
@@ -338,10 +421,13 @@ export function MiBitacoraPage({
             <div className="overflow-hidden rounded-[10px] border border-[#d3d3d3] bg-white">
               <div className="flex items-center justify-between border-b border-[#d9d9d9] px-4 py-3">
                 <h2 className="text-[22px] font-semibold leading-none text-[#1f1f1f]">Mi bitácora de accesos</h2>
-                <p className="text-xs text-[#7559e8]">{data?.meta.total ?? 0} registrados</p>
+                <div className="flex items-center gap-3">
+                  {isUpdating ? <span className="text-[11px] text-[#8a8a8a]">Actualizando...</span> : null}
+                  <p className="text-xs text-[#7559e8]">{sortedRecords.length} registrados</p>
+                </div>
               </div>
 
-              {loading ? (
+              {loading && sortedRecords.length === 0 ? (
                 <div className="flex min-h-45 items-center justify-center px-4 py-10 text-sm text-slate-500">Cargando registros...</div>
               ) : records.length === 0 ? (
                 <div className="flex min-h-57.5 items-center justify-center px-4 py-10">
@@ -356,7 +442,59 @@ export function MiBitacoraPage({
                 </div>
               ) : (
                 <>
-                  <div className="overflow-x-auto">
+                  <div className="space-y-3 p-3 md:hidden">
+                    {records.map((record) => (
+                      <article key={record.id_bitacora} className="rounded-xl border border-[#e5e5e5] bg-white p-3 shadow-sm">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold", getAvatarColor(getRecordName(record)))}>
+                              {getInitials(getRecordName(record))}
+                            </div>
+                            <p className="truncate text-sm font-semibold text-[#2f2f2f]">{getRecordName(record)}</p>
+                          </div>
+                          <Badge className={cn("rounded-full border px-2 py-0.5 text-[11px] font-semibold", personTypeStyles[record.tipo_persona])}>
+                            {personTypeLabels[record.tipo_persona]}
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-1.5 text-xs text-[#4d4d4d]">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="size-3.5 text-[#6b6b6b]" />
+                            <span className="font-medium">Entrada:</span>
+                            <span>{formatDateTime(record.fecha_hora_entrada)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="size-3.5 text-[#6b6b6b]" />
+                            <span className="font-medium">Salida:</span>
+                            <span>{record.fecha_hora_salida ? formatDateTime(record.fecha_hora_salida) : "-"}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <QrCode className={cn("size-3.5", record.metodo_acceso === "QR" ? "text-[#2f2f2f]" : "text-[#9b9b9b]")} />
+                            <span className="font-medium">Método:</span>
+                            <span>{record.metodo_acceso}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">Guardia:</span>
+                            <span>{record.guardia?.nombre ?? record.guardia?.id_guardia ?? "-"}</span>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 flex justify-end">
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 rounded-md border border-[#dfdfdf] px-2.5 py-1.5 text-xs text-[#3f3f3f] hover:bg-[#f6f6f6]"
+                            onClick={() => void onSelectRecord(record)}
+                            title="Ver detalle"
+                          >
+                            <Search className="size-3.5" />
+                            Ver detalle
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+
+                  <div className="hidden overflow-x-auto md:block">
                     <table className="w-full min-w-245 table-fixed text-sm">
                       <colgroup>
                         <col className="w-55" />
@@ -374,9 +512,45 @@ export function MiBitacoraPage({
                           </th>
                           <th className="px-3 py-3 text-left font-medium">Name</th>
                           <th className="px-3 py-3 text-left font-medium">Tipo</th>
-                          <th className="px-3 py-3 text-left font-medium">Hora Entrada</th>
-                          <th className="px-3 py-3 text-left font-medium">Hora Salida</th>
-                          <th className="px-3 py-3 text-left font-medium">Método</th>
+                          <th className="px-3 py-3 text-left font-medium">
+                            <button type="button" onClick={() => toggleSort('fecha_hora_entrada')} className="flex w-full items-center gap-2 text-left">
+                              <Calendar className="size-4 shrink-0 text-[#6b6b6b]" />
+                              <span className="truncate">Hora Entrada</span>
+                              <span className="ml-auto flex size-4 items-center justify-center shrink-0">
+                                {sortField === 'fecha_hora_entrada' ? (
+                                  sort === 'asc' ? <ChevronUp className="size-4 text-[#6b6b6b]" /> : <ChevronDown className="size-4 text-[#6b6b6b]" />
+                                ) : (
+                                  <ChevronUp className="size-4 opacity-0" />
+                                )}
+                              </span>
+                            </button>
+                          </th>
+                          <th className="px-3 py-3 text-left font-medium">
+                            <button type="button" onClick={() => toggleSort('fecha_hora_salida')} className="flex w-full items-center gap-2 text-left">
+                              <Clock className="size-4 shrink-0 text-[#6b6b6b]" />
+                              <span className="truncate">Hora Salida</span>
+                              <span className="ml-auto flex size-4 items-center justify-center shrink-0">
+                                {sortField === 'fecha_hora_salida' ? (
+                                  sort === 'asc' ? <ChevronUp className="size-4 text-[#6b6b6b]" /> : <ChevronDown className="size-4 text-[#6b6b6b]" />
+                                ) : (
+                                  <ChevronUp className="size-4 opacity-0" />
+                                )}
+                              </span>
+                            </button>
+                          </th>
+                          <th className="px-3 py-3 text-left font-medium">
+                            <button type="button" onClick={() => toggleSort('metodo')} className="flex w-full items-center gap-2 text-left">
+                              <QrCode className="size-4 shrink-0 text-[#6b6b6b]" />
+                              <span className="truncate">Método</span>
+                              <span className="ml-auto flex size-4 items-center justify-center shrink-0">
+                                {sortField === 'metodo' ? (
+                                  sort === 'asc' ? <ChevronUp className="size-4 text-[#6b6b6b]" /> : <ChevronDown className="size-4 text-[#6b6b6b]" />
+                                ) : (
+                                  <ChevronUp className="size-4 opacity-0" />
+                                )}
+                              </span>
+                            </button>
+                          </th>
                           <th className="px-3 py-3 text-left font-medium">Guardia</th>
                           <th className="px-3 py-3 text-right font-medium" />
                         </tr>
@@ -427,7 +601,7 @@ export function MiBitacoraPage({
                     </table>
                   </div>
 
-                  <div className="flex items-center justify-between border-t border-[#dfdfdf] px-4 py-3 text-xs text-[#5c5c5c]">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#dfdfdf] px-3 py-3 text-xs text-[#5c5c5c] sm:px-4">
                     <button
                       type="button"
                       onClick={() => setPage((prev) => Math.max(1, prev - 1))}

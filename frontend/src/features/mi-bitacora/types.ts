@@ -69,6 +69,7 @@ export interface MiBitacoraFilters {
   dateFrom?: string;
   dateTo?: string;
   sort?: "asc" | "desc";
+  sortField?: "fecha_hora_entrada" | "fecha_hora_salida" | "metodo";
   page?: number;
   limit?: number;
 }

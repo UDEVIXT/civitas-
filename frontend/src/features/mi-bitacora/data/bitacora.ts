@@ -49,6 +49,7 @@ function buildQueryObject(filters: MiBitacoraFilters) {
   params.page = filters.page ?? 1;
   params.limit = filters.limit ?? 10;
   params.sort = filters.sort ?? "desc";
+  params.sortField = filters.sortField ?? "fecha_hora_entrada";
 
   if (filters.search?.trim()) params.search = filters.search.trim();
   if (filters.personType) params.personType = filters.personType;
