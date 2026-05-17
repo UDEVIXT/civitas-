@@ -45,3 +45,4 @@ export const actualizarEmpleadoResidente = async (id: string, data: any) => {
     };
   }
 };
+
