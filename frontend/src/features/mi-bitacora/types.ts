@@ -64,13 +64,12 @@ export interface MiBitacoraDetalleResponse {
 }
 
 export interface MiBitacoraFilters {
-  residentUserId?: string;
-  residentName?: string;
   search?: string;
   personType?: PersonaBitacora;
   dateFrom?: string;
   dateTo?: string;
   sort?: "asc" | "desc";
+  sortField?: "fecha_hora_entrada" | "fecha_hora_salida" | "metodo";
   page?: number;
   limit?: number;
 }

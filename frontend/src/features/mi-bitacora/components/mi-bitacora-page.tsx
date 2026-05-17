@@ -1,29 +1,25 @@
 "use client";
 
 import * as React from "react";
-import { AlertCircle, QrCode, Search, Star, X } from "lucide-react";
+import { AlertCircle, Search, Star, X, Filter } from "lucide-react";
+import FiltersPanel from "./FiltersPanel";
+import useMiBitacora from "../hooks/useMiBitacora";
+import RecordCard from "./RecordCard";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 
-import {
-  actualizarFrecuenciaVisitante,
-  getMiBitacora,
-  getMiBitacoraDetalle,
-} from "../data/bitacora";
-import type {
-  MiBitacoraDetalle,
-  MiBitacoraItem,
-  MiBitacoraResponse,
-  PersonaBitacora,
-} from "../types";
+// data logic moved to hook
+import type { PersonaBitacora } from "../types";
+import RecordsTable from "./RecordsTable";
 
 type SortDirection = "asc" | "desc";
+// SortField is handled inside the hook
 
-const PAGE_SIZE = 10;
-const REFRESH_INTERVAL_MS = 15000;
+// paging and refresh handled inside the hook
 
 const personTypeOptions: Array<{ label: string; value: "all" | PersonaBitacora }> = [
   { label: "Todos", value: "all" },
@@ -89,40 +85,52 @@ function formatDateTime(value: string | null) {
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
-function toIsoDateRange(dateValue: string, range: "start" | "end") {
-  if (!dateValue) return undefined;
-  return `${dateValue}${range === "start" ? "T00:00:00.000Z" : "T23:59:59.999Z"}`;
-}
+// note: `RecordRow`/`RecordCard` use `record.nombre_persona` directly
 
-function getRecordName(record: MiBitacoraItem | MiBitacoraDetalle) {
-  return record.nombre_persona || "";
-}
+export function MiBitacoraPage() {
+  const { user } = useAuth();
+  const residentUserId = user?.nombre ?? "";
 
-export function MiBitacoraPage({
-  initialResidentUserId,
-}: {
-  initialResidentUserId: string;
-}) {
-  const [residentUserId, setResidentUserId] = React.useState(initialResidentUserId);
-  const [residentName, setResidentName] = React.useState("");
-  const [searchInput, setSearchInput] = React.useState("");
-  const [search, setSearch] = React.useState("");
-  const [personType, setPersonType] = React.useState<"all" | PersonaBitacora>("all");
-  const [sort, setSort] = React.useState<SortDirection>("desc");
-  const [dateFrom, setDateFrom] = React.useState("");
-  const [dateTo, setDateTo] = React.useState("");
-  const [page, setPage] = React.useState(1);
-
-  const [data, setData] = React.useState<MiBitacoraResponse | null>(null);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-
-  const [selected, setSelected] = React.useState<MiBitacoraItem | null>(null);
-  const [selectedDetail, setSelectedDetail] = React.useState<MiBitacoraDetalle | null>(null);
-  const [detailLoading, setDetailLoading] = React.useState(false);
-  const [detailError, setDetailError] = React.useState<string | null>(null);
-  const [updatingFrecuenciaId, setUpdatingFrecuenciaId] = React.useState<string | null>(null);
-  const [updateFrecuenciaMessage, setUpdateFrecuenciaMessage] = React.useState<{ type: "success" | "error"; message: string } | null>(null);
+  const {
+    searchInput,
+    setSearchInput,
+    setSearch,
+    personType,
+    setPersonType,
+    sort,
+    setSort,
+    sortField,
+    setSortField,
+    groupBy,
+    setGroupBy,
+    dateFrom,
+    setDateFrom,
+    dateTo,
+    setDateTo,
+    page,
+    setPage,
+    loading,
+    isUpdating,
+    error,
+    selected,
+    selectedDetail,
+    detailLoading,
+    detailError,
+    updatingFrecuenciaId,
+    updateFrecuenciaMessage,
+    fetchList,
+    sortedRecords,
+    groupedAll,
+    totalPages,
+    paginatedFlattened,
+    groupedRecords,
+    visiblePages,
+    toggleSort,
+    toggleGroup,
+    onSelectRecord,
+    onToggleFrecuencia,
+    setSelected,
+  } = useMiBitacora(residentUserId);
 
   React.useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -131,141 +139,20 @@ export function MiBitacoraPage({
     }, 350);
 
     return () => window.clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchInput, setSearch, setPage]);
 
-  const fetchList = React.useCallback(
-    async (isRefresh = false) => {
-      if (!residentUserId.trim() && !residentName.trim()) {
-        setData(null);
-        setError("Ingresa un ID o nombre de residente para consultar su bitácora.");
-        return;
-      }
 
-      try {
-        if (!isRefresh) {
-          setLoading(true);
-        }
-        setError(null);
-
-        const response = await getMiBitacora({
-          residentUserId: residentUserId.trim() || undefined,
-          residentName: residentName.trim() || undefined,
-          search,
-          personType: personType === "all" ? undefined : personType,
-          dateFrom: toIsoDateRange(dateFrom, "start"),
-          dateTo: toIsoDateRange(dateTo, "end"),
-          sort,
-          page,
-          limit: PAGE_SIZE,
-        });
-
-        setData(response);
-        if (response.data.length === 0) {
-          setSelected(null);
-          setSelectedDetail(null);
-          setDetailError(null);
-        }
-      } catch (cause) {
-        setError(
-          cause instanceof Error ? cause.message : "No fue posible cargar la bitácora por un problema técnico.",
-        );
-      } finally {
-        setLoading(false);
-      }
-    },
-    [dateFrom, dateTo, page, personType, residentName, residentUserId, search, sort],
-  );
-
-  async function onSelectRecord(record: MiBitacoraItem) {
-    setSelected(record);
-    setSelectedDetail(null);
-    setDetailError(null);
-    setDetailLoading(true);
-
-    try {
-      const response = await getMiBitacoraDetalle(
-        record.id_bitacora,
-        residentUserId.trim() || undefined,
-        residentName.trim() || undefined,
-      );
-      setSelectedDetail(response.data);
-    } catch (cause) {
-      setDetailError(
-        cause instanceof Error ? cause.message : "No se pudo cargar el detalle del registro.",
-      );
-    } finally {
-      setDetailLoading(false);
-    }
-  }
-
-  async function onToggleFrecuencia(idBitacora: string, currentEsFrecuente: boolean) {
-    setUpdatingFrecuenciaId(idBitacora);
-    setUpdateFrecuenciaMessage(null);
-
-    try {
-      const newValue = !currentEsFrecuente;
-      await actualizarFrecuenciaVisitante(
-        idBitacora,
-        newValue,
-        residentUserId.trim() || undefined,
-        residentName.trim() || undefined,
-      );
-
-      setUpdateFrecuenciaMessage({
-        type: "success",
-        message: newValue ? "Marcado como frecuente" : "Removido de frecuentes",
-      });
-
-      void fetchList(true);
-
-      if (selected?.id_bitacora === idBitacora) {
-        const response = await getMiBitacoraDetalle(
-          idBitacora,
-          residentUserId.trim() || undefined,
-          residentName.trim() || undefined,
-        );
-        setSelectedDetail(response.data);
-      }
-
-      window.setTimeout(() => setUpdateFrecuenciaMessage(null), 3000);
-    } catch (cause) {
-      setUpdateFrecuenciaMessage({
-        type: "error",
-        message: cause instanceof Error ? cause.message : "No fue posible actualizar la frecuencia.",
-      });
-      window.setTimeout(() => setUpdateFrecuenciaMessage(null), 4000);
-    } finally {
-      setUpdatingFrecuenciaId(null);
-    }
-  }
-
-  React.useEffect(() => {
-    void fetchList(false);
-  }, [fetchList]);
-
-  React.useEffect(() => {
-    const interval = window.setInterval(() => {
-      void fetchList(true);
-    }, REFRESH_INTERVAL_MS);
-
-    return () => window.clearInterval(interval);
-  }, [fetchList]);
-
-  const records = data?.data ?? [];
-  const totalPages = data?.meta.totalPages ?? 1;
-  const currentPage = data?.meta.page ?? 1;
-  const pages = Array.from({ length: totalPages }, (_, index) => index + 1);
-  const visiblePages = pages.slice(Math.max(0, currentPage - 2), Math.min(pages.length, currentPage + 3));
-  const residentTag = residentUserId.trim() || residentName.trim() || "Administrador";
+  const residentTag = residentUserId.trim() || "Residente";
+  const [showFilters, setShowFilters] = React.useState(false);
 
   return (
     <div className="min-h-screen bg-[#ececec] p-2 sm:p-4">
-      <div className="mx-auto min-h-[calc(100vh-16px)] max-w-[1440px] overflow-hidden rounded-[30px] border border-[#d3d3d3] bg-[#ececec] sm:min-h-[calc(100vh-32px)]">
+      <div className="mx-auto min-h-[calc(100vh-16px)] max-w-360 overflow-hidden rounded-[30px] border border-[#d3d3d3] bg-[#ececec] sm:min-h-[calc(100vh-32px)]">
         <section className="flex min-w-0 flex-1 flex-col bg-[#ececec]">
           <main className="flex-1 px-4 py-4 sm:px-5 sm:py-5 lg:px-6">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h1 className="text-[36px] font-semibold leading-none text-[#1f1f1f]">Bitácora de accesos</h1>
-              <div className="relative w-full sm:w-[280px]">
+              <div className="relative w-full sm:w-70">
                 <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#9b9b9b]" />
                 <Input
                   value={searchInput}
@@ -277,17 +164,7 @@ export function MiBitacoraPage({
             </div>
 
             <div className="mb-4 flex flex-wrap items-center gap-2">
-              <Input
-                value={residentUserId}
-                onChange={(event) => {
-                  setResidentUserId(event.target.value);
-                  setPage(1);
-                }}
-                placeholder="ID residente"
-                className="h-8 w-[220px] rounded-md border-[#d2d2d2] bg-white px-2 text-xs"
-              />
-
-              <button type="button" onClick={() => setResidentUserId("")} className="flex h-8 items-center gap-2 rounded-md border border-[#d2d2d2] bg-white px-3 text-xs font-medium text-[#2c2c2c]">
+              <button type="button" className="flex h-8 items-center gap-2 rounded-md border border-[#d2d2d2] bg-white px-3 text-xs font-medium text-[#2c2c2c]" disabled>
                 {residentTag} <X className="size-3" />
               </button>
 
@@ -324,7 +201,7 @@ export function MiBitacoraPage({
                   setDateFrom(event.target.value);
                   setPage(1);
                 }}
-                className="h-8 w-[140px] rounded-md border-[#d2d2d2] bg-white px-2 text-xs"
+                className="h-8 w-35 rounded-md border-[#d2d2d2] bg-white px-2 text-xs"
                 title="Desde"
               />
 
@@ -335,9 +212,43 @@ export function MiBitacoraPage({
                   setDateTo(event.target.value);
                   setPage(1);
                 }}
-                className="h-8 w-[140px] rounded-md border-[#d2d2d2] bg-white px-2 text-xs"
+                className="h-8 w-35 rounded-md border-[#d2d2d2] bg-white px-2 text-xs"
                 title="Hasta"
               />
+
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowFilters((s) => !s)}
+                  className="ml-2 inline-flex h-8 items-center gap-2 rounded-md border border-[#d2d2d2] bg-white px-3 text-xs font-medium text-[#2c2c2c]"
+                  aria-label="Mostrar filtros"
+                >
+                  <Filter className="size-3 text-[#6b6b6b]" />
+                  <span>Filtros</span>
+                </button>
+
+                {showFilters ? (
+                  <FiltersPanel
+                    personType={personType}
+                    setPersonType={setPersonType}
+                    sort={sort}
+                    setSort={setSort}
+                    dateFrom={dateFrom}
+                    setDateFrom={setDateFrom}
+                    dateTo={dateTo}
+                    setDateTo={setDateTo}
+                    searchInput={searchInput}
+                    setSearchInput={setSearchInput}
+                    setSearch={setSearch}
+                    setPage={setPage}
+                    fetchList={fetchList}
+                    groupBy={groupBy}
+                    setGroupBy={setGroupBy}
+                    setSortField={setSortField}
+                    onClose={() => setShowFilters(false)}
+                  />
+                ) : null}
+              </div>
             </div>
 
             {error ? (
@@ -358,13 +269,16 @@ export function MiBitacoraPage({
             <div className="overflow-hidden rounded-[10px] border border-[#d3d3d3] bg-white">
               <div className="flex items-center justify-between border-b border-[#d9d9d9] px-4 py-3">
                 <h2 className="text-[22px] font-semibold leading-none text-[#1f1f1f]">Mi bitácora de accesos</h2>
-                <p className="text-xs text-[#7559e8]">{data?.meta.total ?? 0} registrados</p>
+                <div className="flex items-center gap-3">
+                  {isUpdating ? <span className="text-[11px] text-[#8a8a8a]">Actualizando...</span> : null}
+                  <p className="text-xs text-[#7559e8]">{sortedRecords.length} registrados</p>
+                </div>
               </div>
 
-              {loading ? (
-                <div className="flex min-h-[180px] items-center justify-center px-4 py-10 text-sm text-slate-500">Cargando registros...</div>
-              ) : records.length === 0 ? (
-                <div className="flex min-h-[230px] items-center justify-center px-4 py-10">
+              {loading && sortedRecords.length === 0 ? (
+                <div className="flex min-h-45 items-center justify-center px-4 py-10 text-sm text-slate-500">Cargando registros...</div>
+              ) : paginatedFlattened.length === 0 ? (
+                <div className="flex min-h-57.5 items-center justify-center px-4 py-10">
                   <div className="mx-auto flex max-w-sm flex-col items-center gap-2 text-center">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#fff6dd] shadow-[0_0_0_8px_rgba(251,191,36,0.12)]">
                       <AlertCircle className="size-5 text-[#e2aa00]" />
@@ -376,85 +290,54 @@ export function MiBitacoraPage({
                 </div>
               ) : (
                 <>
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[980px] table-fixed text-sm">
-                      <colgroup>
-                        <col className="w-[220px]" />
-                        <col className="w-[180px]" />
-                        <col className="w-[180px]" />
-                        <col className="w-[140px]" />
-                        <col className="w-[140px]" />
-                        <col className="w-[160px]" />
-                        <col className="w-[110px]" />
-                      </colgroup>
-                      <thead className="bg-[#f5f5f5]">
-                        <tr className="border-b border-[#dfdfdf] text-[#4f4f4f]">
-                          <th className="px-2 py-3 text-center font-medium">
-                            <input type="checkbox" className="h-4 w-4 rounded border-[#c7c7c7]" />
-                          </th>
-                          <th className="px-3 py-3 text-left font-medium">Name</th>
-                          <th className="px-3 py-3 text-left font-medium">Tipo</th>
-                          <th className="px-3 py-3 text-left font-medium">Hora Entrada</th>
-                          <th className="px-3 py-3 text-left font-medium">Hora Salida</th>
-                          <th className="px-3 py-3 text-left font-medium">Método</th>
-                          <th className="px-3 py-3 text-left font-medium">Guardia</th>
-                          <th className="px-3 py-3 text-right font-medium" />
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[#ececec]">
-                        {records.map((record) => (
-                          <tr key={record.id_bitacora} className="bg-white text-[#303030] hover:bg-[#fafafa]">
-                            <td className="px-2 py-3 text-center align-middle">
-                              <input type="checkbox" className="h-4 w-4 rounded border-[#c7c7c7]" />
-                            </td>
-                            <td className="px-3 py-3 align-middle">
-                              <div className="flex items-center gap-2.5">
-                                <div className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold", getAvatarColor(getRecordName(record)))}>
-                                  {getInitials(getRecordName(record))}
-                                </div>
-                                <span className="truncate text-sm font-medium">{getRecordName(record)}</span>
-                              </div>
-                            </td>
-                            <td className="px-3 py-3 align-middle text-sm text-[#555555]">
-                              <Badge className={cn("rounded-full border px-2 py-0.5 text-[11px] font-semibold", personTypeStyles[record.tipo_persona])}>
-                                {personTypeLabels[record.tipo_persona]}
-                              </Badge>
-                            </td>
-                            <td className="px-3 py-3 align-middle text-sm text-[#444444]">{formatDateTime(record.fecha_hora_entrada)}</td>
-                            <td className="px-3 py-3 align-middle text-sm text-[#444444]">{record.fecha_hora_salida ? formatDateTime(record.fecha_hora_salida) : "-"}</td>
-                            <td className="px-3 py-3 align-middle text-sm text-[#444444]">
-                              <span className="inline-flex items-center gap-1.5">
-                                <QrCode className={cn("size-4", record.metodo_acceso === "QR" ? "text-[#2f2f2f]" : "text-[#c2c2c2]")} />
-                                {record.metodo_acceso}
-                              </span>
-                            </td>
-                            <td className="px-3 py-3 align-middle text-sm text-[#444444]">{record.guardia?.nombre ?? record.guardia?.id_guardia ?? "-"}</td>
-                            <td className="px-3 py-3 align-middle">
-                              <div className="flex items-center justify-end gap-1">
-                                <button
-                                  type="button"
-                                  className="rounded p-1 text-[#666666] transition-colors hover:bg-[#f1f1f1] hover:text-[#2b2b2b]"
-                                  onClick={() => void onSelectRecord(record)}
-                                  title="Ver detalle"
-                                >
-                                  <Search className="size-4" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
+                  <div className="space-y-3 p-3 md:hidden">
+                    {groupedRecords.map((group) => (
+                      <section key={group.method}>
+                        {groupBy !== null ? (
+                          <div className="mb-2 flex items-center gap-2">
+                            <h3 className="text-sm font-semibold">
+                              {group.method} <span className="text-xs text-[#7a7a7a]">({groupedAll.find((g) => g.method === group.method)?.items.length ?? group.items.length})</span>
+                            </h3>
+                          </div>
+                        ) : null}
+
+                        {group.items.map((record) => (
+                          <RecordCard
+                            key={record.id_bitacora}
+                            record={record}
+                            groupBy={groupBy}
+                            personTypeStyles={personTypeStyles}
+                            personTypeLabels={personTypeLabels}
+                            onSelectRecord={onSelectRecord}
+                          />
                         ))}
-                      </tbody>
-                    </table>
+                      </section>
+                    ))}
                   </div>
 
-                  <div className="flex items-center justify-between border-t border-[#dfdfdf] px-4 py-3 text-xs text-[#5c5c5c]">
+                  <div className="hidden overflow-x-auto md:block">
+                    <RecordsTable
+                      groupedRecords={groupedRecords}
+                      groupedAll={groupedAll}
+                      groupBy={groupBy}
+                      personTypeStyles={personTypeStyles}
+                      personTypeLabels={personTypeLabels}
+                      toggleGroup={toggleGroup}
+                      toggleSort={toggleSort}
+                      sortField={sortField}
+                      sort={sort}
+                      onSelectRecord={onSelectRecord}
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#dfdfdf] px-3 py-3 text-xs text-[#5c5c5c] sm:px-4">
                     <button
                       type="button"
                       onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
+                      disabled={page === 1}
                       className={cn(
                         "rounded-md border border-[#d2d2d2] bg-white px-3 py-1.5",
-                        currentPage === 1 ? "cursor-not-allowed opacity-50" : "hover:bg-[#f8f8f8]",
+                        page === 1 ? "cursor-not-allowed opacity-50" : "hover:bg-[#f8f8f8]",
                       )}
                     >
                       Previous
@@ -468,7 +351,7 @@ export function MiBitacoraPage({
                           onClick={() => setPage(pageNumber)}
                           className={cn(
                             "h-6 min-w-6 rounded px-2 text-xs",
-                            pageNumber === currentPage
+                            pageNumber === page
                               ? "bg-[#f2e9ff] font-semibold text-[#7c5dd8]"
                               : "text-[#666666] hover:bg-[#f6f6f6]",
                           )}
@@ -481,10 +364,10 @@ export function MiBitacoraPage({
                     <button
                       type="button"
                       onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage === totalPages}
+                      disabled={page === totalPages}
                       className={cn(
                         "rounded-md border border-[#d2d2d2] bg-white px-3 py-1.5",
-                        currentPage === totalPages ? "cursor-not-allowed opacity-50" : "hover:bg-[#f8f8f8]",
+                        page === totalPages ? "cursor-not-allowed opacity-50" : "hover:bg-[#f8f8f8]",
                       )}
                     >
                       Next

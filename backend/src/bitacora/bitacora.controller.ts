@@ -11,17 +11,41 @@ import {
   BadRequestException,
   Req,
 } from '@nestjs/common';
+import type { Request, Response } from 'express';
 
 import { BitacoraService } from './bitacora.service';
 
 import { Subject, Observable } from 'rxjs';
 import { Roles } from 'src/auth/decorators/roles/roles.decorator';
 import { map } from 'rxjs/operators';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
-import { AuthGuard } from '@nestjs/passport/dist/auth.guard';
+import { AuthGuard } from '@nestjs/passport';
 
-const bitacoraUpdates$ = new Subject<any>();
+interface AuthenticatedRequest extends Request {
+  user: {
+    userId: string;
+    username: string;
+    role: 'Administrador' | 'Guardia' | 'Residente';
+  };
+}
+
+interface BitacoraSseEvent {
+  tipo_evento: string;
+  ids_afectados: string[];
+  mensaje: string;
+  timestamp: Date;
+}
+
+interface RegistrarSalidaDto {
+  id_bitacora?: string | string[];
+  comentario_salida?: string;
+}
+
+const bitacoraUpdates$ = new Subject<BitacoraSseEvent>();
+
+// Subjects por usuario (username) para enviar eventos SSE sólo a los
+// residentes que estén suscritos.
+const userSseSubjects = new Map<string, Subject<BitacoraSseEvent>>();
 
 @Controller('bitacora')
 export class BitacoraController {
@@ -31,22 +55,37 @@ export class BitacoraController {
   // SSE
   // ---------------------------------------------------------
   @Sse('updates')
-  sse(): Observable<MessageEvent> {
-    return bitacoraUpdates$.asObservable().pipe(
-      map((data) => ({
-        data,
-      })),
-    );
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Residente')
+  sse(@Req() req: AuthenticatedRequest): Observable<MessageEvent> {
+    const username = req.user?.username ?? '';
+
+    let subj = userSseSubjects.get(username);
+    if (!subj) {
+      subj = new Subject<BitacoraSseEvent>();
+      userSseSubjects.set(username, subj);
+    }
+
+    // Cleanup cuando el cliente cierra la conexión
+    const res = req.res as Response | undefined;
+    if (res && typeof res.on === 'function') {
+      res.on('close', () => {
+        subj?.complete();
+        userSseSubjects.delete(username);
+      });
+    }
+
+    return subj.asObservable().pipe(map((data) => ({ data })));
   }
 
   // ---------------------------------------------------------
   // GET MI BITACORA (Residente específico)
   // ---------------------------------------------------------
-  //@UseGuards(JwtAuthGuard, RolesGuard)
-  //@Roles('Residente')
   @Get('mi-bitacora')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Residente')
   async obtenerMiBitacora(
-    @Query('residentUserId') residentUserId?: string,
+    @Req() req: AuthenticatedRequest,
     @Query('search') search?: string,
     @Query('personType') personType?: 'visitante' | 'empleado' | 'proveedor',
     @Query('dateFrom') dateFrom?: string,
@@ -55,6 +94,8 @@ export class BitacoraController {
     @Query('page') page = '1',
     @Query('limit') limit = '10',
   ) {
+    const residentUserId = req.user?.username;
+
     const data = await this.bitacoraService.obtenerMiBitacora({
       residentUserId: residentUserId || '',
       search,
@@ -77,7 +118,7 @@ export class BitacoraController {
   // ---------------------------------------------------------
   @Get()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Administrador', 'Guardia', 'Residente')
+  @Roles('Administrador', 'Guardia')
   async getBitacora(
     @Query('search') search?: string,
     @Query('tipo') tipo?: string,
@@ -115,8 +156,14 @@ export class BitacoraController {
   @Get(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Administrador', 'Guardia', 'Residente')
-  async obtenerDetalleRegistro(@Param('id') id: string) {
-    const result = await this.bitacoraService.obtenerDetalleRegistro(id);
+  async obtenerDetalleRegistro(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const result = await this.bitacoraService.obtenerDetalleRegistro(
+      id,
+      req.user,
+    );
     return {
       success: true,
       data: result,
@@ -126,16 +173,18 @@ export class BitacoraController {
   // ---------------------------------------------------------
   // ACTUALIZAR FRECUENCIA
   // ---------------------------------------------------------
-  //@UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Residente')
   @Patch(':id/frecuencia')
   async actualizarFrecuencia(
     @Param('id') id: string,
     @Body() body: { es_frecuente: boolean },
+    @Req() req: AuthenticatedRequest,
   ) {
     const result = await this.bitacoraService.actualizarFrecuenciaVisitante(
       id,
       body.es_frecuente,
+      req.user,
     );
 
     return {
@@ -152,13 +201,8 @@ export class BitacoraController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Guardia')
   async registrarSalida(
-    @Body()
-    dto: {
-      id_bitacora?: string | string[];
-      comentario_salida?: string;
-    },
-
-    @Req() req: any,
+    @Body() dto: RegistrarSalidaDto,
+    @Req() req: AuthenticatedRequest,
   ) {
     const { id_bitacora, comentario_salida } = dto;
 
@@ -192,6 +236,31 @@ export class BitacoraController {
           : `Salida registrada para el registro ${idsProcesados[0]}`,
       timestamp: new Date(),
     });
+
+    // Notificar sólo a los residentes afectados por estos IDs
+    try {
+      const residentUsernames =
+        await this.bitacoraService.getResidentUsernamesForRegistroIds(
+          idsProcesados,
+        );
+
+      const evento: BitacoraSseEvent = {
+        tipo_evento: 'SALIDA_REGISTRO',
+        ids_afectados: idsProcesados,
+        mensaje:
+          idsProcesados.length > 1
+            ? `${idsProcesados.length} salidas registradas masivamente`
+            : `Salida registrada para el registro ${idsProcesados[0]}`,
+        timestamp: new Date(),
+      };
+
+      for (const u of residentUsernames) {
+        const s = userSseSubjects.get(u);
+        if (s) s.next(evento);
+      }
+    } catch {
+      // No bloqueamos la respuesta si la notificación falla, sólo registramos.
+    }
 
     return {
       success: true,
