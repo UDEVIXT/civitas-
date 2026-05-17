@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { AlertCircle, QrCode, Search, Star, X, ChevronUp, ChevronDown, Clock, Calendar, Filter } from "lucide-react";
+import { AlertCircle, Search, Star, X, Filter } from "lucide-react";
 import FiltersPanel from "./FiltersPanel";
 import useMiBitacora from "../hooks/useMiBitacora";
+import RecordCard from "./RecordCard";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,11 +13,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 
 // data logic moved to hook
-import type {
-  MiBitacoraDetalle,
-  MiBitacoraItem,
-  PersonaBitacora,
-} from "../types";
+import type { PersonaBitacora } from "../types";
+import RecordsTable from "./RecordsTable";
 
 type SortDirection = "asc" | "desc";
 // SortField is handled inside the hook
@@ -87,9 +85,7 @@ function formatDateTime(value: string | null) {
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
-function getRecordName(record: MiBitacoraItem | MiBitacoraDetalle) {
-  return record.nombre_persona || "";
-}
+// note: `RecordRow`/`RecordCard` use `record.nombre_persona` directly
 
 export function MiBitacoraPage() {
   const { user } = useAuth();
@@ -148,8 +144,6 @@ export function MiBitacoraPage() {
 
   const residentTag = residentUserId.trim() || "Residente";
   const [showFilters, setShowFilters] = React.useState(false);
-
-  // sorting/grouping handlers provided by hook (toggleSort, toggleGroup)
 
   return (
     <div className="min-h-screen bg-[#ececec] p-2 sm:p-4">
@@ -297,219 +291,43 @@ export function MiBitacoraPage() {
               ) : (
                 <>
                   <div className="space-y-3 p-3 md:hidden">
-                    {groupedRecords.map((group) => {
-                      return (
-                        <section key={group.method}>
-                              {groupBy !== null ? (
-                                <div className="mb-2 flex items-center gap-2">
-                                  <h3 className="text-sm font-semibold">
-                                    {group.method} <span className="text-xs text-[#7a7a7a]">({groupedAll.find((g) => g.method === group.method)?.items.length ?? group.items.length})</span>
-                                  </h3>
-                                </div>
-                              ) : null}
+                    {groupedRecords.map((group) => (
+                      <section key={group.method}>
+                        {groupBy !== null ? (
+                          <div className="mb-2 flex items-center gap-2">
+                            <h3 className="text-sm font-semibold">
+                              {group.method} <span className="text-xs text-[#7a7a7a]">({groupedAll.find((g) => g.method === group.method)?.items.length ?? group.items.length})</span>
+                            </h3>
+                          </div>
+                        ) : null}
 
                         {group.items.map((record) => (
-                          <article key={record.id_bitacora} className="rounded-xl border border-[#e5e5e5] bg-white p-3 shadow-sm">
-                            <div className="mb-2 flex items-center justify-between gap-2">
-                              <div className="flex min-w-0 items-center gap-2.5">
-                                <div
-                                  className={cn(
-                                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold",
-                                    getAvatarColor(getRecordName(record)),
-                                  )}
-                                >
-                                  {getInitials(getRecordName(record))}
-                                </div>
-                                <p className="truncate text-sm font-semibold text-[#2f2f2f]">{getRecordName(record)}</p>
-                              </div>
-                              <Badge
-                                className={cn(
-                                  "rounded-full border px-2 py-0.5 text-[11px] font-semibold",
-                                  personTypeStyles[record.tipo_persona],
-                                )}
-                              >
-                                {personTypeLabels[record.tipo_persona]}
-                              </Badge>
-                            </div>
-
-                            <div className="grid grid-cols-1 gap-1.5 text-xs text-[#4d4d4d]">
-                              <div className="flex items-center gap-2">
-                                <Calendar className="size-3.5 text-[#6b6b6b]" />
-                                <span className="font-medium">Entrada:</span>
-                                <span>{formatDateTime(record.fecha_hora_entrada)}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Clock className="size-3.5 text-[#6b6b6b]" />
-                                <span className="font-medium">Salida:</span>
-                                <span>{record.fecha_hora_salida ? formatDateTime(record.fecha_hora_salida) : "-"}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                  <QrCode
-                                    className={cn(
-                                      "size-3.5",
-                                      groupBy === 'metodo'
-                                        ? (record.metodo_acceso === "QR" ? "text-[#2f2f2f]" : "text-[#9b9b9b]")
-                                        : "text-[#6b6b6b]",
-                                    )}
-                                  />
-                                <span className="font-medium">Método:</span>
-                                <span>{record.metodo_acceso}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">Guardia:</span>
-                                <span>{record.guardia?.nombre ?? record.guardia?.id_guardia ?? "-"}</span>
-                              </div>
-                            </div>
-
-                            <div className="mt-3 flex justify-end">
-                              <button
-                                type="button"
-                                className="inline-flex items-center gap-1 rounded-md border border-[#dfdfdf] px-2.5 py-1.5 text-xs text-[#3f3f3f] hover:bg-[#f6f6f6]"
-                                onClick={() => void onSelectRecord(record)}
-                                title="Ver detalle"
-                              >
-                                <Search className="size-3.5" />
-                                Ver detalle
-                              </button>
-                            </div>
-                          </article>
+                          <RecordCard
+                            key={record.id_bitacora}
+                            record={record}
+                            groupBy={groupBy}
+                            personTypeStyles={personTypeStyles}
+                            personTypeLabels={personTypeLabels}
+                            onSelectRecord={onSelectRecord}
+                          />
                         ))}
-                        </section>
-                      );
-                    })}
+                      </section>
+                    ))}
                   </div>
 
                   <div className="hidden overflow-x-auto md:block">
-                    <table className="w-full min-w-245 table-fixed text-sm">
-                      <colgroup>
-                        <col className="w-55" />
-                        <col className="w-45" />
-                        <col className="w-45" />
-                        <col className="w-35" />
-                        <col className="w-35" />
-                        <col className="w-40" />
-                        <col className="w-27.5" />
-                      </colgroup>
-                      <thead className="bg-[#f5f5f5] sticky top-0 z-10">
-                        <tr className="border-b border-[#dfdfdf] text-[#4f4f4f]">
-                          <th className="px-2 py-3 text-center font-medium">
-                            <input type="checkbox" className="h-4 w-4 rounded border-[#c7c7c7]" />
-                          </th>
-                          <th className="px-3 py-3 text-left font-medium">
-                            <button type="button" onClick={() => toggleGroup('nombre')} className={cn('flex items-center gap-2 text-left', groupBy === 'nombre' ? 'font-semibold underline' : '')}>
-                              <span className="truncate">Name</span>
-                            </button>
-                          </th>
-                          <th className="px-3 py-3 text-left font-medium">
-                            <button type="button" onClick={() => toggleGroup('tipo')} className={cn('flex items-center gap-2 text-left', groupBy === 'tipo' ? 'font-semibold underline' : '')}>
-                              <span className="truncate">Tipo</span>
-                            </button>
-                          </th>
-                          <th className="px-3 py-3 text-left font-medium">
-                            <button type="button" onClick={() => toggleSort('fecha_hora_entrada')} className="flex w-full items-center gap-2 text-left">
-                              <Calendar className="size-4 shrink-0 text-[#6b6b6b]" />
-                              <span className="truncate">Hora Entrada</span>
-                              <span className="ml-auto flex size-4 items-center justify-center shrink-0">
-                                {sortField === 'fecha_hora_entrada' ? (
-                                  sort === 'asc' ? <ChevronUp className="size-4 text-[#6b6b6b]" /> : <ChevronDown className="size-4 text-[#6b6b6b]" />
-                                ) : (
-                                  <ChevronUp className="size-4 opacity-0" />
-                                )}
-                              </span>
-                            </button>
-                          </th>
-                          <th className="px-3 py-3 text-left font-medium">
-                            <button type="button" onClick={() => toggleSort('fecha_hora_salida')} className="flex w-full items-center gap-2 text-left">
-                              <Clock className="size-4 shrink-0 text-[#6b6b6b]" />
-                              <span className="truncate">Hora Salida</span>
-                              <span className="ml-auto flex size-4 items-center justify-center shrink-0">
-                                {sortField === 'fecha_hora_salida' ? (
-                                  sort === 'asc' ? <ChevronUp className="size-4 text-[#6b6b6b]" /> : <ChevronDown className="size-4 text-[#6b6b6b]" />
-                                ) : (
-                                  <ChevronUp className="size-4 opacity-0" />
-                                )}
-                              </span>
-                            </button>
-                          </th>
-                          <th className="px-3 py-3 text-left font-medium">
-                            <button type="button" onClick={() => toggleSort('metodo')} className="flex w-full items-center gap-2 text-left">
-                              <QrCode className="size-4 shrink-0 text-[#6b6b6b]" />
-                              <span className="truncate">Método</span>
-                              <span className="ml-auto flex size-4 items-center justify-center shrink-0">
-                                {sortField === 'metodo' ? (
-                                  sort === 'asc' ? <ChevronUp className="size-4 text-[#6b6b6b]" /> : <ChevronDown className="size-4 text-[#6b6b6b]" />
-                                ) : (
-                                  <ChevronUp className="size-4 opacity-0" />
-                                )}
-                              </span>
-                            </button>
-                          </th>
-                          <th className="px-3 py-3 text-left font-medium">
-                            <button type="button" onClick={() => toggleGroup('guardia')} className={cn('flex items-center gap-2 text-left', groupBy === 'guardia' ? 'font-semibold underline' : '')}>
-                              <span className="truncate">Guardia</span>
-                            </button>
-                          </th>
-                          <th className="px-3 py-3 text-right font-medium" />
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[#ececec]">
-                        {groupedRecords.map((group) => (
-                          <React.Fragment key={group.method}>
-                            {groupBy !== null ? (
-                              <tr className="bg-[#fbfbfb] text-[#333333]">
-                                <td colSpan={8} className="px-3 py-2 font-semibold">
-                                  {group.method} <span className="ml-2 text-xs text-[#7a7a7a]">({groupedAll.find((g) => g.method === group.method)?.items.length ?? group.items.length})</span>
-                                </td>
-                              </tr>
-                            ) : null}
-                            {group.items.map((record) => (
-                              <tr key={record.id_bitacora} className="bg-white text-[#303030] hover:bg-[#fafafa]">
-                                <td className="px-2 py-3 text-center align-middle">
-                                  <input type="checkbox" className="h-4 w-4 rounded border-[#c7c7c7]" />
-                                </td>
-                                <td className="px-3 py-3 align-middle">
-                                  <div className="flex items-center gap-2.5">
-                                    <div className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold", getAvatarColor(getRecordName(record)))}>
-                                      {getInitials(getRecordName(record))}
-                                    </div>
-                                    <span className="truncate text-sm font-medium">{getRecordName(record)}</span>
-                                  </div>
-                                </td>
-                                <td className="px-3 py-3 align-middle text-sm text-[#555555]">
-                                  <Badge className={cn("rounded-full border px-2 py-0.5 text-[11px] font-semibold", personTypeStyles[record.tipo_persona])}>
-                                    {personTypeLabels[record.tipo_persona]}
-                                  </Badge>
-                                </td>
-                                <td className="px-3 py-3 align-middle text-sm text-[#444444]">{formatDateTime(record.fecha_hora_entrada)}</td>
-                                <td className="px-3 py-3 align-middle text-sm text-[#444444]">{record.fecha_hora_salida ? formatDateTime(record.fecha_hora_salida) : "-"}</td>
-                                <td className="px-3 py-3 align-middle text-sm text-[#444444]">
-                                  <span className="inline-flex items-center gap-1.5">
-                                    <QrCode className={cn(
-                                      "size-4",
-                                      groupBy === 'metodo' ? (record.metodo_acceso === "QR" ? "text-[#2f2f2f]" : "text-[#c2c2c2]") : "text-[#6b6b6b]",
-                                    )} />
-                                    {record.metodo_acceso}
-                                  </span>
-                                </td>
-                                <td className="px-3 py-3 align-middle text-sm text-[#444444]">{record.guardia?.nombre ?? record.guardia?.id_guardia ?? "-"}</td>
-                                <td className="px-3 py-3 align-middle">
-                                  <div className="flex items-center justify-end gap-1">
-                                    <button
-                                      type="button"
-                                      className="rounded p-1 text-[#666666] transition-colors hover:bg-[#f1f1f1] hover:text-[#2b2b2b]"
-                                      onClick={() => void onSelectRecord(record)}
-                                      title="Ver detalle"
-                                    >
-                                      <Search className="size-4" />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </React.Fragment>
-                        ))}
-                      </tbody>
-                    </table>
+                    <RecordsTable
+                      groupedRecords={groupedRecords}
+                      groupedAll={groupedAll}
+                      groupBy={groupBy}
+                      personTypeStyles={personTypeStyles}
+                      personTypeLabels={personTypeLabels}
+                      toggleGroup={toggleGroup}
+                      toggleSort={toggleSort}
+                      sortField={sortField}
+                      sort={sort}
+                      onSelectRecord={onSelectRecord}
+                    />
                   </div>
 
                   <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#dfdfdf] px-3 py-3 text-xs text-[#5c5c5c] sm:px-4">
