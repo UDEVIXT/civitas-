@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { BitacoraRegistro } from "../api/bitacora";
 import { bitacoraService } from "@/services/bitacora.service";
+import { toast } from "sonner";
 
 interface ModalRegistrarSalidaProps {
     isOpen: boolean;
@@ -34,8 +35,9 @@ export function ModalRegistrarSalida({
             await bitacoraService.registrarSalida(registro.id.toString(), comentario);
             onSuccess();
         } catch (error) {
-            console.error("Error al registrar salida:", error);
-            alert("Ocurrió un error al registrar la salida");
+            toast.error("Error al registrar la salida", {
+                description: "Ocurrió un error al registrar la salida. Por favor, intenta nuevamente.",
+            });
         } finally {
             setIsLoading(false);
         }
@@ -89,10 +91,10 @@ export function ModalRegistrarSalida({
                 </div>
 
                 <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-2">
-                    <Button variant="outline" onClick={onClose} disabled={isLoading} className="w-full sm:w-auto">
+                    <Button variant="outline" onClick={onClose} disabled={isLoading} className="w-full sm:w-auto cursor-pointer">
                         Cancelar
                     </Button>
-                    <Button onClick={handleConfirm} disabled={isLoading} className="w-full sm:w-auto">
+                    <Button onClick={handleConfirm} disabled={isLoading} className="w-full sm:w-auto cursor-pointer">
                         {isLoading ? "Registrando..." : "Confirmar Salida"}
                     </Button>
                 </div>

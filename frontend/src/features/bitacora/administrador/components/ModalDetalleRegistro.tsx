@@ -114,6 +114,10 @@ export function ModalDetalleRegistro({
     servicio_nombre?: string;
     placas?: string;
     motivo?: string;
+    notas?: string;
+    comentario_salida?: string;
+    qr_utilizado?: string;
+    hora_validacion?: string;
   };
 
   return (
@@ -317,7 +321,7 @@ export function ModalDetalleRegistro({
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <FileText className="h-5 w-5" />
-                Notas del Guardia
+                Notas de entrada del Guardia
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -332,6 +336,28 @@ export function ModalDetalleRegistro({
               </div>
             </CardContent>
           </Card>
+          
+          {registro.fecha_salida && registro.fecha_salida !== "-" && (
+            <Card className="md:col-span-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <FileText className="h-5 w-5" />
+                  Notas de salida del Guardia
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="p-3 sm:p-4 bg-muted rounded-lg min-h-[80px] sm:min-h-[100px]">
+                  {registro.comentario_salida ? (
+                    <p className="text-sm whitespace-pre-wrap">{registro.comentario_salida}</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">
+                      No hay notas registradas para la salida.
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </DialogContent>
     </Dialog>

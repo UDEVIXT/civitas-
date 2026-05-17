@@ -41,7 +41,15 @@ apiClient.interceptors.response.use(
       _retry?: boolean;
     };
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+   if (error.response?.status === 401 && !originalRequest._retry) {
+      
+      // CORRECCIÓN: Si el error 401 viene de verificar código o hacer login,
+      // NO intentamos refrescar el token. Devolvemos el error original al componente.
+      const rutasSinAutenticacion = ["/auth/login", "/auth/forgot-password", "/auth/verify-code", "/auth/reset-password"];
+      if (originalRequest.url && rutasSinAutenticacion.some(ruta => originalRequest.url.includes(ruta))) {
+        return Promise.reject(error);
+      }
+
       if (originalRequest.url?.includes("/auth/refresh")) {
         return Promise.reject(error);
       }
@@ -61,7 +69,16 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError);
-        window.location.href = "/login";
+        
+        // CORRECCIÓN: Evaluar si la ruta actual es pública antes de expulsar al usuario
+        const currentPath = window.location.pathname;
+        const isPublicRoute = currentPath === "/login" || currentPath.startsWith("/recuperar-contrasena");
+        
+        // Solo redirigimos si el usuario estaba navegando en una zona privada (ej. /dashboard)
+        if (!isPublicRoute) {
+          window.location.href = "/login";
+        }
+        
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

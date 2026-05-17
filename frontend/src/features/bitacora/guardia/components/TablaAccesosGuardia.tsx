@@ -101,7 +101,7 @@ function RegistroCard({
         />
         {/* Botón expansión */}
         <button
-          className="flex-1 flex items-center justify-between gap-3 text-left"
+          className="flex-1 flex items-center justify-between gap-3 text-left cursor-pointer"
           onClick={() => setExpanded((v) => !v)}
         >
           <div className="flex items-center gap-3 min-w-0">
@@ -207,7 +207,7 @@ function RegistroCard({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full text-xs mt-1"
+                  className="w-full text-xs mt-1 cursor-pointer"
                   onClick={() => onRegisterExit(registro)}
                 >
                   Registrar Salida
@@ -217,7 +217,7 @@ function RegistroCard({
           </div>
 
           <button
-            className="w-full mt-1 text-xs text-primary font-medium py-1.5 rounded-md border border-primary/30 hover:bg-primary/5 transition-colors"
+            className="w-full mt-1 text-xs text-primary font-medium py-1.5 rounded-md border border-primary/30 hover:bg-primary/5 transition-colors cursor-pointer"
             onClick={() => onOpen(registro.id)}
           >
             Ver detalle completo
@@ -267,7 +267,7 @@ export function TablaAccesosGuardia({
       <div className="flex flex-col items-center justify-center py-12 space-y-4 text-center">
         <h3 className="text-lg font-semibold text-destructive">Error al cargar datos</h3>
         <p className="text-muted-foreground">No se pudieron cargar los registros. Por favor, intente nuevamente.</p>
-        <button onClick={() => refetch()} className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90">
+        <button onClick={() => refetch()} className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 cursor-pointer">
           Reintentar
         </button>
       </div>
@@ -429,6 +429,7 @@ export function TablaAccesosGuardia({
                     </div>
                   ) : (
                     <Button
+                      className="cursor-pointer"
                       variant="outline"
                       size="sm"
                       onClick={(e) => { e.stopPropagation(); onRegisterExitClick(registro); }}
