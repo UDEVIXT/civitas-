@@ -104,14 +104,15 @@ export function ModalEditarEmpleado({ empleado, isOpen, onClose, onSave, isSavin
     },
   });
 
-  React.useEffect(() => {
+React.useEffect(() => {
     if (empleado) {
       const telefonoLimpio = (empleado.telefono || "").replace(/\D/g, "");
  
       const servicioAny = empleado.servicio as any;
       const empleadoAny = empleado as any;
 
-      const cargoReal = servicioAny?.tipo_servicio?.nombre || servicioAny?.cargo || "";
+      // 💡 CARGO BLINDADO: Primero busca en servicio.cargo, si no, usa el tipo_servicio
+     const cargoReal = servicioAny?.cargo || servicioAny?.tipo_servicio?.nombre || "";
 
       // Diccionario para traducir de la BD al UI
       const mapeoDiasInverso: Record<string, string> = {
@@ -123,19 +124,39 @@ export function ModalEditarEmpleado({ empleado, isOpen, onClose, onSave, isSavin
 
       // Reconstruimos la tabla de 7 días cruzando con los datos de la BD
       const horariosMapeados = DIAS_SEMANA.map(diaUI => {
+        // Buscamos si este día de la UI existe dentro de la respuesta del servidor
         const horarioBD = listaHorariosBD.find(h => mapeoDiasInverso[h.dia_semana] === diaUI);
         
-        if (horarioBD && horarioBD.activo) {
-          const dEntrada = new Date(horarioBD.hora_inicio);
-          const dSalida = new Date(horarioBD.hora_fin);
+        // 💡 FIX CRÍTICO: Si el registro existe en la lista de la BD, significa que está activo
+        if (horarioBD) {
+          let entradaStr = "08:00";
+          let salidaStr = "16:00";
+
+          if (horarioBD.hora_inicio) {
+            if (horarioBD.hora_inicio.includes('T')) {
+              entradaStr = horarioBD.hora_inicio.split('T')[1].substring(0, 5);
+            } else {
+              entradaStr = horarioBD.hora_inicio.substring(0, 5);
+            }
+          }
+
+          if (horarioBD.hora_fin) {
+            if (horarioBD.hora_fin.includes('T')) {
+              salidaStr = horarioBD.hora_fin.split('T')[1].substring(0, 5);
+            } else {
+              salidaStr = horarioBD.hora_fin.substring(0, 5);
+            }
+          }
+
           return {
             dia: diaUI,
-            activo: true,
-            hora_entrada: `${String(dEntrada.getUTCHours()).padStart(2, '0')}:${String(dEntrada.getUTCMinutes()).padStart(2, '0')}`,
-            hora_salida: `${String(dSalida.getUTCHours()).padStart(2, '0')}:${String(dSalida.getUTCMinutes()).padStart(2, '0')}`,
+            activo: true, // 👈 Forzamos a true porque el backend ya lo filtró como activo
+            hora_entrada: entradaStr,
+            hora_salida: salidaStr,
           };
         }
 
+        // Si no existe en la BD, se queda desmarcado por defecto
         return {
           dia: diaUI,
           activo: false,
