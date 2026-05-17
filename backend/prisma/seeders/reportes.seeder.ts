@@ -7,12 +7,24 @@ import {
 import { fakerES_MX as faker } from '@faker-js/faker';
 
 export async function seedReportes(prisma: PrismaClient) {
-  console.log('Iniciando el seeder...');
+  console.log('Iniciando el seeder de reportes...');
+
+  const usuarios = await prisma.usuario.findMany({
+    select: { id_usuario: true },
+  });
+
+  if (usuarios.length === 0) {
+    console.error('Error: No hay usuarios en la base de datos.');
+    console.error('Debes ejecutar el seeder de usuarios antes que el de reportes.');
+    return; 
+  }
 
   for (let i = 0; i < 10; i++) {
+    const usuarioAleatorio = faker.helpers.arrayElement(usuarios);
+
     await prisma.reporte.create({
       data: {
-        id_usuario: faker.string.uuid(),
+        id_usuario: usuarioAleatorio.id_usuario,
         motivo: faker.lorem.sentence().substring(0, 100),
         descripcion: faker.lorem.paragraphs(2),
         tipo: faker.helpers.arrayElement(Object.values(TipoReporte)),
@@ -43,12 +55,3 @@ export async function seedReportes(prisma: PrismaClient) {
     'Seeder ejecutado con éxito. Se crearon 10 reportes con sus evidencias.',
   );
 }
-
-/*seedReportes()
-  .catch((e) => {
-    console.error('Error al ejecutar el seeder:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });*/
