@@ -95,6 +95,7 @@ model Usuario {
   residentes         Residente[]
   persona            Persona        @relation(fields: [id_persona], references: [id_persona])
   sesiones Sesion[]
+  reportes             Reporte[]
 }
 
 model Residente {
@@ -105,7 +106,6 @@ model Residente {
   usuario     Usuario      @relation(fields: [id_usuario], references: [id_usuario])
   vivienda    Vivienda     @relation(fields: [id_vivienda], references: [id_vivienda])
   visitantes  Visitante[]
-  incidencias Incidencia[]
 }
 
 model Visitante {
@@ -202,36 +202,9 @@ model Administrador {
   usuario          Usuario @relation(fields: [id_usuario], references: [id_usuario])
 }
 
-model Incidencia {
-  id_incidencia  String           @id @default(uuid())
-  titulo         String
-  descripcion    String
-  estado         EstadoIncidencia @default(PENDIENTE)
-  prioridad      String?          @default("MEDIA")
-  es_anonimo     Boolean          @default(false)
-  fecha_creacion DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-
-  id_residente String
-  residente    Residente             @relation(fields: [id_residente], references: [id_residente])
-  historial    HistorialIncidencia[]
-}
-
-model HistorialIncidencia {
-  id_historial    String           @id @default(uuid())
-  estado_anterior EstadoIncidencia
-  nuevo_estado    EstadoIncidencia
-  comentario      String?
-  fecha           DateTime         @default(now())
-  actualizado_por String?          @default("Sistema")
-
-  id_incidencia String
-  incidencia    Incidencia @relation(fields: [id_incidencia], references: [id_incidencia])
-}
-
 model EvidenciaReporte {
-  id_evidencia   String   @id @default(uuid()) @db.Uuid
-  id_reporte     String   @db.Uuid
+  id_evidencia   String   @id @default(uuid()) 
+  id_reporte     String   
   reporte        Reporte  @relation(fields: [id_reporte], references: [id_reporte])
   url_archivo    String   @db.Text
   nombre_archivo String   @db.VarChar(256)
@@ -239,8 +212,9 @@ model EvidenciaReporte {
 }
 
 model Reporte {
-  id_reporte         String           @id @default(uuid()) @db.Uuid
-  id_usuario         String           @db.Uuid
+  id_reporte         String           @id @default(uuid()) 
+  id_usuario         String           
+  usuario            Usuario          @relation(fields: [id_usuario], references: [id_usuario])
   motivo             String           @db.VarChar(100)
   descripcion        String           @db.Text
   tipo               TipoReporte
@@ -252,7 +226,7 @@ model Reporte {
   token_seguimiento  String? @unique
   resultado_esperado String?          @db.Text
   resultado_solucion String?          @db.Text
-
+  createdAt          DateTime         @default(now())
   evidencias EvidenciaReporte[]
 }
 
