@@ -151,7 +151,7 @@ export function FiltrosTabla({
               variant="destructive"
               disabled={selectedIds.length === 0}
               onClick={onMassExitClick}
-              className="h-9 flex-1 sm:flex-none whitespace-nowrap"
+              className="h-9 flex-1 sm:flex-none whitespace-nowrap cursor-pointer"
             >
               <span className="hidden sm:inline">Salida Masiva</span>
               <span className="sm:hidden">Salida</span>
@@ -161,7 +161,7 @@ export function FiltrosTabla({
             <Button
               variant="outline"
               size="icon"
-              className="h-9 w-9 shrink-0"
+              className="h-9 w-9 shrink-0 cursor-pointer"
               onClick={onClear}
               title="Borrar filtros"
             >
@@ -186,7 +186,7 @@ function DatePickerWithRange({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className={`justify-start px-3 h-9 font-normal w-full sm:w-[220px] ${!date ? "text-muted-foreground" : ""}`}
+          className={`cursor-pointer justify-start px-3 h-9 font-normal w-full sm:w-[220px] ${!date ? "text-muted-foreground" : ""}`}
         >
           <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
           <span className="truncate">

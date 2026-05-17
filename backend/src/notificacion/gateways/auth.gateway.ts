@@ -10,7 +10,8 @@ import { Server, Socket } from 'socket.io';
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: 'http://localhost:3000',
+    credentials: true,
   },
 })
 export class AuthGateway {
@@ -18,11 +19,11 @@ export class AuthGateway {
   server: Server;
 
   handleConnection(client: Socket) {
-    console.log('Cliente conectado:', client.id);
+    //console.log('Cliente conectado:', client.id);
   }
 
   handleDisconnect(client: Socket) {
-    console.log('Cliente desconectado:', client.id);
+    //console.log('Cliente desconectado:', client.id);
   }
 
   @SubscribeMessage('register')
@@ -36,6 +37,7 @@ export class AuthGateway {
   }
 
   notifyNewLogin(userId: string, payload: any) {
+    //console.log('Notificando nuevo inicio de sesión para el usuario:', userId);
     this.server.to(`user-${userId}`).emit('new-login-detected', payload);
   }
 }

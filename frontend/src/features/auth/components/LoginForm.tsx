@@ -114,7 +114,7 @@ export function LoginForm() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foregroundcursor-pointer"
                 tabIndex={-1}
               >
                 {showPassword ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
@@ -147,7 +147,7 @@ export function LoginForm() {
 
           <Button
             type="submit"
-            className="w-full"
+            className="w-full cursor-pointer"
             size="lg"
             disabled={isLoading}
           >

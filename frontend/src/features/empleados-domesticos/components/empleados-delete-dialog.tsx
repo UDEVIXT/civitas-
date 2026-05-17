@@ -49,8 +49,8 @@ export function EmpleadosDeleteDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl rounded-2xl p-0">
-        <div className="flex items-start gap-4 px-6 pb-6 pt-6">
+      <DialogContent className="w-[95vw] max-w-xl rounded-2xl p-0">
+        <div className="flex flex-col gap-4 px-6 pb-6 pt-6 sm:flex-row sm:items-start">
           <div
             className={
               isDeactivate
@@ -70,7 +70,7 @@ export function EmpleadosDeleteDialog({
               <DialogDescription>{description}</DialogDescription>
             </DialogHeader>
             {selectedEmpleado && (
-              <p className="mt-3 text-sm text-muted-foreground">
+              <p className="mt-3 break-words pr-2 text-sm text-muted-foreground">
                 {selectedEmpleado.nombre} -{" "}
                 {selectedEmpleado.residente.vivienda.numero_vivienda}
               </p>
@@ -84,6 +84,7 @@ export function EmpleadosDeleteDialog({
                   value={motivo}
                   onChange={(event) => onMotivoChange(event.target.value)}
                   placeholder="Escribe el motivo de la baja"
+                  className="min-h-[96px]"
                 />
                 {motivoError && (
                   <p className="text-xs text-red-600">
@@ -98,9 +99,13 @@ export function EmpleadosDeleteDialog({
           </div>
           <DialogClose asChild />
         </div>
-        <DialogFooter className="border-t bg-zinc-50/50 px-6 py-4">
+        <DialogFooter className="flex flex-col-reverse gap-2 border-t bg-zinc-50/50 px-6 py-4 sm:flex-row sm:justify-end">
           <DialogClose asChild>
-            <Button type="button" variant="outline" className="rounded-xl">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full rounded-xl sm:w-auto"
+            >
               Cancelar
             </Button>
           </DialogClose>
@@ -108,8 +113,8 @@ export function EmpleadosDeleteDialog({
             type="button"
             className={
               isDeactivate
-                ? "rounded-xl bg-red-500 hover:bg-red-600"
-                : "rounded-xl bg-amber-400 text-amber-950 hover:bg-amber-500"
+                ? "w-full rounded-xl bg-red-500 hover:bg-red-600 sm:w-auto"
+                : "w-full rounded-xl bg-amber-400 text-amber-950 hover:bg-amber-500 sm:w-auto"
             }
             onClick={onConfirm}
             disabled={isDeleting || (isDeactivate && !motivo.trim())}
