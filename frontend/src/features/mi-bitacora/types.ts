@@ -64,8 +64,6 @@ export interface MiBitacoraDetalleResponse {
 }
 
 export interface MiBitacoraFilters {
-  residentUserId?: string;
-  residentName?: string;
   search?: string;
   personType?: PersonaBitacora;
   dateFrom?: string;

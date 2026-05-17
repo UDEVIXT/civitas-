@@ -11,17 +11,37 @@ import {
   BadRequestException,
   Req,
 } from '@nestjs/common';
+import type { Request } from 'express';
 
 import { BitacoraService } from './bitacora.service';
 
 import { Subject, Observable } from 'rxjs';
 import { Roles } from 'src/auth/decorators/roles/roles.decorator';
 import { map } from 'rxjs/operators';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
-import { AuthGuard } from '@nestjs/passport/dist/auth.guard';
+import { AuthGuard } from '@nestjs/passport';
 
-const bitacoraUpdates$ = new Subject<any>();
+interface AuthenticatedRequest extends Request {
+  user: {
+    userId: string;
+    username: string;
+    role: 'Administrador' | 'Guardia' | 'Residente';
+  };
+}
+
+interface BitacoraSseEvent {
+  tipo_evento: string;
+  ids_afectados: string[];
+  mensaje: string;
+  timestamp: Date;
+}
+
+interface RegistrarSalidaDto {
+  id_bitacora?: string | string[];
+  comentario_salida?: string;
+}
+
+const bitacoraUpdates$ = new Subject<BitacoraSseEvent>();
 
 @Controller('bitacora')
 export class BitacoraController {
@@ -31,6 +51,8 @@ export class BitacoraController {
   // SSE
   // ---------------------------------------------------------
   @Sse('updates')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Residente')
   sse(): Observable<MessageEvent> {
     return bitacoraUpdates$.asObservable().pipe(
       map((data) => ({
@@ -42,11 +64,11 @@ export class BitacoraController {
   // ---------------------------------------------------------
   // GET MI BITACORA (Residente específico)
   // ---------------------------------------------------------
-  //@UseGuards(JwtAuthGuard, RolesGuard)
-  //@Roles('Residente')
   @Get('mi-bitacora')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Residente')
   async obtenerMiBitacora(
-    @Query('residentUserId') residentUserId?: string,
+    @Req() req: AuthenticatedRequest,
     @Query('search') search?: string,
     @Query('personType') personType?: 'visitante' | 'empleado' | 'proveedor',
     @Query('dateFrom') dateFrom?: string,
@@ -55,6 +77,8 @@ export class BitacoraController {
     @Query('page') page = '1',
     @Query('limit') limit = '10',
   ) {
+    const residentUserId = req.user?.username;
+
     const data = await this.bitacoraService.obtenerMiBitacora({
       residentUserId: residentUserId || '',
       search,
@@ -77,7 +101,7 @@ export class BitacoraController {
   // ---------------------------------------------------------
   @Get()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Administrador', 'Guardia', 'Residente')
+  @Roles('Administrador', 'Guardia')
   async getBitacora(
     @Query('search') search?: string,
     @Query('tipo') tipo?: string,
@@ -115,8 +139,14 @@ export class BitacoraController {
   @Get(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Administrador', 'Guardia', 'Residente')
-  async obtenerDetalleRegistro(@Param('id') id: string) {
-    const result = await this.bitacoraService.obtenerDetalleRegistro(id);
+  async obtenerDetalleRegistro(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const result = await this.bitacoraService.obtenerDetalleRegistro(
+      id,
+      req.user,
+    );
     return {
       success: true,
       data: result,
@@ -126,16 +156,18 @@ export class BitacoraController {
   // ---------------------------------------------------------
   // ACTUALIZAR FRECUENCIA
   // ---------------------------------------------------------
-  //@UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Residente')
   @Patch(':id/frecuencia')
   async actualizarFrecuencia(
     @Param('id') id: string,
     @Body() body: { es_frecuente: boolean },
+    @Req() req: AuthenticatedRequest,
   ) {
     const result = await this.bitacoraService.actualizarFrecuenciaVisitante(
       id,
       body.es_frecuente,
+      req.user,
     );
 
     return {
@@ -152,13 +184,8 @@ export class BitacoraController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Guardia')
   async registrarSalida(
-    @Body()
-    dto: {
-      id_bitacora?: string | string[];
-      comentario_salida?: string;
-    },
-
-    @Req() req: any,
+    @Body() dto: RegistrarSalidaDto,
+    @Req() req: AuthenticatedRequest,
   ) {
     const { id_bitacora, comentario_salida } = dto;
 

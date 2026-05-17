@@ -46,9 +46,6 @@ function mapDetalleResponse(payload: MiBitacoraDetalleResponse): MiBitacoraDetal
 function buildQueryObject(filters: MiBitacoraFilters) {
   const params: Record<string, string | number | undefined> = {};
 
-  if (filters.residentUserId?.trim()) params.residentUserId = filters.residentUserId.trim();
-  if (filters.residentName?.trim()) params.residentName = filters.residentName.trim();
-
   params.page = filters.page ?? 1;
   params.limit = filters.limit ?? 10;
   params.sort = filters.sort ?? "desc";
@@ -81,26 +78,8 @@ export async function getMiBitacora(filters: MiBitacoraFilters) {
 
 export async function getMiBitacoraDetalle(
   idBitacora: string,
-  residentUserId?: string,
-  residentName?: string,
 ) {
-  const params = new URLSearchParams();
-
-  if (residentUserId?.trim()) {
-    params.set("residentUserId", residentUserId.trim());
-  }
-
-  if (residentName?.trim()) {
-    params.set("residentName", residentName.trim());
-  }
-
-  const query = new URLSearchParams();
-  if (params.toString()) {
-    // no-op, params already built above
-  }
-
   const response = await apiClient.get<MiBitacoraDetalleResponse>(`/bitacora/${idBitacora}`, {
-    params: Object.fromEntries(params.entries ? params.entries() : []),
     headers: { "Cache-Control": "no-store" },
   });
 
@@ -119,28 +98,12 @@ export async function getMiBitacoraDetalle(
 export async function actualizarFrecuenciaVisitante(
   idBitacora: string,
   esFrecuente: boolean,
-  residentUserId?: string,
-  residentName?: string,
 ) {
-  const params = new URLSearchParams();
-
-  if (residentUserId?.trim()) {
-    params.set("residentUserId", residentUserId.trim());
-  }
-
-  if (residentName?.trim()) {
-    params.set("residentName", residentName.trim());
-  }
-
-  const paramsObj: Record<string, string> = {};
-  if (residentUserId?.trim()) paramsObj.residentUserId = residentUserId.trim();
-  if (residentName?.trim()) paramsObj.residentName = residentName.trim();
-
   const response = await apiClient.patch<{
     success: boolean;
     message?: string;
     es_frecuente?: boolean;
-  }>(`/bitacora/${idBitacora}/frecuencia`, { es_frecuente: esFrecuente }, { params: paramsObj });
+  }>(`/bitacora/${idBitacora}/frecuencia`, { es_frecuente: esFrecuente });
 
   const payload = response.data;
 

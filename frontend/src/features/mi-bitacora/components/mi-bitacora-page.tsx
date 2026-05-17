@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 
 import {
   actualizarFrecuenciaVisitante,
@@ -99,12 +100,9 @@ function getRecordName(record: MiBitacoraItem | MiBitacoraDetalle) {
 }
 
 export function MiBitacoraPage({
-  initialResidentUserId,
-}: {
-  initialResidentUserId: string;
-}) {
-  const [residentUserId, setResidentUserId] = React.useState(initialResidentUserId);
-  const [residentName, setResidentName] = React.useState("");
+}: {}) {
+  const { user } = useAuth();
+  const residentUserId = user?.nombre ?? "";
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
   const [personType, setPersonType] = React.useState<"all" | PersonaBitacora>("all");
@@ -135,9 +133,9 @@ export function MiBitacoraPage({
 
   const fetchList = React.useCallback(
     async (isRefresh = false) => {
-      if (!residentUserId.trim() && !residentName.trim()) {
+      if (!residentUserId.trim()) {
         setData(null);
-        setError("Ingresa un ID o nombre de residente para consultar su bitácora.");
+        setError("No se pudo identificar al residente autenticado.");
         return;
       }
 
@@ -148,8 +146,6 @@ export function MiBitacoraPage({
         setError(null);
 
         const response = await getMiBitacora({
-          residentUserId: residentUserId.trim() || undefined,
-          residentName: residentName.trim() || undefined,
           search,
           personType: personType === "all" ? undefined : personType,
           dateFrom: toIsoDateRange(dateFrom, "start"),
@@ -173,7 +169,7 @@ export function MiBitacoraPage({
         setLoading(false);
       }
     },
-    [dateFrom, dateTo, page, personType, residentName, residentUserId, search, sort],
+    [dateFrom, dateTo, page, personType, residentUserId, search, sort],
   );
 
   async function onSelectRecord(record: MiBitacoraItem) {
@@ -185,8 +181,6 @@ export function MiBitacoraPage({
     try {
       const response = await getMiBitacoraDetalle(
         record.id_bitacora,
-        residentUserId.trim() || undefined,
-        residentName.trim() || undefined,
       );
       setSelectedDetail(response.data);
     } catch (cause) {
@@ -207,8 +201,6 @@ export function MiBitacoraPage({
       await actualizarFrecuenciaVisitante(
         idBitacora,
         newValue,
-        residentUserId.trim() || undefined,
-        residentName.trim() || undefined,
       );
 
       setUpdateFrecuenciaMessage({
@@ -221,8 +213,6 @@ export function MiBitacoraPage({
       if (selected?.id_bitacora === idBitacora) {
         const response = await getMiBitacoraDetalle(
           idBitacora,
-          residentUserId.trim() || undefined,
-          residentName.trim() || undefined,
         );
         setSelectedDetail(response.data);
       }
@@ -256,16 +246,16 @@ export function MiBitacoraPage({
   const currentPage = data?.meta.page ?? 1;
   const pages = Array.from({ length: totalPages }, (_, index) => index + 1);
   const visiblePages = pages.slice(Math.max(0, currentPage - 2), Math.min(pages.length, currentPage + 3));
-  const residentTag = residentUserId.trim() || residentName.trim() || "Administrador";
+  const residentTag = residentUserId.trim() || "Residente";
 
   return (
     <div className="min-h-screen bg-[#ececec] p-2 sm:p-4">
-      <div className="mx-auto min-h-[calc(100vh-16px)] max-w-[1440px] overflow-hidden rounded-[30px] border border-[#d3d3d3] bg-[#ececec] sm:min-h-[calc(100vh-32px)]">
+      <div className="mx-auto min-h-[calc(100vh-16px)] max-w-360 overflow-hidden rounded-[30px] border border-[#d3d3d3] bg-[#ececec] sm:min-h-[calc(100vh-32px)]">
         <section className="flex min-w-0 flex-1 flex-col bg-[#ececec]">
           <main className="flex-1 px-4 py-4 sm:px-5 sm:py-5 lg:px-6">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h1 className="text-[36px] font-semibold leading-none text-[#1f1f1f]">Bitácora de accesos</h1>
-              <div className="relative w-full sm:w-[280px]">
+              <div className="relative w-full sm:w-70">
                 <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#9b9b9b]" />
                 <Input
                   value={searchInput}
@@ -277,17 +267,7 @@ export function MiBitacoraPage({
             </div>
 
             <div className="mb-4 flex flex-wrap items-center gap-2">
-              <Input
-                value={residentUserId}
-                onChange={(event) => {
-                  setResidentUserId(event.target.value);
-                  setPage(1);
-                }}
-                placeholder="ID residente"
-                className="h-8 w-[220px] rounded-md border-[#d2d2d2] bg-white px-2 text-xs"
-              />
-
-              <button type="button" onClick={() => setResidentUserId("")} className="flex h-8 items-center gap-2 rounded-md border border-[#d2d2d2] bg-white px-3 text-xs font-medium text-[#2c2c2c]">
+              <button type="button" className="flex h-8 items-center gap-2 rounded-md border border-[#d2d2d2] bg-white px-3 text-xs font-medium text-[#2c2c2c]" disabled>
                 {residentTag} <X className="size-3" />
               </button>
 
@@ -324,7 +304,7 @@ export function MiBitacoraPage({
                   setDateFrom(event.target.value);
                   setPage(1);
                 }}
-                className="h-8 w-[140px] rounded-md border-[#d2d2d2] bg-white px-2 text-xs"
+                className="h-8 w-35 rounded-md border-[#d2d2d2] bg-white px-2 text-xs"
                 title="Desde"
               />
 
@@ -335,7 +315,7 @@ export function MiBitacoraPage({
                   setDateTo(event.target.value);
                   setPage(1);
                 }}
-                className="h-8 w-[140px] rounded-md border-[#d2d2d2] bg-white px-2 text-xs"
+                className="h-8 w-35 rounded-md border-[#d2d2d2] bg-white px-2 text-xs"
                 title="Hasta"
               />
             </div>
@@ -362,9 +342,9 @@ export function MiBitacoraPage({
               </div>
 
               {loading ? (
-                <div className="flex min-h-[180px] items-center justify-center px-4 py-10 text-sm text-slate-500">Cargando registros...</div>
+                <div className="flex min-h-45 items-center justify-center px-4 py-10 text-sm text-slate-500">Cargando registros...</div>
               ) : records.length === 0 ? (
-                <div className="flex min-h-[230px] items-center justify-center px-4 py-10">
+                <div className="flex min-h-57.5 items-center justify-center px-4 py-10">
                   <div className="mx-auto flex max-w-sm flex-col items-center gap-2 text-center">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#fff6dd] shadow-[0_0_0_8px_rgba(251,191,36,0.12)]">
                       <AlertCircle className="size-5 text-[#e2aa00]" />
@@ -377,15 +357,15 @@ export function MiBitacoraPage({
               ) : (
                 <>
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[980px] table-fixed text-sm">
+                    <table className="w-full min-w-245 table-fixed text-sm">
                       <colgroup>
-                        <col className="w-[220px]" />
-                        <col className="w-[180px]" />
-                        <col className="w-[180px]" />
-                        <col className="w-[140px]" />
-                        <col className="w-[140px]" />
-                        <col className="w-[160px]" />
-                        <col className="w-[110px]" />
+                        <col className="w-55" />
+                        <col className="w-45" />
+                        <col className="w-45" />
+                        <col className="w-35" />
+                        <col className="w-35" />
+                        <col className="w-40" />
+                        <col className="w-27.5" />
                       </colgroup>
                       <thead className="bg-[#f5f5f5]">
                         <tr className="border-b border-[#dfdfdf] text-[#4f4f4f]">

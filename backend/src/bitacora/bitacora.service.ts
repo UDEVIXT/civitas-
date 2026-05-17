@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   InternalServerErrorException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -307,13 +308,25 @@ export class BitacoraService {
   }
   
 
-  async actualizarFrecuenciaVisitante(idBitacora: string, esFrecuente: boolean) {
+  async actualizarFrecuenciaVisitante(
+    idBitacora: string,
+    esFrecuente: boolean,
+    requestedBy?: { username?: string; role?: string },
+  ) {
     const registro = await this.prisma.bitacora.findUnique({
       where: { id_bitacora: idBitacora },
       include: {
         acceso: {
           include: {
-            visitante: true,
+            visitante: {
+              include: {
+                residente: {
+                  include: {
+                    usuario: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -326,6 +339,15 @@ export class BitacoraService {
     // NUEVO: Aislamiento estricto para evitar TS18047
     if (!registro.acceso.visitante) {
       throw new ConflictException('No se puede actualizar la frecuencia: este registro pertenece a un residente directo.');
+    }
+
+    if (requestedBy?.role === 'Residente') {
+      const residentUsername = requestedBy.username ?? '';
+      const ownerUsername = registro.acceso.visitante.residente?.usuario?.nombre_usuario ?? '';
+
+      if (!residentUsername || residentUsername !== ownerUsername) {
+        throw new ForbiddenException('No tienes permiso para modificar este registro.');
+      }
     }
 
     await this.prisma.visitante.update({
@@ -492,85 +514,110 @@ export class BitacoraService {
 
   // Detalle de registro en bitácora a partir de su ID
 
-  async obtenerDetalleRegistro(id: string) {
-      const registro = await this.prisma.bitacora.findUnique({
-        where: { id_bitacora: id },
-        include: {
-          acceso: {
-            include: {
-              visitante: {
-                include: {
-                  servicio: {
-                    select: { nombre_empresa: true, nombre_servicio: true, cargo: true, placas: true, tipo_servicio: true },
+  async obtenerDetalleRegistro(
+    id: string,
+    requestedBy?: { username?: string; role?: string },
+  ) {
+    const registro = await this.prisma.bitacora.findUnique({
+      where: { id_bitacora: id },
+      include: {
+        acceso: {
+          include: {
+            visitante: {
+              include: {
+                residente: {
+                  include: {
+                    usuario: true,
+                  },
+                },
+                servicio: {
+                  select: {
+                    nombre_empresa: true,
+                    nombre_servicio: true,
+                    cargo: true,
+                    placas: true,
+                    tipo_servicio: true,
                   },
                 },
               },
-              usuario: {
-                include: { persona: true },
-              },
+            },
+            usuario: {
+              include: { persona: true },
             },
           },
-          guardia: true,
         },
-      });
+        guardia: true,
+      },
+    });
 
-      if (!registro) {
-        throw new NotFoundException('Registro no encontrado');
-      }
-
-      // 4. CORRECCIÓN: Tratamiento seguro para nulos
-      const visitante = registro.acceso.visitante;
-      const isResidenteDirecto = !visitante; // Evaluamos si es un residente sin visitante
-
-      let tipoPersona: string;
-      if (isResidenteDirecto) {
-        tipoPersona = 'residente';
-      } else if (visitante.id_servicio) {
-        tipoPersona = 'proveedor';
-      } else if (visitante.es_frecuente) {
-        tipoPersona = 'empleado_domestico';
-      } else {
-        tipoPersona = 'visitante';
-      }
-
-      let metodoAcceso: string;
-      if (isResidenteDirecto) {
-        metodoAcceso = registro.acceso.codigo_qr ? 'QR' : 'manual';
-      } else if (visitante.es_frecuente) {
-        metodoAcceso = 'lista';
-      } else if (registro.acceso.codigo_qr) {
-        metodoAcceso = 'QR';
-      } else {
-        metodoAcceso = 'manual';
-      }
-
-      const estado = registro.fecha_hora_salida ? 'salida' : 'entrada';
-
-      return {
-        id: registro.id_bitacora,
-        // Usamos el nombre del residente si visitante es null
-        nombre: isResidenteDirecto ? registro.acceso.usuario?.persona?.nombre : visitante.nombre,
-        tipo_persona: tipoPersona,
-        residente_asociado: {
-          nombre: registro.acceso.usuario?.persona?.nombre || '-',
-          avatar_url: registro.acceso.usuario?.persona?.url_imagen || null,
-        },
-        fecha_entrada: registro.fecha_hora_entrada,
-        fecha_salida: registro.fecha_hora_salida || '-',
-        metodo_acceso: metodoAcceso,
-        guardia_registro: registro.guardia?.nombre || 'No registrado',
-        estado,
-        // Usamos ?. (optional chaining) para evitar el error en TypeScript
-        avatar_url: isResidenteDirecto ? registro.acceso.usuario?.persona?.url_imagen : (visitante?.url_imagen || null),
-        empresa: visitante?.servicio?.nombre_empresa || undefined,
-        motivo: visitante?.motivo || undefined,
-        servicio_nombre: visitante?.servicio?.nombre_servicio || undefined,
-        cargo_empleado: visitante?.servicio?.cargo || undefined,
-        placas: visitante?.servicio?.placas || undefined,
-        qr_utilizado: registro.acceso.codigo_qr || null,
-        notas: registro.comentario ?? 'Sin comentarios',
-        comentario_salida: registro.comentario_salida || null,
-        hora_validacion: registro.fecha_hora_entrada,
-      };
+    if (!registro) {
+      throw new NotFoundException('Registro no encontrado');
     }
+
+    if (requestedBy?.role === 'Residente') {
+      const residentUsername = requestedBy.username ?? '';
+      const ownerUsername = registro.acceso.visitante
+        ? registro.acceso.visitante.residente?.usuario?.nombre_usuario ?? ''
+        : registro.acceso.usuario?.nombre_usuario ?? '';
+
+      if (!residentUsername || residentUsername !== ownerUsername) {
+        throw new ForbiddenException('No tienes permiso para ver este registro.');
+      }
+    }
+
+    // 4. CORRECCIÓN: Tratamiento seguro para nulos
+    const visitante = registro.acceso.visitante;
+    const isResidenteDirecto = !visitante; // Evaluamos si es un residente sin visitante
+
+    let tipoPersona: string;
+    if (isResidenteDirecto) {
+      tipoPersona = 'residente';
+    } else if (visitante.id_servicio) {
+      tipoPersona = 'proveedor';
+    } else if (visitante.es_frecuente) {
+      tipoPersona = 'empleado_domestico';
+    } else {
+      tipoPersona = 'visitante';
+    }
+
+    let metodoAcceso: string;
+    if (isResidenteDirecto) {
+      metodoAcceso = registro.acceso.codigo_qr ? 'QR' : 'manual';
+    } else if (visitante.es_frecuente) {
+      metodoAcceso = 'lista';
+    } else if (registro.acceso.codigo_qr) {
+      metodoAcceso = 'QR';
+    } else {
+      metodoAcceso = 'manual';
+    }
+
+    const estado = registro.fecha_hora_salida ? 'salida' : 'entrada';
+
+    return {
+      id: registro.id_bitacora,
+      // Usamos el nombre del residente si visitante es null
+      nombre: isResidenteDirecto ? registro.acceso.usuario?.persona?.nombre : visitante.nombre,
+      tipo_persona: tipoPersona,
+      residente_asociado: {
+        nombre: registro.acceso.usuario?.persona?.nombre || '-',
+        avatar_url: registro.acceso.usuario?.persona?.url_imagen || null,
+      },
+      fecha_entrada: registro.fecha_hora_entrada,
+      fecha_salida: registro.fecha_hora_salida || '-',
+      metodo_acceso: metodoAcceso,
+      guardia_registro: registro.guardia?.nombre || 'No registrado',
+      estado,
+      // Usamos ?. (optional chaining) para evitar el error en TypeScript
+      avatar_url: isResidenteDirecto ? registro.acceso.usuario?.persona?.url_imagen : (visitante?.url_imagen || null),
+      empresa: visitante?.servicio?.nombre_empresa || undefined,
+      motivo: visitante?.motivo || undefined,
+      servicio_nombre: visitante?.servicio?.nombre_servicio || undefined,
+      cargo_empleado: visitante?.servicio?.cargo || undefined,
+      placas: visitante?.servicio?.placas || undefined,
+      qr_utilizado: registro.acceso.codigo_qr || null,
+      notas: registro.comentario ?? 'Sin comentarios',
+      comentario_salida: registro.comentario_salida || null,
+      hora_validacion: registro.fecha_hora_entrada,
+    };
+  }
 }
