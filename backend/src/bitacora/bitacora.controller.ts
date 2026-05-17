@@ -11,7 +11,7 @@ import {
   BadRequestException,
   Req,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 
 import { BitacoraService } from './bitacora.service';
 
@@ -43,6 +43,10 @@ interface RegistrarSalidaDto {
 
 const bitacoraUpdates$ = new Subject<BitacoraSseEvent>();
 
+// Subjects por usuario (username) para enviar eventos SSE sólo a los
+// residentes que estén suscritos.
+const userSseSubjects = new Map<string, Subject<BitacoraSseEvent>>();
+
 @Controller('bitacora')
 export class BitacoraController {
   constructor(private readonly bitacoraService: BitacoraService) {}
@@ -53,12 +57,25 @@ export class BitacoraController {
   @Sse('updates')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Residente')
-  sse(): Observable<MessageEvent> {
-    return bitacoraUpdates$.asObservable().pipe(
-      map((data) => ({
-        data,
-      })),
-    );
+  sse(@Req() req: AuthenticatedRequest): Observable<MessageEvent> {
+    const username = req.user?.username ?? '';
+
+    let subj = userSseSubjects.get(username);
+    if (!subj) {
+      subj = new Subject<BitacoraSseEvent>();
+      userSseSubjects.set(username, subj);
+    }
+
+    // Cleanup cuando el cliente cierra la conexión
+    const res = req.res as Response | undefined;
+    if (res && typeof res.on === 'function') {
+      res.on('close', () => {
+        subj?.complete();
+        userSseSubjects.delete(username);
+      });
+    }
+
+    return subj.asObservable().pipe(map((data) => ({ data })));
   }
 
   // ---------------------------------------------------------
@@ -219,6 +236,31 @@ export class BitacoraController {
           : `Salida registrada para el registro ${idsProcesados[0]}`,
       timestamp: new Date(),
     });
+
+    // Notificar sólo a los residentes afectados por estos IDs
+    try {
+      const residentUsernames =
+        await this.bitacoraService.getResidentUsernamesForRegistroIds(
+          idsProcesados,
+        );
+
+      const evento: BitacoraSseEvent = {
+        tipo_evento: 'SALIDA_REGISTRO',
+        ids_afectados: idsProcesados,
+        mensaje:
+          idsProcesados.length > 1
+            ? `${idsProcesados.length} salidas registradas masivamente`
+            : `Salida registrada para el registro ${idsProcesados[0]}`,
+        timestamp: new Date(),
+      };
+
+      for (const u of residentUsernames) {
+        const s = userSseSubjects.get(u);
+        if (s) s.next(evento);
+      }
+    } catch {
+      // No bloqueamos la respuesta si la notificación falla, sólo registramos.
+    }
 
     return {
       success: true,

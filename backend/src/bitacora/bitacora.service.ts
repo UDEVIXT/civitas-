@@ -732,4 +732,60 @@ export class BitacoraService {
       hora_validacion: registro.fecha_hora_entrada,
     };
   }
+
+  // Devuelve los nombres de usuario de los residentes asociados a una lista
+  // de `id_bitacora`. Esto se usa para notificar sólo a los residentes
+  // cuyos registros se vieron afectados por una operación (por ejemplo,
+  // registrar salida).
+  async getResidentUsernamesForRegistroIds(ids: string[]) {
+    if (!ids || ids.length === 0) return [];
+
+    const registros = (await this.prisma.bitacora.findMany({
+      where: { id_bitacora: { in: ids } },
+      select: {
+        id_bitacora: true,
+        acceso: {
+          select: {
+            visitante: {
+              select: {
+                residente: {
+                  select: { usuario: { select: { nombre_usuario: true } } },
+                },
+              },
+            },
+            usuario: { select: { nombre_usuario: true } },
+          },
+        },
+      },
+    })) as Array<{
+      id_bitacora: string;
+      acceso: {
+        visitante?: {
+          residente?: { usuario?: { nombre_usuario?: string } };
+        };
+        usuario?: { nombre_usuario?: string } | null;
+      };
+    }>;
+
+    const usernames = new Set<string>();
+    for (const r of registros) {
+      const visitante = r.acceso?.visitante;
+      if (
+        visitante &&
+        visitante.residente &&
+        visitante.residente.usuario &&
+        visitante.residente.usuario.nombre_usuario
+      ) {
+        usernames.add(visitante.residente.usuario.nombre_usuario);
+      } else if (
+        r.acceso &&
+        r.acceso.usuario &&
+        r.acceso.usuario.nombre_usuario
+      ) {
+        usernames.add(r.acceso.usuario.nombre_usuario);
+      }
+    }
+
+    return Array.from(usernames);
+  }
 }
