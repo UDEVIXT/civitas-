@@ -48,7 +48,7 @@ export class BitacoraService {
         OR: [
           // 1. Si es visitante, busca en su nombre
           { visitante: { nombre: { contains: search, mode: 'insensitive' } } },
-          
+
           // 2. Si NO es visitante (residente directo), busca en el nombre del usuario
           {
             AND: [
@@ -70,7 +70,7 @@ export class BitacoraService {
               residente: { vivienda: { numero_vivienda: { startsWith: residencia, mode: 'insensitive' } } }
             }
           },
-          
+
           // 2. Si NO es visitante (residente directo), evaluamos su propia vivienda
           {
             AND: [
@@ -122,7 +122,7 @@ export class BitacoraService {
           break;
         case 'residente':
           accesoFiltros.push({
-            id_visitante: null, 
+            id_visitante: null,
           });
           break;
         default:
@@ -293,7 +293,7 @@ export class BitacoraService {
         mensaje: `Se registraron ${resultado.count} salidas exitosamente.`,
         cantidad: resultado.count,
       };
-      
+
     } catch (error) {
       if (
         error instanceof NotFoundException ||
@@ -306,7 +306,7 @@ export class BitacoraService {
       );
     }
   }
-  
+
 
   async actualizarFrecuenciaVisitante(
     idBitacora: string,
@@ -405,11 +405,15 @@ export class BitacoraService {
 
     // FILTRO TIPO
     if (personType === 'visitante') {
+      // Visitante: debe ser NO frecuente y NO pertenecer a un servicio (id_servicio null)
+      where.acceso.visitante.es_frecuente = false;
       where.acceso.visitante.id_servicio = null;
     } else if (personType === 'proveedor') {
       where.acceso.visitante.id_servicio = { not: null };
     } else if (personType === 'empleado') {
+      // Solo empleados: deben ser frecuentes y NO pertenecer a un servicio (id_servicio null)
       where.acceso.visitante.es_frecuente = true;
+      where.acceso.visitante.id_servicio = null;
     }
 
     // FILTRO FECHAS
