@@ -249,6 +249,7 @@ export class BitacoraService {
   }
 
   // HU-1.9.1: Registrar salida (Individual o Masiva)
+  // HU-1.9.1: Registrar salida (Individual o Masiva)
   async registrarSalida(
     id_bitacora: string | string[],
     id_guardia: string,
@@ -281,8 +282,30 @@ export class BitacoraService {
         },
       });
 
-    return salidaRegistrada;
+      if (resultado.count === 0) {
+        throw new ConflictException(
+          'No se encontraron registros pendientes de salida, o ya han sido registrados previamente.',
+        );
+      }
+
+      return {
+        mensaje: `Se registraron ${resultado.count} salidas exitosamente.`,
+        cantidad: resultado.count,
+      };
+      
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ConflictException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Error interno del servidor al registrar salida.',
+      );
+    }
   }
+  
 
   async actualizarFrecuenciaVisitante(idBitacora: string, esFrecuente: boolean) {
     const registro = await this.prisma.bitacora.findUnique({
@@ -298,6 +321,11 @@ export class BitacoraService {
 
     if (!registro) {
       throw new NotFoundException('Registro no encontrado.');
+    }
+
+    // NUEVO: Aislamiento estricto para evitar TS18047
+    if (!registro.acceso.visitante) {
+      throw new ConflictException('No se puede actualizar la frecuencia: este registro pertenece a un residente directo.');
     }
 
     await this.prisma.visitante.update({
@@ -338,7 +366,7 @@ export class BitacoraService {
         visitante: {
           residente: {
             usuario: {
-              id_usuario: residentUserId,
+              nombre_usuario: residentUserId,
             },
           },
         },
@@ -418,8 +446,13 @@ export class BitacoraService {
     ]);
 
     // Transform to include tipo_persona
+    // Transform to include tipo_persona
     const data = bitacoras.map((bitacora) => {
       const visitante = bitacora.acceso.visitante;
+
+      // NUEVO: Validación explícita para satisfacer al compilador de TypeScript
+      if (!visitante) return null;
+
       let tipoPersona: 'visitante' | 'empleado' | 'proveedor';
 
       if (visitante.id_servicio) {
@@ -444,7 +477,7 @@ export class BitacoraService {
         },
         es_frecuente: visitante.es_frecuente,
       };
-    });
+    }).filter((item) => item !== null); // NUEVO: Filtramos los valores nulos del arreglo resultante
 
     return {
       data,
@@ -458,28 +491,6 @@ export class BitacoraService {
   }
 
   // Detalle de registro en bitácora a partir de su ID
-      if (resultado.count === 0) {
-        throw new ConflictException(
-          'No se encontraron registros pendientes de salida, o ya han sido registrados previamente.',
-        );
-      }
-
-      return {
-        mensaje: `Se registraron ${resultado.count} salidas exitosamente.`,
-        cantidad: resultado.count,
-      };
-    } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof ConflictException
-      ) {
-        throw error;
-      }
-      throw new InternalServerErrorException(
-        'Error interno del servidor al registrar salida.',
-      );
-    }
-  }
 
   async obtenerDetalleRegistro(id: string) {
       const registro = await this.prisma.bitacora.findUnique({

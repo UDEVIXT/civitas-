@@ -4,6 +4,7 @@ import type {
   MiBitacoraFilters,
   MiBitacoraResponse,
 } from "../types";
+import apiClient from "@/api/axios";
 
 function mapDetalleResponse(payload: MiBitacoraDetalleResponse): MiBitacoraDetalle {
   const detail = payload.data as unknown as {
@@ -42,53 +43,37 @@ function mapDetalleResponse(payload: MiBitacoraDetalleResponse): MiBitacoraDetal
   };
 }
 
-function buildQuery(filters: MiBitacoraFilters) {
-  const params = new URLSearchParams();
+function buildQueryObject(filters: MiBitacoraFilters) {
+  const params: Record<string, string | number | undefined> = {};
 
-  if (filters.residentUserId?.trim()) {
-    params.set("residentUserId", filters.residentUserId.trim());
-  }
+  if (filters.residentUserId?.trim()) params.residentUserId = filters.residentUserId.trim();
+  if (filters.residentName?.trim()) params.residentName = filters.residentName.trim();
 
-  if (filters.residentName?.trim()) {
-    params.set("residentName", filters.residentName.trim());
-  }
+  params.page = filters.page ?? 1;
+  params.limit = filters.limit ?? 10;
+  params.sort = filters.sort ?? "desc";
 
-  params.set("page", String(filters.page ?? 1));
-  params.set("limit", String(filters.limit ?? 10));
-  params.set("sort", filters.sort ?? "desc");
+  if (filters.search?.trim()) params.search = filters.search.trim();
+  if (filters.personType) params.personType = filters.personType;
+  if (filters.dateFrom) params.dateFrom = filters.dateFrom;
+  if (filters.dateTo) params.dateTo = filters.dateTo;
 
-  if (filters.search?.trim()) {
-    params.set("search", filters.search.trim());
-  }
-
-  if (filters.personType) {
-    params.set("personType", filters.personType);
-  }
-
-  if (filters.dateFrom) {
-    params.set("dateFrom", filters.dateFrom);
-  }
-
-  if (filters.dateTo) {
-    params.set("dateTo", filters.dateTo);
-  }
-
-  return params.toString();
+  return params;
 }
 
 export async function getMiBitacora(filters: MiBitacoraFilters) {
-  const query = buildQuery(filters);
-  const response = await fetch(`/api/mi-bitacora?${query}`, {
-    method: "GET",
-    cache: "no-store",
+  const params = buildQueryObject(filters);
+
+  const response = await apiClient.get<MiBitacoraResponse>("/bitacora/mi-bitacora", {
+    params,
+    // disable axios cache if needed via headers
+    headers: { "Cache-Control": "no-store" },
   });
 
-  const payload = (await response.json()) as MiBitacoraResponse & {
-    message?: string;
-  };
+  const payload = response.data as MiBitacoraResponse & { message?: string };
 
-  if (!response.ok || !payload.success) {
-    throw new Error(payload.message ?? "No fue posible cargar la bitacora.");
+  if (!payload || !payload.success) {
+    throw new Error(payload?.message ?? "No fue posible cargar la bitacora.");
   }
 
   return payload;
@@ -109,20 +94,20 @@ export async function getMiBitacoraDetalle(
     params.set("residentName", residentName.trim());
   }
 
-  const response = await fetch(
-    `/api/mi-bitacora/${idBitacora}?${params.toString()}`,
-    {
-      method: "GET",
-      cache: "no-store",
-    },
-  );
+  const query = new URLSearchParams();
+  if (params.toString()) {
+    // no-op, params already built above
+  }
 
-  const payload = (await response.json()) as MiBitacoraDetalleResponse & {
-    message?: string;
-  };
+  const response = await apiClient.get<MiBitacoraDetalleResponse>(`/bitacora/${idBitacora}`, {
+    params: Object.fromEntries(params.entries ? params.entries() : []),
+    headers: { "Cache-Control": "no-store" },
+  });
 
-  if (!response.ok || !payload.success) {
-    throw new Error(payload.message ?? "No fue posible cargar el detalle.");
+  const payload = response.data as MiBitacoraDetalleResponse & { message?: string };
+
+  if (!payload || !payload.success) {
+    throw new Error(payload?.message ?? "No fue posible cargar el detalle.");
   }
 
   return {
@@ -147,26 +132,20 @@ export async function actualizarFrecuenciaVisitante(
     params.set("residentName", residentName.trim());
   }
 
-  const response = await fetch(
-    `/api/mi-bitacora/${idBitacora}/frecuencia?${params.toString()}`,
-    {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ es_frecuente: esFrecuente }),
-      cache: "no-store",
-    },
-  );
+  const paramsObj: Record<string, string> = {};
+  if (residentUserId?.trim()) paramsObj.residentUserId = residentUserId.trim();
+  if (residentName?.trim()) paramsObj.residentName = residentName.trim();
 
-  const payload = (await response.json()) as {
+  const response = await apiClient.patch<{
     success: boolean;
     message?: string;
     es_frecuente?: boolean;
-  };
+  }>(`/bitacora/${idBitacora}/frecuencia`, { es_frecuente: esFrecuente }, { params: paramsObj });
 
-  if (!response.ok || !payload.success) {
-    throw new Error(payload.message ?? "No fue posible actualizar la frecuencia.");
+  const payload = response.data;
+
+  if (!payload || !payload.success) {
+    throw new Error(payload?.message ?? "No fue posible actualizar la frecuencia.");
   }
 
   return payload;
