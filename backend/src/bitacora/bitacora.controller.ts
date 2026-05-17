@@ -40,6 +40,39 @@ export class BitacoraController {
   }
 
   // ---------------------------------------------------------
+  // GET MI BITACORA (Residente específico)
+  // ---------------------------------------------------------
+  //@UseGuards(JwtAuthGuard, RolesGuard)
+  //@Roles('Residente')
+  @Get('mi-bitacora')
+  async obtenerMiBitacora(
+    @Query('residentUserId') residentUserId?: string,
+    @Query('search') search?: string,
+    @Query('personType') personType?: 'visitante' | 'empleado' | 'proveedor',
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+    @Query('sort') sort?: 'asc' | 'desc',
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+  ) {
+    const data = await this.bitacoraService.obtenerMiBitacora({
+      residentUserId: residentUserId || '',
+      search,
+      personType,
+      dateFrom,
+      dateTo,
+      sort: sort || 'desc',
+      page: Number(page),
+      limit: Number(limit),
+    });
+
+    return {
+      success: true,
+      ...data,
+    };
+  }
+
+  // ---------------------------------------------------------
   // GET BITACORA
   // ---------------------------------------------------------
   @Get()
@@ -89,6 +122,29 @@ export class BitacoraController {
       data: result,
     };
   }
+
+  // ---------------------------------------------------------
+  // ACTUALIZAR FRECUENCIA
+  // ---------------------------------------------------------
+  //@UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Residente')
+  @Patch(':id/frecuencia')
+  async actualizarFrecuencia(
+    @Param('id') id: string,
+    @Body() body: { es_frecuente: boolean },
+  ) {
+    const result = await this.bitacoraService.actualizarFrecuenciaVisitante(
+      id,
+      body.es_frecuente,
+    );
+
+    return {
+      success: true,
+      message: 'Frecuencia actualizada correctamente',
+      data: result,
+    };
+  }
+
   // ---------------------------------------------------------
   // REGISTRAR SALIDA A -> (Todos) POR ROL (GUARDIA)
   // ---------------------------------------------------------

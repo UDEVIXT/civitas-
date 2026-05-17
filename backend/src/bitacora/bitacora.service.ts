@@ -221,13 +221,15 @@ export class BitacoraService {
         motivo: visitante?.motivo ?? 'Sin motivo especificado',
         comentario_salida: item.comentario_salida ?? '',
 
-        tipo_persona: isResidenteDirecto 
-          ? 'residente' 
+        tipo_persona: isResidenteDirecto
+          ? 'residente'
           : (visitante.es_frecuente ? 'empleado_domestico' : (visitante.servicio?.tipo_servicio?.categoria ?? 'visitante')),
 
         residente_asociado: {
-          nombre: isResidenteDirecto 
-            ? (item.acceso.usuario?.residentes?.[0]?.vivienda?.numero_vivienda ?? 'Sin asignar') 
+          // Si es residente directo, buscamos su propia vivienda en el arreglo.
+          // Si es visitante, buscamos la vivienda del residente al que visita.
+          nombre: isResidenteDirecto
+            ? (item.acceso.usuario?.residentes?.[0]?.vivienda?.numero_vivienda ?? 'Sin asignar')
             : (visitante?.residente?.vivienda?.numero_vivienda ?? '-'),
           avatar_url: null,
         },
@@ -246,6 +248,7 @@ export class BitacoraService {
     };
   }
 
+  // HU-1.9.1: Registrar salida (Individual o Masiva)
   // HU-1.9.1: Registrar salida (Individual o Masiva)
   async registrarSalida(
     id_bitacora: string | string[],
@@ -289,6 +292,7 @@ export class BitacoraService {
         mensaje: `Se registraron ${resultado.count} salidas exitosamente.`,
         cantidad: resultado.count,
       };
+      
     } catch (error) {
       if (
         error instanceof NotFoundException ||
@@ -301,6 +305,192 @@ export class BitacoraService {
       );
     }
   }
+  
+
+  async actualizarFrecuenciaVisitante(idBitacora: string, esFrecuente: boolean) {
+    const registro = await this.prisma.bitacora.findUnique({
+      where: { id_bitacora: idBitacora },
+      include: {
+        acceso: {
+          include: {
+            visitante: true,
+          },
+        },
+      },
+    });
+
+    if (!registro) {
+      throw new NotFoundException('Registro no encontrado.');
+    }
+
+    // NUEVO: Aislamiento estricto para evitar TS18047
+    if (!registro.acceso.visitante) {
+      throw new ConflictException('No se puede actualizar la frecuencia: este registro pertenece a un residente directo.');
+    }
+
+    await this.prisma.visitante.update({
+      where: { id_visitante: registro.acceso.visitante.id_visitante },
+      data: { es_frecuente: esFrecuente },
+    });
+
+    return {
+      id_bitacora: registro.id_bitacora,
+      es_frecuente: esFrecuente,
+    };
+  }
+
+  // Obtener bitácora de un residente específico con filtros
+  async obtenerMiBitacora(filters: {
+    residentUserId?: string;
+    search?: string;
+    personType?: 'visitante' | 'empleado' | 'proveedor';
+    dateFrom?: string;
+    dateTo?: string;
+    sort?: 'asc' | 'desc';
+    page: number;
+    limit: number;
+  }) {
+    const {
+      residentUserId,
+      search,
+      personType,
+      dateFrom,
+      dateTo,
+      sort = 'desc',
+      page,
+      limit,
+    } = filters;
+
+    const where: any = {
+      acceso: {
+        visitante: {
+          residente: {
+            usuario: {
+              nombre_usuario: residentUserId,
+            },
+          },
+        },
+      },
+    };
+
+    // SEARCH
+    if (search) {
+      where.acceso.visitante.nombre = {
+        contains: search,
+        mode: 'insensitive',
+      };
+    }
+
+    // FILTRO TIPO
+    if (personType === 'visitante') {
+      where.acceso.visitante.id_servicio = null;
+    } else if (personType === 'proveedor') {
+      where.acceso.visitante.id_servicio = { not: null };
+    } else if (personType === 'empleado') {
+      where.acceso.visitante.es_frecuente = true;
+    }
+
+    // FILTRO FECHAS
+    if (dateFrom || dateTo) {
+      where.fecha_hora_entrada = {};
+      if (dateFrom) {
+        where.fecha_hora_entrada.gte = new Date(dateFrom);
+      }
+      if (dateTo) {
+        where.fecha_hora_entrada.lte = new Date(dateTo);
+      }
+    }
+
+    const orderBy: any = {
+      fecha_hora_entrada: sort === 'asc' ? 'asc' : 'desc',
+    };
+
+    const [bitacoras, total] = await Promise.all([
+      this.prisma.bitacora.findMany({
+        where,
+        include: {
+          acceso: {
+            select: {
+              codigo_qr: true,
+              visitante: {
+                select: {
+                  nombre: true,
+                  es_frecuente: true,
+                  id_servicio: true,
+                  url_imagen: true,
+                  servicio: {
+                    select: {
+                      tipo_servicio: {
+                        select: {
+                          categoria: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          guardia: {
+            select: {
+              nombre: true,
+              id_guardia: true,
+            },
+          },
+        },
+        orderBy,
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.bitacora.count({ where }),
+    ]);
+
+    // Transform to include tipo_persona
+    // Transform to include tipo_persona
+    const data = bitacoras.map((bitacora) => {
+      const visitante = bitacora.acceso.visitante;
+
+      // NUEVO: Validación explícita para satisfacer al compilador de TypeScript
+      if (!visitante) return null;
+
+      let tipoPersona: 'visitante' | 'empleado' | 'proveedor';
+
+      if (visitante.id_servicio) {
+        tipoPersona = 'proveedor';
+      } else if (visitante.es_frecuente) {
+        tipoPersona = 'empleado';
+      } else {
+        tipoPersona = 'visitante';
+      }
+
+      return {
+        id_bitacora: bitacora.id_bitacora,
+        id_visitante: visitante.nombre, // placeholder for frontend mapping
+        nombre_persona: visitante.nombre,
+        tipo_persona: tipoPersona,
+        fecha_hora_entrada: bitacora.fecha_hora_entrada.toISOString(),
+        fecha_hora_salida: bitacora.fecha_hora_salida?.toISOString() || null,
+        metodo_acceso: visitante.es_frecuente ? 'lista' : (bitacora.acceso.codigo_qr ? 'QR' : 'manual'),
+        guardia: {
+          id_guardia: bitacora.guardia.id_guardia,
+          nombre: bitacora.guardia.nombre,
+        },
+        es_frecuente: visitante.es_frecuente,
+      };
+    }).filter((item) => item !== null); // NUEVO: Filtramos los valores nulos del arreglo resultante
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  // Detalle de registro en bitácora a partir de su ID
 
   async obtenerDetalleRegistro(id: string) {
       const registro = await this.prisma.bitacora.findUnique({
