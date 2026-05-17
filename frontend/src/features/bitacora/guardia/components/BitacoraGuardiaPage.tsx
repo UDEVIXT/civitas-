@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { ModalRegistrarSalida } from "../components/ModalRegistrarSalida";
 import { bitacoraService } from "@/services/bitacora.service";
+import { toast } from "sonner";
 
 export function BitacoraGuardiaPage() {
   const [isMounted, setIsMounted] = React.useState(false);
@@ -103,6 +104,9 @@ export function BitacoraGuardiaPage() {
       handleSuccess();
     } catch (error) {
       console.error("Error al registrar salidas masivas:", error);
+      toast.error("Error al registrar las salidas masivas. Intenta nuevamente.", {
+        description: "Ocurrió un error al registrar las salidas masivas. Por favor, intenta nuevamente.",
+      });
     } finally {
       setIsMassLoading(false);
     }
@@ -181,8 +185,8 @@ export function BitacoraGuardiaPage() {
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsMassModalOpen(false)} disabled={isMassLoading}>Cancelar</Button>
-            <Button onClick={confirmMassExit} disabled={isMassLoading || selectedIds.length === 0}>
+            <Button variant="outline" onClick={() => setIsMassModalOpen(false)} disabled={isMassLoading} className="cursor-pointer">Cancelar</Button>
+            <Button onClick={confirmMassExit} disabled={isMassLoading || selectedIds.length === 0} className="cursor-pointer">
               {isMassLoading ? "Registrando..." : `Confirmar ${selectedIds.length} Salidas`}
             </Button>
           </div>

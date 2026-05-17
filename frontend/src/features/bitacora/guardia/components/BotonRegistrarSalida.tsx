@@ -16,7 +16,7 @@ export function BotonRegistrarSalida() {
 
     return (
         <>
-            <Button onClick={() => setIsModalOpen(true)} variant="default">
+            <Button onClick={() => setIsModalOpen(true)} variant="default" className="cursor-pointer">
                 Registrar Salida
             </Button>
 

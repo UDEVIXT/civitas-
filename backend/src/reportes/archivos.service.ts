@@ -1,6 +1,12 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import * as WebSocket from 'ws';
+
+// Parche global para Node.js: Simulamos la API nativa de los navegadores
+if (typeof global !== 'undefined') {
+  (global as any).WebSocket = WebSocket;
+}
 
 @Injectable()
 export class ArchivosService {
@@ -16,7 +22,12 @@ export class ArchivosService {
       throw new Error('SUPABASE_URL y SUPABASE_KEY son requeridos');
     }
 
-    this.supabase = createClient(supabaseUrl, supabaseKey);
+    // Inicializamos Supabase limpio, ya que Node.js ahora tiene soporte global para WebSockets
+    this.supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false, // Recomendado para entornos backend puros
+      },
+    });
   }
 
   async subirImagen(archivo: any): Promise<string> {

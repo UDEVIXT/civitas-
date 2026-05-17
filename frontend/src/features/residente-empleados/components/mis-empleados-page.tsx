@@ -15,7 +15,7 @@ export default function MisEmpleadosPage() {
 
   // 3. Le pasas el ID dinámico
   // const idResidenteActivo = user?.id_residente ? String(user.id_residente) : "";
-  const idResidenteActivo = "c70e1942-e3a8-4b97-959b-b1e051b85aa0";
+  const idResidenteActivo = "98bbddf7-cfd0-4ef0-b1d9-6355e8bc1603";
 
   const { 
     empleados, 

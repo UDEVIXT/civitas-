@@ -14,6 +14,7 @@ import { ResidenteModule } from './residente/residente.module';
 import { ViviendaModule } from './vivienda/vivienda.module';
 import { APP_GUARD } from '@nestjs/core/constants';
 import { MiEmpleadoModule } from './mis-empleados/mi-empleado.module'; 
+import { MailModule } from './mail/mail.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -34,7 +35,7 @@ import { MiEmpleadoModule } from './mis-empleados/mi-empleado.module';
         ttl: 60000,
         limit: 50,
       },
-    ]),
+    ]), MailModule,
   ],
   controllers: [AppController],
   providers: [
