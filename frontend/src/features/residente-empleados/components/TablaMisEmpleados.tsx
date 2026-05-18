@@ -1,5 +1,6 @@
 "use client";
-import { Pencil, Clock } from "lucide-react";
+
+import { Pencil, Clock, UserMinus, UserCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,11 +33,13 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
+// 1. Modificamos el tipo de las Props para recibir la función onBaja
 type MisEmpleadosTableProps = {
   items: EmpleadoDomestico[];
   isLoading: boolean;
   onEdit: (empleado: EmpleadoDomestico) => void;
   onVerHorario: (empleado: EmpleadoDomestico) => void;
+  onBaja: (empleado: EmpleadoDomestico) => void; // <-- Nueva prop requerida
 };
 
 export function TablaMisEmpleados({
@@ -44,6 +47,7 @@ export function TablaMisEmpleados({
   isLoading,
   onEdit,
   onVerHorario,
+  onBaja, // <-- Desestructuramos la nueva prop
 }: MisEmpleadosTableProps) {
   if (isLoading) {
     return (
@@ -57,94 +61,118 @@ export function TablaMisEmpleados({
 
   return (
     <div className="rounded-2xl border border-border bg-white shadow-sm overflow-x-auto">
-    <div className="min-w-[600px]"> 
-       <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/30">
-            <TableHead className="w-90">Nombre</TableHead>
-            <TableHead>Estado</TableHead>
-            <TableHead>Horario Autorizado</TableHead>
-            <TableHead className="text-right">Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {items.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={4}
-                className="py-10 text-center text-sm text-muted-foreground"
-              >
-                No tienes empleados domésticos registrados.
-              </TableCell>
+      <div className="min-w-[600px]"> 
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/30">
+              <TableHead className="w-90">Nombre</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Horario Autorizado</TableHead>
+              <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
-          ) : (
-            items.map((empleado, index) => {
-              const isActive = empleado.servicio?.activo;
-              return (
-                <TableRow
-                  key={empleado.id_visitante}
-                  className="hover:bg-muted/10 transition-colors"
+          </TableHeader>
+          <TableBody>
+            {items.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={4}
+                  className="py-10 text-center text-sm text-muted-foreground"
                 >
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div
+                  No tienes empleados domésticos registrados.
+                </TableCell>
+              </TableRow>
+            ) : (
+              items.map((empleado, index) => {
+                const isActive = empleado.servicio?.activo;
+                return (
+                  <TableRow
+                    key={empleado.id_visitante}
+                    className="hover:bg-muted/10 transition-colors"
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={cn(
+                            "flex size-10 items-center justify-center rounded-full text-sm font-semibold",
+                            avatarPalette[index % avatarPalette.length],
+                          )}
+                        >
+                          {getInitials(empleado.nombre)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">
+                            {empleado.nombre}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {empleado.telefono || "Sin teléfono"}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
                         className={cn(
-                          "flex size-10 items-center justify-center rounded-full text-sm font-semibold",
-                          avatarPalette[index % avatarPalette.length],
+                          "rounded-full px-2 py-0 border",
+                          isActive
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : "border-zinc-200 bg-zinc-50 text-zinc-500",
                         )}
                       >
-                        {getInitials(empleado.nombre)}
+                        {isActive ? "Activo" : "Suspendido"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onVerHorario(empleado)}
+                      >
+                        <Clock className="size-4" />
+                        <span className="ml-2">Ver horario</span>
+                      </Button>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {/* Botón de Editar */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onEdit(empleado)}
+                          className="rounded-full hover:bg-amber-50 hover:text-amber-600"
+                          title="Editar empleado"
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+
+                        {/* 2. Nuevo Botón Dinámico: Suspender o Reactivar */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onBaja(empleado)}
+                          className={cn(
+                            "rounded-full",
+                            isActive
+                              ? "hover:bg-red-50 hover:text-red-600"
+                              : "hover:bg-emerald-50 hover:text-emerald-600"
+                          )}
+                          title={isActive ? "Suspender acceso" : "Reactivar acceso"}
+                        >
+                          {isActive ? (
+                            <UserMinus className="size-4" />
+                          ) : (
+                            <UserCheck className="size-4" />
+                          )}
+                        </Button>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">
-                          {empleado.nombre}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {empleado.telefono || "Sin teléfono"}
-                        </p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "rounded-full px-2 py-0 border",
-                        isActive
-                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                          : "border-zinc-200 bg-zinc-50 text-zinc-500",
-                      )}
-                    >
-                      {isActive ? "Activo" : "Inactivo"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onVerHorario(empleado)}
-                    >
-                      <Clock className="size-4" />
-                      <span className="ml-2">Ver horario</span>
-                    </Button>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onEdit(empleado)}
-                      className="rounded-full hover:bg-amber-50 hover:text-amber-600"
-                    >
-                      <Pencil className="size-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })
-          )}
-        </TableBody>
-      </Table>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
-</div>
   );
 }

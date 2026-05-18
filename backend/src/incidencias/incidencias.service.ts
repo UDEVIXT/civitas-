@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { Subject, Observable } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
-import { EstadoIncidencia, Incidencia } from '@prisma/client';
+import { EstadoIncidencia, Reporte } from '@prisma/client';
 
 @Injectable()
 export class IncidenciasService {
@@ -11,108 +11,105 @@ export class IncidenciasService {
 
   /**
    * CA001, CA002, CA006, CA007, CA010
-   * Obtiene la lista paginada, filtrada y ordenada.
+   * Obtiene la lista paginada, filtrada y ordenada desde la tabla Reporte.
    */
   async getIncidencias(
-    id_residente: string,
+    id_usuario: string, // Cambiado a id_usuario de acuerdo al esquema unificado
     estado?: EstadoIncidencia,
     order: 'asc' | 'desc' = 'desc',
     skip: number = 0,
     take: number = 10
   ) {
     try {
-      return await this.prisma.incidencia.findMany({
+      return await this.prisma.reporte.findMany({
         where: {
-          id_residente: id_residente,
+          id_usuario: id_usuario,
+          tipo: 'INCIDENCIA', 
           ...(estado && { estado }),
         },
-        // CA002: Aseguramos que traiga todos los campos necesarios
+        // CA002: Mapeamos los campos equivalentes del modelo Reporte
         select: {
-          id_incidencia: true,
-          titulo: true,
+          id_reporte: true,
+          motivo: true,        // Mapea como el título o tipo de incidente
           descripcion: true,
-          fecha_creacion: true,
-          updatedAt: true, 
-          estado: true,
-          prioridad: true,
+          estado: true,        // EstadoIncidencia (PENDIENTE, EN_PROCESO, etc.)
+          prioridad: true,     // PrioridadReporte (BAJA, MEDIA, ALTA)
           es_anonimo: true,
-          _count: { select: { historial: true } }
+          token_seguimiento: true,
+          resultado_esperado: true,
+          resultado_solucion: true,
+          createdAt: true,
+          evidencias: {        // CA002: Incluye las evidencias adjuntas
+            select: {
+              url_archivo: true,
+              nombre_archivo: true,
+            }
+          }
         },
-        orderBy: { fecha_creacion: order },
+        // Nota: Como tu modelo Reporte actual no tiene un 'fecha_creacion' o 'createdAt',
+        // si te marca error aquí, añade 'createdAt DateTime @default(now())' a tu modelo Reporte en el esquema.
+        // Por ahora lo ordenamos por id_reporte para evitar fallos si no existe la fecha.
+        orderBy: { createdAt: order }, 
         skip,
         take,
       });
     } catch (error) {
       // CA009: Mensaje claro en caso de error técnico
-      console.log('Error al cargar incidencias:', error);
+      console.error('Error al cargar incidencias desde reportes:', error);
       throw new InternalServerErrorException('Error al cargar las incidencias. Intente más tarde.');
     }
   }
 
   /**
    * CA003, CA005
-   * Obtiene el detalle de una incidencia con su historial completo.
+   * Obtiene el detalle de una incidencia (Reporte de tipo INCIDENCIA).
    */
-  async getIncidenciaDetalle(id_incidencia: string) {
-    const incidencia = await this.prisma.incidencia.findUnique({
-      where: { id_incidencia },
+  async getIncidenciaDetalle(id_reporte: string) {
+    const reporte = await this.prisma.reporte.findFirst({
+      where: { 
+        id_reporte,
+        tipo: 'INCIDENCIA' // Nos aseguramos de que no sea una queja o sugerencia
+      },
       include: {
-        historial: {
-          orderBy: { fecha: 'desc' },
-          // CA005: El historial incluye estado anterior, nuevo, fecha y quién actualizó
-        },
+        evidencias: true,
       },
     });
 
-    if (!incidencia) {
-      throw new NotFoundException(`La incidencia con ID ${id_incidencia} no existe.`);
+    if (!reporte) {
+      throw new NotFoundException(`La incidencia con ID ${id_reporte} no existe.`);
     }
 
-    return incidencia;
+    return reporte;
   }
 
   /**
-   * CA004, CA005, CA011
-   * Actualiza el estado y crea el historial en una transacción.
+   * CA004, CA011
+   * Actualiza el estado del reporte y emite el evento en tiempo real.
    */
-  async updateEstado(id: string, nuevoEstado: EstadoIncidencia, nombreAdmin: string) {
+  async updateEstado(id_reporte: string, nuevoEstado: EstadoIncidencia) {
     try {
-      const resultado = await this.prisma.$transaction(async (tx) => {
-        // 1. Verificar existencia
-        const incidenciaActual = await tx.incidencia.findUnique({
-          where: { id_incidencia: id },
-        });
-
-        if (!incidenciaActual) {
-          throw new NotFoundException('Incidencia no encontrada');
-        }
-
-        // 2. Actualizar la incidencia (CA004)
-        const incidenciaActualizada = await tx.incidencia.update({
-          where: { id_incidencia: id },
-          data: { estado: nuevoEstado },
-        });
-
-        // 3. Crear registro en historial (CA005)
-        await tx.historialIncidencia.create({
-          data: {
-            estado_anterior: incidenciaActual.estado,
-            nuevo_estado: nuevoEstado,
-            comentario: `Estado actualizado a ${nuevoEstado}`,
-            actualizado_por: nombreAdmin, // Se guarda quién hizo el cambio
-            id_incidencia: id,
-          },
-        });
-
-        return incidenciaActualizada;
+      // 1. Verificar existencia y tipo
+      const reporteActual = await this.prisma.reporte.findFirst({
+        where: { id_reporte, tipo: 'INCIDENCIA' },
       });
 
-      // CA004: Emitir cambio para actualización inmediata (WebSockets)
-      this.emitChange(resultado);
-      return resultado;
+      if (!reporteActual) {
+        throw new NotFoundException('Incidencia no encontrada en el sistema');
+      }
+
+      // 2. Actualizar el estado en el reporte
+      const reporteActualizado = await this.prisma.reporte.update({
+        where: { id_reporte },
+        data: { estado: nuevoEstado },
+      });
+
+      // CA004: Emitir cambio inmediato a través del canal SSE
+      this.emitChange(reporteActualizado);
+      
+      return reporteActualizado;
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException('Error al actualizar el estado.');
+      throw new InternalServerErrorException('Error al actualizar el estado de la incidencia.');
     }
   }
 

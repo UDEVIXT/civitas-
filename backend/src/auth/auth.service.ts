@@ -11,7 +11,7 @@ import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthGateway } from '../notificacion/gateways/auth.gateway';
 import { Request } from 'express';
-
+import { MailerService } from '@nestjs-modules/mailer';
 function detectarDispositivo(userAgent?: string) {
   if (!userAgent) {
     return 'Desconocido';
@@ -42,6 +42,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly authGateway: AuthGateway,
+    private readonly mailerService: MailerService,
   ) {}
 
   async login(
@@ -210,18 +211,20 @@ export class AuthService {
   // 1. Genera y guarda el código (Cumple CA001, CA002, CA003)
   async forgotPassword(identificador: string) {
     try {
-      // Nota: Aquí busco por 'nombre_usuario'. Si en tu BD tienes 'correo' o 'telefono',
-      // ajusta el 'where' para buscar en esos campos específicos.
-      const user = await this.prisma.usuario.findFirst({
-        where: { nombre_usuario: identificador },
-      });
+      // CA001: Verificar que el usuario exista (por username O por correo)
+    const user = await this.prisma.usuario.findFirst({
+      where: {
+        OR: [
+          { nombre_usuario: identificador },
+          { correo: identificador } // Ajusta 'correo' al nombre real de tu columna en schema.prisma
+        ],
+      },
+    });
 
-      if (!user) {
-        // CA002: Mensaje indicando que no existe el usuario
-        throw new NotFoundException(
-          'No existe un usuario registrado con esa información.',
-        );
-      }
+    if (!user) {
+      // Retornamos éxito simulado para evitar fugas de información (User Enumeration)
+      return { message: 'Si el dato existe, se ha enviado un código de verificación.' };
+    }
 
       // Generar un código numérico seguro de 6 dígitos
       const codigo = crypto.randomInt(100000, 999999).toString();
@@ -239,45 +242,65 @@ export class AuthService {
         },
       });
 
-      // CA003: Simulación de envío del código (Aquí luego irá nodemailer o Twilio)
-      console.log(
-        `[SIMULACIÓN - CORREO/SMS] Enviando código de recuperación al usuario ${identificador}: ${codigo}`,
-      );
+      await this.mailerService.sendMail({
+        to: user.correo, // Asumiendo que el 'identificador' es un correo
+        subject: 'Código de Recuperación - Civitas',
+        template: './recuperacion', // Busca recuperacion.hbs
+        context: {
+          nombre: user.nombre_usuario,
+          codigo: codigo,
+        },
+      });
 
       return {
         message: 'Si el dato existe, se ha enviado un código de verificación.',
       };
     } catch (error) {
+      // --- AÑADE ESTA LÍNEA PARA VER EL ERROR REAL EN LA TERMINAL ---
+      console.error('ERROR REAL DE CORREO:', error); 
+      
       if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException(
-        'Error al procesar la solicitud de recuperación.',
-      );
+      throw new InternalServerErrorException('Error al procesar la solicitud de recuperación.');
     }
   }
 
   // 2. Valida la vigencia del código (Cumple CA004, CA005)
+// 2. Valida la vigencia del código
   async verifyResetCode(identificador: string, codigo: string) {
+    console.log('\n--- DIAGNÓSTICO DE VERIFICACIÓN ---');
+    console.log(`Buscando usuario: [${identificador}] con código: [${codigo}]`);
+
+    // 1. Buscamos SOLO por correo o usuario, usando modo insensible a mayúsculas
     const user = await this.prisma.usuario.findFirst({
       where: {
-        nombre_usuario: identificador,
-        resetPasswordToken: codigo,
+        OR: [
+          { nombre_usuario: identificador },
+          { correo: { equals: identificador, mode: 'insensitive' } } // Ignora mayúsculas
+        ],
       },
     });
 
     if (!user) {
-      throw new UnauthorizedException(
-        'El código es incorrecto o no pertenece a este usuario.',
-      );
+      console.log('❌ FALLO 1: El usuario/correo no existe en la BD.');
+      throw new UnauthorizedException('El correo no existe en el sistema.');
     }
 
-    // CA004: Validación matemática de la fecha de expiración
-    if (user.resetPasswordExpires && user.resetPasswordExpires < new Date()) {
-      throw new UnauthorizedException(
-        'El código ha expirado. Por favor, solicite uno nuevo.',
-      );
+    // 2. Verificamos que el código sea idéntico
+    if (user.resetPasswordToken !== codigo) {
+      console.log(`❌ FALLO 2: Discrepancia de código. Esperaba [${user.resetPasswordToken}], recibió [${codigo}]`);
+      throw new UnauthorizedException('El código introducido es incorrecto.');
     }
 
-    // CA005: El código es correcto y vigente
+    // 3. Verificamos la vigencia del tiempo
+    const ahora = new Date();
+    if (user.resetPasswordExpires && user.resetPasswordExpires < ahora) {
+      console.log(`❌ FALLO 3: Tiempo expirado. Hora BD: ${user.resetPasswordExpires.toISOString()} | Hora Servidor: ${ahora.toISOString()}`);
+      throw new UnauthorizedException('El código ha expirado por tiempo.');
+    }
+
+    console.log('✅ ÉXITO: El código pasó todas las pruebas.');
+    console.log('-----------------------------------\n');
+
     return {
       success: true,
       message: 'Código verificado correctamente. Puede cambiar su contraseña.',
