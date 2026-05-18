@@ -194,6 +194,59 @@ console.log("🚀 [HOOK] El idResidente que llega al hook es:", idResidente);
     setIsHorarioModalOpen(true);
   };
 
+  const handleBajaClick = (empleado: EmpleadoDomestico) => {
+    setSelectedEmpleado(empleado);
+    setBajaMode("deactivate");
+    setMotivoBaja("");
+    setBajaError(null);
+    setIsBajaModalOpen(true);
+  };
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedEmpleado) return Promise.reject("No hay empleado seleccionado");
+      const { default: apiClient } = await import("@/api/axios");
+      
+      const endpoint = `/mi-empleado/${selectedEmpleado.id_visitante}`;
+      
+      if (bajaMode === "deactivate") {
+        const response = await apiClient.put(endpoint, {
+          accion: "baja",
+          data: { motivo: motivoBaja, activo: false }
+        });
+        return response.data;
+      } else {
+        const response = await apiClient.put(endpoint, {
+          accion: "reactivacion",
+          data: { motivo: motivoBaja, activo: true }
+        });
+        return response.data;
+      }
+    },
+    onSuccess: (res: any) => {
+      if (res && (res.success || res.statusCode === 200 || res.status === 200)) {
+        queryClient.invalidateQueries({ queryKey: ["residente-empleados"] });
+        setIsBajaModalOpen(false);
+        toast({
+          title: "Operación exitosa",
+          description: bajaMode === "deactivate" ? "Acceso suspendido correctamente." : "Acceso reactivado.",
+        });
+      } else {
+        setBajaError(res?.message || "Hubo un problema al procesar la solicitud.");
+      }
+    },
+    onError: (error: any) => {
+      const backendMessage = error.response?.data?.message;
+      const finalMessage = Array.isArray(backendMessage) ? backendMessage.join(". ") : backendMessage;
+      setBajaError(finalMessage || "Error al procesar la solicitud.");
+      toast({
+        title: "Error",
+        description: finalMessage || "Error al procesar la solicitud.",
+        variant: "destructive",
+      });
+    }
+  });
+
   return {
     empleados: data?.data || [],
     isLoading,
@@ -212,6 +265,18 @@ console.log("🚀 [HOOK] El idResidente que llega al hook es:", idResidente);
       setIsOpen: setIsHorarioModalOpen,
       selectedEmpleado,
       handleVerHorario,
+    },
+    modalBaja: {
+      isOpen: isBajaModalOpen,
+      setIsOpen: setIsBajaModalOpen,
+      selectedEmpleado,
+      mode: bajaMode,
+      motivo: motivoBaja,
+      setMotivo: setMotivoBaja,
+      isDeleting: deleteMutation.isPending,
+      deleteError: bajaError,
+      handleBajaClick,
+      confirm: () => deleteMutation.mutate(),
     },
   };
 }
