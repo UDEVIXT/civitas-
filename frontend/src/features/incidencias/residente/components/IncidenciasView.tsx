@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 // My components
 import { toast } from "sonner"
@@ -15,6 +15,8 @@ import { useIncidenciaForm } from '../hooks/useIncidenciaForm';
 import { useSubmitIncidencia } from '../hooks/useSubmitIncidencia';
 
 function IncidenciasView() {
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [shouldReset, setShouldReset] = useState(false);
     const { position, setPosition } = useLocationStore();
     const { data: address, isLoading: isAddressLoading } = useReverseGeocoding(position);
     
@@ -25,7 +27,8 @@ function IncidenciasView() {
         setField,
         setErrors,
         clearErrors,
-        validateForm
+        validateForm,
+        resetForm
     } = useIncidenciaForm();
     
     const submitMutation = useSubmitIncidencia();
@@ -84,14 +87,20 @@ function IncidenciasView() {
         if (!isValid) return;
 
         submitMutation.mutate(formData as any, {
-            onSuccess: (data) => {
-                if (data?.success) {
-                    toast.success("Reporte creado exitosamente");
-                }
+            onSuccess: () => {
+                toast.success("Reporte creado exitosamente");
+
+                setTimeout(() => {
+                    resetForm();
+                    setPosition(null);
+                    setIsDialogOpen(false);
+                    setShouldReset(false);
+                }, 1000);
+                setShouldReset(false);
             },
             onError: (error: any) => {
                 toast.error(
-                    error.response?.data?.message || 
+                    error.response?.data?.message ||
                     "Error al crear el reporte"
                 );
             }
@@ -121,6 +130,7 @@ function IncidenciasView() {
 
     return (
         <IncidenciaDialog
+          key={isDialogOpen ? 'open' : 'closed'}
           formData={formData}
           errors={errors}
           address={address}
@@ -133,6 +143,12 @@ function IncidenciasView() {
           onLocationSelect={handleLocationSelect}
           selectedCoords={position ? { longitude: position.lng, latitude: position.lat } : undefined}
           onSubmit={handleSubmit}
+          open={isDialogOpen}
+          onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (open) setShouldReset(true);
+          }}
+          reset={shouldReset}
         />
     );
 }

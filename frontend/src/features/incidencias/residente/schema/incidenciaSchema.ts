@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const IncidenciaSchema = z.object({
     usuario: z.string().min(1, "Debes seleccionar un usuario"),
     tipoReporte: z.string().min(1, "Debes seleccionar un tipo de reporte"),
-    motivo: z.string().min(1, "El motivo es requerido"),
+    motivo: z.string().min(1, "El motivo es requerido").max(100, "No puede exceder los 100 caracteres"),
     descripcion: z.string().min(10, "La descripción debe tener al menos 10 caracteres"),
     ubicacion: z.object({
         lat: z.number(),

@@ -22,15 +22,17 @@ interface LocationPickerProps {
   onMapClick: (lng: number, lat: number) => void;
   onLocationSelect?: (coords: { longitude: number; latitude: number }) => void;
   selectedCoords?: { longitude: number; latitude: number };
+  reset?: boolean;
 }
 
-export function LocationPicker({ 
-  address, 
-  isAddressLoading, 
-  error, 
-  onMapClick, 
+export function LocationPicker({
+  address,
+  isAddressLoading,
+  error,
+  onMapClick,
   onLocationSelect,
-  selectedCoords 
+  selectedCoords,
+  reset
 }: LocationPickerProps) {
   const [manualAddress, setManualAddress] = useState("");
   const [isSearchingAddress, setIsSearchingAddress] = useState(false);
@@ -39,6 +41,16 @@ export function LocationPicker({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const mapRef = useRef<MapLibreGL.Map | null>(null);
+
+  useEffect(() => {
+    if (reset) {
+      setManualAddress("");
+      setCurrentCoords(null);
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setSelectedSuggestionIndex(-1);
+    }
+  }, [reset]);
 
   const handleLocationSelect = useCallback((coords: { longitude: number; latitude: number }) => {
     setCurrentCoords(coords);
