@@ -62,9 +62,13 @@ export class EmpleadoController {
   @Put(':id')
   async update(
     @Param('id') id: string,
-    @Body() body: { accion?: string; data?: any; activo?: boolean; motivo?: string },
+    @Body() body: { accion?: string; data?: any; activo?: boolean; motivo?: string; id_residente?: string },
   ) {
-    const { accion, data, activo, motivo } = body;
+    const { accion, data } = body;
+    // Soporte para peticiones donde los datos vienen en la raíz o dentro del objeto 'data'
+    const activo = body.activo !== undefined ? body.activo : data?.activo;
+    const motivo = body.motivo !== undefined ? body.motivo : data?.motivo;
+    const id_residente = body.id_residente !== undefined ? body.id_residente : data?.id_residente;
 
     // ESCENARIO A: Tu actualización personalizada desde el modal del residente
     if (accion === 'actualizacion_residente') {
@@ -81,9 +85,9 @@ export class EmpleadoController {
         if (!motivo || !motivo.trim()) {
           throw new BadRequestException('El motivo de la baja es requerido');
         }
-        return this.empleadoService.eliminarEmpleado(id, motivo);
+        return this.empleadoService.eliminarEmpleado(id, motivo, id_residente);
       }
-      return this.empleadoService.reactivarEmpleado(id);
+      return this.empleadoService.reactivarEmpleado(id, id_residente);
     }
 
     // Si no entra en ninguna condición válida
