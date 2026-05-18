@@ -33,6 +33,7 @@ interface BitacoraSseEvent {
   tipo_evento: string;
   ids_afectados: string[];
   mensaje: string;
+  comentario_salida?: string;
   timestamp: Date;
 }
 
@@ -234,6 +235,7 @@ export class BitacoraController {
         idsProcesados.length > 1
           ? `${idsProcesados.length} salidas registradas masivamente`
           : `Salida registrada para el registro ${idsProcesados[0]}`,
+      comentario_salida,
       timestamp: new Date(),
     });
 
