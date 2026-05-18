@@ -2,65 +2,37 @@ import apiClient from "@/api/axios";
 
 export type EstadoIncidencia = "PENDIENTE" | "EN_PROCESO" | "RESUELTA" | "CANCELADA";
 
-export type PrioridadIncidencia = "BAJA" | "MEDIA" | "ALTA" | "CRITICA";
-
-export interface HistorialIncidencia {
-  id_historial: string;
-  estado_anterior: EstadoIncidencia;
-  nuevo_estado: EstadoIncidencia;
-  comentario?: string;
-  fecha: string;
-  actualizado_por?: string;
-  id_incidencia: string;
+export interface Evidencia {
+  url_archivo: string;
+  nombre_archivo: string;
 }
 
 export interface Incidente {
-  id_incidencia: string;
-  titulo: string;
+  id_reporte: string;
+  motivo: string;
   descripcion: string;
   estado: EstadoIncidencia;
-  prioridad?: PrioridadIncidencia;
+  prioridad?: string;
   es_anonimo: boolean;
-  fecha_creacion: string;
-  updatedAt: string;
-  id_residente: string;
-  historial: HistorialIncidencia[];
-  ubicacion?: string;
-  fotos?: string[];
-  nombre_residente?: string;
-}
-
-export interface IncidenciasResponse {
-  success: boolean;
-  data: Incidente[];
-  meta: {
-    total: number;
-    page: number;
-    limit: number;
-    total_pages: number;
-  };
-}
-
-export interface IncidenciaDetalleResponse {
-  success: boolean;
-  data: Incidente;
+  token_seguimiento: string | null;
+  resultado_esperado: string | null;
+  resultado_solucion: string | null;
+  createdAt: string;
+  evidencias: Evidencia[];
 }
 
 export interface IncidenciasFiltros {
-  page?: number;
-  limit?: number;
+  usuarioId?: string;
   estado?: EstadoIncidencia;
-  search?: string;
-  fechaInicio?: string;
-  fechaFin?: string;
-  ordenarPor?: "reciente" | "antiguo";
-  [key: string]: any;
+  order?: "asc" | "desc";
+  skip?: number;
+  take?: number;
 }
 
 export const obtenerIncidencias = async (
   filtros: IncidenciasFiltros = {}
-): Promise<IncidenciasResponse> => {
-  const response = await apiClient.get<IncidenciasResponse>("/incidencias", {
+): Promise<Incidente[]> => {
+  const response = await apiClient.get<Incidente[]>("/incidencias", {
     params: filtros,
   });
   return response.data;
@@ -68,9 +40,7 @@ export const obtenerIncidencias = async (
 
 export const obtenerDetalleIncidencia = async (
   id: string
-): Promise<IncidenciaDetalleResponse> => {
-  const response = await apiClient.get<IncidenciaDetalleResponse>(
-    `/incidencias/${id}`
-  );
+): Promise<Incidente> => {
+  const response = await apiClient.get<Incidente>(`/incidencias/${id}`);
   return response.data;
 };
