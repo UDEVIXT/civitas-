@@ -1,6 +1,11 @@
 "use client";
 
-// Components
+import { useCallback, useEffect } from 'react';
+
+// My components
+import { toast } from "sonner"
+
+// Components UI
 import { IncidenciaDialog } from './IncidenciaDialog';
 
 // Hooks
@@ -8,8 +13,6 @@ import { useLocationStore } from '../hooks/useLocationStore';
 import { useReverseGeocoding } from '../hooks/useGeo';
 import { useIncidenciaForm } from '../hooks/useIncidenciaForm';
 import { useSubmitIncidencia } from '../hooks/useSubmitIncidencia';
-import { useCallback, useEffect } from 'react';
-import { toast } from "sonner"
 
 function IncidenciasView() {
     const { position, setPosition } = useLocationStore();
@@ -74,15 +77,26 @@ function IncidenciasView() {
     }, [setPosition, address, setField, errors.ubicacion, setErrors]);
 
     const handleSubmit = useCallback((e: React.FormEvent) => {
-        if (e && e.preventDefault) {
-            e.preventDefault();
-        }
-        
+        e.preventDefault();
+
         const isValid = validateForm();
-        
-        if (isValid && submitMutation && formData) {
-            submitMutation.mutate(formData as any);
-        }
+
+        if (!isValid) return;
+
+        submitMutation.mutate(formData as any, {
+            onSuccess: (data) => {
+                if (data?.success) {
+                    toast.success("Reporte creado exitosamente");
+                }
+            },
+            onError: (error: any) => {
+                toast.error(
+                    error.response?.data?.message || 
+                    "Error al crear el reporte"
+                );
+            }
+        });
+
     }, [validateForm, submitMutation, formData]);
 
     const handleFieldChange = useCallback((field: string, value: any) => {
@@ -104,19 +118,6 @@ function IncidenciasView() {
             });
         }
     }, [address, position, setField]);
-
-    useEffect(() => {
-        if (submitMutation.isSuccess && submitMutation.data?.success) {
-            toast.success("Reporte creado exitosamente");
-        }
-    }, [submitMutation.isSuccess, submitMutation.data]);
-
-    useEffect(() => {
-        if (submitMutation.isError) {
-            const error = submitMutation.error as any;
-            toast.error(error.response?.data?.message || 'Error al crear el reporte');
-        }
-    }, [submitMutation.isError, submitMutation.error]);
 
     return (
         <IncidenciaDialog
