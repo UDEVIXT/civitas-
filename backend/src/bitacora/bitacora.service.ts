@@ -258,6 +258,7 @@ export class BitacoraService {
             },
           },
           guardia: { select: { nombre: true } },
+          guardia_salida: { select: { nombre: true } },
         },
         orderBy,
         skip: (page - 1) * limit,
@@ -326,6 +327,7 @@ export class BitacoraService {
         fecha_salida: item.fecha_hora_salida,
         metodo_acceso: metodoAccesoCalculado,
         guardia_registro: item.guardia.nombre,
+        guardia_salida: item.guardia_salida?.nombre ?? 'Pendiente',
         estado:
           item.fecha_hora_salida === null
             ? tiempoExcedido
@@ -343,7 +345,6 @@ export class BitacoraService {
   }
 
   // HU-1.9.1: Registrar salida (Individual o Masiva)
-  // HU-1.9.1: Registrar salida (Individual o Masiva)
   async registrarSalida(
     id_bitacora: string | string[],
     id_guardia: string,
@@ -351,7 +352,9 @@ export class BitacoraService {
   ) {
     try {
       const guardiaInfo = await this.prisma.guardia.findFirst({
-        where: { id_usuario: id_guardia },
+        where: {
+          id_usuario: id_guardia,
+        },
       });
 
       if (!guardiaInfo) {
@@ -367,12 +370,15 @@ export class BitacoraService {
 
       const resultado = await this.prisma.bitacora.updateMany({
         where: {
-          id_bitacora: { in: ids },
+          id_bitacora: {
+            in: ids,
+          },
           fecha_hora_salida: null,
         },
         data: {
           fecha_hora_salida: new Date(),
           comentario_salida: textoSalida,
+          id_guardia_salida: guardiaInfo.id_guardia,
         },
       });
 
@@ -385,6 +391,7 @@ export class BitacoraService {
       return {
         mensaje: `Se registraron ${resultado.count} salidas exitosamente.`,
         cantidad: resultado.count,
+        guardia_salida: guardiaInfo.nombre,
       };
     } catch (error) {
       if (
