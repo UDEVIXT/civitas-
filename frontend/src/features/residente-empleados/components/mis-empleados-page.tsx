@@ -8,6 +8,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { TablaMisEmpleados } from "./TablaMisEmpleados";
 import { ModalEditarEmpleado } from "./ModalEditarEmpleado";
 import { MiEmpleadoHorarioDialog } from "./MiEmpleadoHorarioDialog";
+import { ModalBajaEmpleado } from "./ModalBajaEmpleado";
 
 export default function MisEmpleadosPage() {
   // 2. Obtén el usuario logueado dinámicamente
@@ -23,7 +24,8 @@ export default function MisEmpleadosPage() {
     search, 
     setSearch, 
     modalEdit, 
-    modalHorario 
+    modalHorario,
+    modalBaja
   } = useResidenteEmpleados(idResidenteActivo);
 
   console.log("Lo que llega al hook:", empleados);
