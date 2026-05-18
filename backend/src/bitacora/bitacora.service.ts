@@ -676,6 +676,22 @@ export class BitacoraService {
     // 4. CORRECCIÓN: Tratamiento seguro para nulos
     const visitante = registro.acceso.visitante;
     const isResidenteDirecto = !visitante; // Evaluamos si es un residente sin visitante
+    const isProveedor = !!visitante?.id_servicio;
+    if (isProveedor) {
+      const empresa = visitante?.servicio?.nombre_empresa;
+      const servicio = visitante?.servicio?.nombre_servicio;
+
+      if (!empresa || !servicio) {
+        return {
+          id: registro.id_bitacora,
+          bloqueado: true,
+          motivo_bloqueo: 'CA003',
+          mensaje:
+            'Proveedor con información incompleta (empresa o servicio faltante).',
+          estado: 'bloqueado_datos_incompletos',
+        };
+      }
+    }
 
     let tipoPersona: string;
     if (isResidenteDirecto) {

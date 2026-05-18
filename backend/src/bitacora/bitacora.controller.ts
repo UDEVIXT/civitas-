@@ -56,7 +56,7 @@ export class BitacoraController {
   // ---------------------------------------------------------
   @Sse('updates')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Residente')
+  @Roles('Residente', 'Guardia')
   sse(@Req() req: AuthenticatedRequest): Observable<MessageEvent> {
     const username = req.user?.username ?? '';
 
