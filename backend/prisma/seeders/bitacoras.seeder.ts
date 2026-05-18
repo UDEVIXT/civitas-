@@ -12,11 +12,15 @@ export async function seedBitacoras(prisma: PrismaClient) {
   const accesos = await prisma.acceso.findMany();
 
   for (const acceso of accesos) {
-    const guardia = faker.helpers.arrayElement(guardias);
+    const guardiaEntrada = faker.helpers.arrayElement(guardias);
+
+    const guardiaSalida = faker.helpers.arrayElement(guardias);
 
     if (faker.datatype.boolean(0.8)) {
       const baseDate = faker.date.recent({ days: 30 });
+
       const fechaEntrada = new Date(baseDate);
+
       fechaEntrada.setHours(
         faker.number.int({ min: 0, max: 23 }),
         faker.number.int({ min: 0, max: 59 }),
@@ -24,26 +28,50 @@ export async function seedBitacoras(prisma: PrismaClient) {
       );
 
       const fechaSalida = faker.datatype.boolean(0.7)
-        ? new Date(fechaEntrada.getTime() + faker.number.int({ min: 1800000, max: 28800000 }))
+        ? new Date(
+            fechaEntrada.getTime() +
+              faker.number.int({
+                min: 1800000,
+                max: 28800000,
+              }),
+          )
         : null;
 
-      // EL CAMBIO ESTÁ AQUÍ:
       await prisma.bitacora.create({
         data: {
           id_acceso: acceso.id_acceso,
-          id_guardia: guardia.id_guardia,
+
+          // Guardia que registró entrada
+          id_guardia: guardiaEntrada.id_guardia,
+
+          // Guardia que registró salida
+          id_guardia_salida: fechaSalida
+            ? guardiaSalida.id_guardia
+            : null,
+
           fecha_hora_entrada: fechaEntrada,
+
+          fecha_hora_salida: fechaSalida,
+
           comentario: faker.helpers.arrayElement([
             'Ingreso sin novedades',
             'Se revisó identificación',
             'Vehículo autorizado',
             'Visitante frecuente registrado',
           ]),
-          comentario_salida: fechaSalida ? 'Salida normal' : null,
-          fecha_hora_salida: fechaSalida,
+
+          comentario_salida: fechaSalida
+            ? faker.helpers.arrayElement([
+                'Salida normal',
+                'Visitante se retiró sin incidentes',
+                'Se verificó salida',
+                'Acceso finalizado correctamente',
+              ])
+            : null,
         },
       });
     }
   }
+
   console.log('Seeding de Bitácora completado.');
 }

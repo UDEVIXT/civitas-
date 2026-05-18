@@ -34,6 +34,7 @@ interface BitacoraSseEvent {
   ids_afectados: string[];
   mensaje: string;
   comentario_salida?: string;
+  guardia_salida?: string;
   timestamp: Date;
 }
 
@@ -206,9 +207,8 @@ export class BitacoraController {
     @Req() req: AuthenticatedRequest,
   ) {
     const { id_bitacora, comentario_salida } = dto;
-
+    //Id de guardia de salida
     const id_guardia = req.user.userId;
-    //console.log('ID GUARDIA DESDE TOKEN:', id_guardia, 'ID_BITACORA:', id_bitacora, 'COMENTARIO_SALIDA:', comentario_salida);
     if (
       !id_bitacora ||
       (Array.isArray(id_bitacora) && id_bitacora.length === 0)
@@ -236,6 +236,7 @@ export class BitacoraController {
           ? `${idsProcesados.length} salidas registradas masivamente`
           : `Salida registrada para el registro ${idsProcesados[0]}`,
       comentario_salida,
+      guardia_salida: resultado.guardia_salida,
       timestamp: new Date(),
     });
 
