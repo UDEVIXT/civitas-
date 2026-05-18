@@ -1,26 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   obtenerIncidencias,
-  obtenerDetalleIncidencia,
   IncidenciasFiltros,
-  IncidenciasResponse,
-  IncidenciaDetalleResponse,
+  Incidente,
 } from "../api/incidencias";
 
 export function useIncidencias(filtros: IncidenciasFiltros = {}) {
-  return useQuery<IncidenciasResponse>({
+  return useQuery<Incidente[]>({
     queryKey: ["incidencias", filtros],
     queryFn: () => obtenerIncidencias(filtros),
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false,
-  });
-}
-
-export function useDetalleIncidencia(id: string | null) {
-  return useQuery<IncidenciaDetalleResponse>({
-    queryKey: ["incidencia-detalle", id],
-    queryFn: () => obtenerDetalleIncidencia(id!),
-    enabled: !!id, // Solo hace la petición si hay un ID válido
-    staleTime: 1000 * 60 * 10, // 10 minutos
   });
 }

@@ -11,16 +11,14 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, Calendar, Plus, AlertTriangle } from "lucide-react";
+import { Clock, Calendar, Plus } from "lucide-react";
 
 import { FiltrosIncidentes } from "./FiltrosIncidentes";
-import { useIncidencias } from "../hooks/useIncidentes";
-import { Incidente, EstadoIncidencia, IncidenciasFiltros } from "../api/incidencias";
+import { Incidente, EstadoIncidencia } from "../api/incidencias";
 import { ModalDetalleIncidente } from "./ModalDetalleIncidente";
 
 interface TablaEstadoIncidentesProps {
-  /** Si se pasa, usa estos datos en lugar de llamar al backend */
-  data?: Incidente[];
+  data: Incidente[];
 }
 
 interface FiltrosState {
@@ -77,76 +75,7 @@ const formatFecha = (fechaISO: string) => {
 
 const PAGE_SIZE = 6;
 
-// ── Subcomponente que usa el hook (solo cuando no hay data por prop) ──
-function TablaConBackend({ filters, onFilterChange }: {
-  filters: FiltrosState;
-  onFilterChange: (f: FiltrosState) => void;
-}) {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  const filtrosBackend: IncidenciasFiltros = {
-    page: currentPage,
-    limit: PAGE_SIZE,
-    ordenarPor: filters.ordenarPor,
-    ...(filters.estado && filters.estado !== 'Todos' && {
-      estado: estadoFiltroToBackend[filters.estado],
-    }),
-    ...(filters.busqueda && { search: filters.busqueda }),
-    ...(filters.fechaDesde && { fechaInicio: filters.fechaDesde }),
-    ...(filters.fechaHasta && { fechaFin: filters.fechaHasta }),
-  };
-
-  const { data: response, isLoading, isError } = useIncidencias(filtrosBackend);
-
-  const handleFilterChange = (newFilters: FiltrosState) => {
-    setCurrentPage(1);
-    onFilterChange(newFilters);
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-          <p className="text-sm text-muted-foreground">Cargando incidentes...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-          <p className="text-sm text-red-600">Error al cargar los incidentes. Por favor intenta nuevamente.</p>
-        </div>
-      </div>
-    );
-  }
-
-  const incidentes = response?.data ?? [];
-  const meta = response?.meta;
-  const totalPages = meta?.total_pages ?? 1;
-  const total = meta?.total ?? 0;
-
-  return (
-    <FilasYPaginacion
-      incidentes={incidentes}
-      filters={filters}
-      onFilterChange={handleFilterChange}
-      currentPage={currentPage}
-      totalPages={totalPages}
-      total={total}
-      onPageChange={setCurrentPage}
-      selectedId={selectedId}
-      onSelectId={setSelectedId}
-    />
-  );
-}
-
-// ── Subcomponente que filtra localmente (cuando recibe data por prop) ──
+// ── Subcomponente que filtra localmente ──
 function TablaLocal({ data, filters, onFilterChange }: {
   data: Incidente[];
   filters: FiltrosState;
@@ -165,22 +94,22 @@ function TablaLocal({ data, filters, onFilterChange }: {
 
     if (filters.busqueda) {
       result = result.filter(i =>
-        i.titulo.toLowerCase().includes(filters.busqueda!.toLowerCase()) ||
+        i.motivo.toLowerCase().includes(filters.busqueda!.toLowerCase()) ||
         i.descripcion.toLowerCase().includes(filters.busqueda!.toLowerCase())
       );
     }
 
     if (filters.fechaDesde) {
-      result = result.filter(i => new Date(i.fecha_creacion) >= new Date(filters.fechaDesde!));
+      result = result.filter(i => new Date(i.createdAt) >= new Date(filters.fechaDesde!));
     }
 
     if (filters.fechaHasta) {
-      result = result.filter(i => new Date(i.fecha_creacion) <= new Date(filters.fechaHasta!));
+      result = result.filter(i => new Date(i.createdAt) <= new Date(filters.fechaHasta!));
     }
 
     result.sort((a, b) => {
-      const fa = new Date(a.fecha_creacion).getTime();
-      const fb = new Date(b.fecha_creacion).getTime();
+      const fa = new Date(a.createdAt).getTime();
+      const fb = new Date(b.createdAt).getTime();
       return filters.ordenarPor === 'reciente' ? fb - fa : fa - fb;
     });
 
@@ -222,7 +151,7 @@ function FilasYPaginacion({ incidentes, filters, onFilterChange, currentPage, to
   selectedId: string | null;
   onSelectId: (id: string | null) => void;
 }) {
-  const selectedIncidente = incidentes.find(i => i.id_incidencia === selectedId) || null;
+  const selectedIncidente = incidentes.find(i => i.id_reporte === selectedId) || null;
 
   return (
     <div className="space-y-4 mt-4">
@@ -242,26 +171,24 @@ function FilasYPaginacion({ incidentes, filters, onFilterChange, currentPage, to
           <Table className="border rounded-lg min-w-[700px] lg:min-w-[800px]">
             <TableHeader className="bg-muted">
               <TableRow>
-                <TableHead className="min-w-[120px] lg:min-w-[150px]">Título</TableHead>
+                <TableHead className="min-w-[120px] lg:min-w-[150px]">Motivo</TableHead>
                 <TableHead className="min-w-[150px] lg:min-w-[200px]">Descripción</TableHead>
                 <TableHead className="text-center min-w-[100px] lg:min-w-[120px]">Fecha reporte</TableHead>
                 <TableHead className="text-center min-w-[80px] lg:min-w-[100px]">Estado</TableHead>
                 <TableHead className="text-center min-w-[80px] lg:min-w-[100px]">Prioridad</TableHead>
-                <TableHead className="text-center min-w-[100px] lg:min-w-[120px]">Última actualización</TableHead>
                 <TableHead className="text-center min-w-[60px] lg:min-w-[80px]">Anónimo</TableHead>
                 <TableHead className="text-center min-w-[50px] lg:min-w-[60px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {incidentes.map((incidente) => {
-                const fechaReporte = formatFecha(incidente.fecha_creacion);
-                const fechaActualizacion = formatFecha(incidente.updatedAt);
+                const fechaReporte = formatFecha(incidente.createdAt);
                 return (
-                  <TableRow key={incidente.id_incidencia} className="py-8">
-                    <TableCell className="font-medium">{incidente.titulo}</TableCell>
+                  <TableRow key={incidente.id_reporte} className="py-8">
+                    <TableCell className="font-medium">{incidente.motivo}</TableCell>
                     <TableCell>
                       <div className="max-w-xs">
-                        <span className="text-sm">{incidente.descripcion}</span>
+                        <span className="text-sm line-clamp-2">{incidente.descripcion}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
@@ -291,18 +218,6 @@ function FilasYPaginacion({ incidentes, filters, onFilterChange, currentPage, to
                       )}
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="flex flex-col items-center gap-1">
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <Calendar className="h-3.5 w-3.5" />
-                          <span>{fechaActualizacion.fecha}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <Clock className="h-3.5 w-3.5" />
-                          <span>{fechaActualizacion.hora}</span>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
                       {incidente.es_anonimo ? (
                         <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Sí</Badge>
                       ) : (
@@ -313,7 +228,7 @@ function FilasYPaginacion({ incidentes, filters, onFilterChange, currentPage, to
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => onSelectId(incidente.id_incidencia)}
+                        onClick={() => onSelectId(incidente.id_reporte)}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -371,9 +286,5 @@ export function TablaEstadoIncidentes({ data }: TablaEstadoIncidentesProps) {
     ordenarPor: 'reciente',
   });
 
-  if (data) {
-    return <TablaLocal data={data} filters={filters} onFilterChange={setFilters} />;
-  }
-
-  return <TablaConBackend filters={filters} onFilterChange={setFilters} />;
+  return <TablaLocal data={data} filters={filters} onFilterChange={setFilters} />;
 }
