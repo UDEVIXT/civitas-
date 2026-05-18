@@ -8,7 +8,8 @@ import { useLocationStore } from '../hooks/useLocationStore';
 import { useReverseGeocoding } from '../hooks/useGeo';
 import { useIncidenciaForm } from '../hooks/useIncidenciaForm';
 import { useSubmitIncidencia } from '../hooks/useSubmitIncidencia';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
+import { toast } from "sonner"
 
 function IncidenciasView() {
     const { position, setPosition } = useLocationStore();
@@ -29,7 +30,7 @@ function IncidenciasView() {
     const handleFile = useCallback((files: File[]) => {
         if (files && setField) {
             setTimeout(() => {
-                setField('evidencia', files);
+                setField('imagen', files);
             }, 0);
         }
     }, [setField]);
@@ -38,20 +39,18 @@ function IncidenciasView() {
         if (setPosition) {
             setPosition({ lat: coords.latitude, lng: coords.longitude });
         }
-        if (address) {
-            if (setField) {
-                setField('ubicacion', {
-                    lat: coords.latitude,
-                    lng: coords.longitude,
-                    direccion: address
-                });
+        if (setField) {
+            setField('ubicacion', {
+                lat: coords.latitude,
+                lng: coords.longitude,
+                direccion: address || ''
+            });
 
-                setTimeout(() => {
-                    if (errors.ubicacion && setErrors) {
-                        setErrors({ ...errors, ubicacion: '' });
-                    }
-                }, 500);
-            }
+            setTimeout(() => {
+                if (errors.ubicacion && setErrors) {
+                    setErrors({ ...errors, ubicacion: '' });
+                }
+            }, 500);
         }
     }, [setPosition, address, setField, errors.ubicacion, setErrors]);
 
@@ -59,20 +58,18 @@ function IncidenciasView() {
         if (setPosition) {
             setPosition({ lat, lng });
         }
-        if (address) {
-            if (setField) {
-                setField('ubicacion', {
-                    lat,
-                    lng,
-                    direccion: address
-                });
+        if (setField) {
+            setField('ubicacion', {
+                lat,
+                lng,
+                direccion: address || ''
+            });
 
-                setTimeout(() => {
-                    if (errors.ubicacion && setErrors) {
-                        setErrors({ ...errors, ubicacion: '' });
-                    }
-                }, 500);
-            }
+            setTimeout(() => {
+                if (errors.ubicacion && setErrors) {
+                    setErrors({ ...errors, ubicacion: '' });
+                }
+            }, 500);
         }
     }, [setPosition, address, setField, errors.ubicacion, setErrors]);
 
@@ -97,6 +94,29 @@ function IncidenciasView() {
             setErrors({ ...errors, [field]: '' });
         }
     }, [setField, errors, setErrors]);
+
+    useEffect(() => {
+        if (address && position && setField) {
+            setField('ubicacion', {
+                lat: position.lat,
+                lng: position.lng,
+                direccion: address
+            });
+        }
+    }, [address, position, setField]);
+
+    useEffect(() => {
+        if (submitMutation.isSuccess && submitMutation.data?.success) {
+            toast.success("Reporte creado exitosamente");
+        }
+    }, [submitMutation.isSuccess, submitMutation.data]);
+
+    useEffect(() => {
+        if (submitMutation.isError) {
+            const error = submitMutation.error as any;
+            toast.error(error.response?.data?.message || 'Error al crear el reporte');
+        }
+    }, [submitMutation.isError, submitMutation.error]);
 
     return (
         <IncidenciaDialog

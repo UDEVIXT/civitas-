@@ -3,9 +3,9 @@ import { JwtModule } from '@nestjs/jwt';
 
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-
+import { NotificacionModule } from '../notificacion/notificacion.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
-
+import { MailModule } from '../mail/mail.module';
 @Module({
   imports: [
     JwtModule.register({
@@ -17,6 +17,8 @@ import { JwtStrategy } from './strategies/jwt.strategy';
         expiresIn: '1d',
       },
     }),
+    NotificacionModule,
+    MailModule,
   ],
 
   controllers: [AuthController],

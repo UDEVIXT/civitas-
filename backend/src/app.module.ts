@@ -14,6 +14,9 @@ import { IncidenciasModule } from './incidencias/incidencias.module';
 import { ResidenteModule } from './residente/residente.module';
 import { ViviendaModule } from './vivienda/vivienda.module';
 import { APP_GUARD } from '@nestjs/core/constants';
+import { MiEmpleadoModule } from './mis-empleados/mi-empleado.module'; 
+import { MailModule } from './mail/mail.module';
+import { MisServiciosModule } from './mis-servicios/mis-servicios.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -29,12 +32,14 @@ import { APP_GUARD } from '@nestjs/core/constants';
     IncidenciasModule,
     ResidenteModule,
     ViviendaModule,
+    MiEmpleadoModule, 
+    MisServiciosModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
-        limit: 5,
+        limit: 50,
       },
-    ]),
+    ]), MailModule,
   ],
   controllers: [AppController],
   providers: [

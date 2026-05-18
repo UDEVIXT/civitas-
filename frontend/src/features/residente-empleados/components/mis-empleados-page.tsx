@@ -1,27 +1,32 @@
 "use client";
 
 import * as React from "react";
-// Importamos el hook personalizado para gestionar empleados del residente
 import { useResidenteEmpleados } from "../hooks/useResidenteEmpleados"; 
+// 1. Importa el hook de autenticación que maneja el equipo
+import { useAuth } from "@/features/auth/hooks/useAuth"; 
 
-// Componentes UI
 import { TablaMisEmpleados } from "./TablaMisEmpleados";
 import { ModalEditarEmpleado } from "./ModalEditarEmpleado";
-import { ModalBajaEmpleado } from "./ModalBajaEmpleado"; 
-import { EmpleadosHorarioDialog } from "@/features/empleados-domesticos/components/horarios-empleado-domestico";
+import { MiEmpleadoHorarioDialog } from "./MiEmpleadoHorarioDialog";
 
 export default function MisEmpleadosPage() {
-  // Aquí usamos useResidenteEmpleados.ts. El "123" es un ejemplo, 
-  // luego lo cambiaremos por el ID real del usuario logueado.
+  // 2. Obtén el usuario logueado dinámicamente
+  const { user } = useAuth(); 
+
+  // 3. Le pasas el ID dinámico
+  // const idResidenteActivo = user?.id_residente ? String(user.id_residente) : "";
+  const idResidenteActivo = "0c281d05-a73a-4a0c-ab25-eb1ca390f08f";
+
   const { 
     empleados, 
     isLoading, 
     search, 
     setSearch, 
     modalEdit, 
-    modalHorario,
-    modalBaja 
-  } = useResidenteEmpleados("123");
+    modalHorario 
+  } = useResidenteEmpleados(idResidenteActivo);
+
+  console.log("Lo que llega al hook:", empleados);
 
   return (
     <div className="flex-1 space-y-4 p-4 sm:p-8 pt-6">
@@ -78,11 +83,10 @@ export default function MisEmpleadosPage() {
         onConfirm={modalBaja.confirm} 
       />
 
-      {/* Modal de Horarios */}
-      {/* CORRECCIÓN: Apuntar a modalHorario en lugar de modalEdit */}
-      <EmpleadosHorarioDialog
-        nombre={modalHorario.selectedEmpleado?.nombre || ""}
-        horarios={modalHorario.selectedEmpleado?.servicio?.horarios || []}
+      {/* Modal de Horarios (el de Joan) */}
+      <MiEmpleadoHorarioDialog
+        nombre={modalEdit.selectedEmpleado?.nombre || ""}
+        horarios={modalEdit.selectedEmpleado?.servicio?.horarios || []}
         open={modalHorario.isOpen}
         onOpenChange={modalHorario.setIsOpen}
       />

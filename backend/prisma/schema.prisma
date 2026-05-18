@@ -74,31 +74,38 @@ model Vivienda {
 }
 
 model Usuario {
-  id_usuario      String         @id @default(uuid())
-  nombre_usuario  String         @unique
-  correo          String         @unique
-  rol             Rol
-  id_persona      String         @unique
-  password        String
-  estado          EstadoUsuario  @default(ACTIVO)
-  correo_verificado Boolean      @default(false)
-  token_verificacion String?     @unique
-  accesos         Acceso[]
-  administradores Administrador?
-  guardias        Guardia?
-  residentes      Residente[]
-  persona         Persona        @relation(fields: [id_persona], references: [id_persona])
+  id_usuario         String         @id @default(uuid())
+  nombre_usuario     String         @unique
+  correo             String         @unique
+  rol                Rol
+  id_persona         String         @unique
+  password           String
+  estado             EstadoUsuario  @default(ACTIVO)
+  // --- Campos nuevos para recuperación de contraseña ---
+  // Almacena el código (ej. "123456") o un token generado
+  resetPasswordToken   String?   
+  
+  // Almacena la fecha y hora exacta en que el código dejará de ser válido
+  resetPasswordExpires DateTime?
+  correo_verificado  Boolean        @default(false)
+  token_verificacion String?        @unique
+  accesos            Acceso[]
+  administradores    Administrador?
+  guardias           Guardia?
+  residentes         Residente[]
+  persona            Persona        @relation(fields: [id_persona], references: [id_persona])
+  sesiones Sesion[]
+  reportes             Reporte[]
 }
 
 model Residente {
-  id_residente String      @id @default(uuid())
+  id_residente String @id @default(uuid())
   id_usuario   String
   id_vivienda  String
 
-  usuario    Usuario     @relation(fields: [id_usuario], references: [id_usuario])
-  vivienda   Vivienda    @relation(fields: [id_vivienda], references: [id_vivienda])
-  visitantes Visitante[]
-  incidencias Incidencia[]
+  usuario     Usuario      @relation(fields: [id_usuario], references: [id_usuario])
+  vivienda    Vivienda     @relation(fields: [id_vivienda], references: [id_vivienda])
+  visitantes  Visitante[]
 }
 
 model Visitante {
@@ -118,14 +125,14 @@ model Visitante {
 model Acceso {
   id_acceso        String        @id @default(uuid())
   id_usuario       String
-  id_visitante     String
-  codigo_qr        String?        @unique
+  id_visitante     String?
+  codigo_qr        String?       @unique
   fecha_creacion   DateTime      @default(now())
   fecha_expiracion DateTime
   estatus          EstatusAcceso @default(Activo)
   comentario_admin String?
   usuario          Usuario       @relation(fields: [id_usuario], references: [id_usuario])
-  visitante        Visitante     @relation(fields: [id_visitante], references: [id_visitante], onDelete: Cascade)
+  visitante        Visitante?    @relation(fields: [id_visitante], references: [id_visitante], onDelete: Cascade)
   bitacora         Bitacora[]
 }
 
@@ -133,12 +140,14 @@ model Bitacora {
   id_bitacora        String    @id @default(uuid())
   id_acceso          String
   id_guardia         String
+  id_guardia_salida  String?
   fecha_hora_entrada DateTime  @default(now())
   fecha_hora_salida  DateTime?
   comentario         String?
   comentario_salida  String?
   acceso             Acceso    @relation(fields: [id_acceso], references: [id_acceso], onDelete: Cascade)
-  guardia            Guardia   @relation(fields: [id_guardia], references: [id_guardia])
+  guardia Guardia @relation("GuardiaEntrada", fields: [id_guardia], references: [id_guardia])
+  guardia_salida Guardia? @relation("GuardiaSalida", fields: [id_guardia_salida], references: [id_guardia])
 }
 
 model Servicio {
@@ -151,7 +160,7 @@ model Servicio {
   rfc              String?                  @unique
   activo           Boolean                  @default(true)
   id_tipo_servicio String?
-  fecha_registro   DateTime @default(now())
+  fecha_registro   DateTime                 @default(now())
   horarios         HorarioAccesoServicios[]
   tipo_servicio    TipoServicio?            @relation(fields: [id_tipo_servicio], references: [id_tipo_servicio])
   visitantes       Visitante[]
@@ -174,7 +183,8 @@ model Guardia {
   id_usuario String     @unique
   nombre     String     @db.VarChar(128)
   turno      String
-  bitacoras  Bitacora[]
+  bitacoras         Bitacora[] @relation("GuardiaEntrada")
+  bitacoras_salida  Bitacora[] @relation("GuardiaSalida")
   usuario    Usuario    @relation(fields: [id_usuario], references: [id_usuario])
 }
 
@@ -195,55 +205,44 @@ model Administrador {
   usuario          Usuario @relation(fields: [id_usuario], references: [id_usuario])
 }
 
-model Incidencia {
-  id_incidencia    String           @id @default(uuid())
-  titulo           String
-  descripcion      String
-  estado           EstadoIncidencia @default(PENDIENTE)
-  prioridad        String?          @default("MEDIA")
-  es_anonimo       Boolean          @default(false)
-  fecha_creacion   DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-
-  id_residente     String
-  residente        Residente        @relation(fields: [id_residente], references: [id_residente])
-  historial        HistorialIncidencia[]
-}
-
-model HistorialIncidencia {
-  id_historial     String           @id @default(uuid())
-  estado_anterior  EstadoIncidencia
-  nuevo_estado     EstadoIncidencia
-  comentario       String?
-  fecha            DateTime         @default(now())
-  actualizado_por  String?          @default("Sistema")
-
-  id_incidencia    String
-  incidencia       Incidencia       @relation(fields: [id_incidencia], references: [id_incidencia])
-}
-
 model EvidenciaReporte {
-  id_evidencia      String   @id @default(uuid()) @db.Uuid
-  id_reporte        String   @db.Uuid
-  reporte           Reporte  @relation(fields: [id_reporte], references: [id_reporte])
-  url_archivo       String   @db.Text
-  nombre_archivo    String   @db.VarChar(256)
-  createdAt         DateTime @default(now()) @db.Timestamp()
+  id_evidencia   String   @id @default(uuid()) 
+  id_reporte     String   
+  reporte        Reporte  @relation(fields: [id_reporte], references: [id_reporte])
+  url_archivo    String   @db.Text
+  nombre_archivo String   @db.VarChar(256)
+  createdAt      DateTime @default(now()) @db.Timestamp()
 }
 
 model Reporte {
-  id_reporte         String                @id @default(uuid()) @db.Uuid
-  id_usuario         String                @db.Uuid
-  motivo             String                @db.VarChar(100)
-  descripcion        String                @db.Text
+  id_reporte         String           @id @default(uuid()) 
+  id_usuario         String           
+  usuario            Usuario          @relation(fields: [id_usuario], references: [id_usuario])
+  motivo             String           @db.VarChar(100)
+  descripcion        String           @db.Text
   tipo               TipoReporte
   latitud            Decimal
   longitud           Decimal
   estado             EstadoIncidencia
   prioridad          PrioridadReporte
   es_anonimo         Boolean
-  resultado_esperado String?               @db.Text
-  resultado_solucion String?               @db.Text
+  token_seguimiento  String? @unique
+  resultado_esperado String?          @db.Text
+  resultado_solucion String?          @db.Text
+  createdAt          DateTime         @default(now())
+  evidencias EvidenciaReporte[]
+}
 
-  evidencias         EvidenciaReporte[]
+model Sesion {
+  id_sesion      String   @id @default(uuid())
+  id_usuario     String
+  refresh_token  String
+  activo         Boolean  @default(true)
+  ip             String?
+  dispositivo    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user_agent     String?
+  usuario Usuario @relation( fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+  @@map("sesiones")
 }

@@ -11,7 +11,7 @@ export const IncidenciaSchema = z.object({
         direccion: z.string().min(1, "Debes seleccionar una ubicación en el mapa"),
     }),
     solucionEsperada: z.string().min(10, "La solución esperada debe tener al menos 10 caracteres"),
-    evidencia: z.array(z.instanceof(File)).optional(),
+    imagen: z.array(z.instanceof(File)).optional(),
 });
 
 export type IncidenciaFormData = z.infer<typeof IncidenciaSchema>;

@@ -5,34 +5,86 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 
-// 1. Creamos la instancia de Axios con la configuración base
 const apiClient: AxiosInstance = axios.create({
-  // Usa una variable de entorno para la URL base de tu backend (ej. NestJS)
   baseURL:
     process.env.NEXT_PUBLIC_API_URL ||
     process.env.REACT_APP_API_URL ||
     "http://localhost:3001/api/",
-  timeout: 10000, // Tiempo de espera (10 segundos)
+  timeout: 10000,
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// 2. Interceptor de Peticiones (Requests)
-apiClient.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    // Aquí puedes obtener tu token de autenticación (localStorage, cookies, Zustand, Redux, etc.)
-    const token = localStorage.getItem("token");
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (value: unknown) => void;
+  reject: (reason: unknown) => void;
+}> = [];
 
-    // Si hay un token, lo inyectamos en las cabeceras de todas las peticiones
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+function processQueue(error: unknown) {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve(undefined);
+    }
+  });
+  failedQueue = [];
+}
+
+apiClient.interceptors.response.use(
+  (response: AxiosResponse) => response,
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean;
+    };
+
+   if (error.response?.status === 401 && !originalRequest._retry) {
+      
+      // CORRECCIÓN: Si el error 401 viene de verificar código o hacer login,
+      // NO intentamos refrescar el token. Devolvemos el error original al componente.
+      const rutasSinAutenticacion = ["/auth/login", "/auth/forgot-password", "/auth/verify-code", "/auth/reset-password"];
+      if (originalRequest.url && rutasSinAutenticacion.some(ruta => originalRequest.url.includes(ruta))) {
+        return Promise.reject(error);
+      }
+
+      if (originalRequest.url?.includes("/auth/refresh")) {
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then(() => apiClient(originalRequest));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        await apiClient.post("/auth/refresh");
+        processQueue(null);
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError);
+        
+        // CORRECCIÓN: Evaluar si la ruta actual es pública antes de expulsar al usuario
+        const currentPath = window.location.pathname;
+        const isPublicRoute = currentPath === "/login" || currentPath.startsWith("/recuperar-contrasena");
+        
+        // Solo redirigimos si el usuario estaba navegando en una zona privada (ej. /dashboard)
+        if (!isPublicRoute) {
+          window.location.href = "/login";
+        }
+        
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
     }
 
-    return config;
-  },
-  (error: AxiosError) => {
-    // Manejo de errores antes de que la petición sea enviada
     return Promise.reject(error);
   },
 );

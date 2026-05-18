@@ -1,8 +1,10 @@
+//ModalSalidaProveedor.tsx
 import React, { useState } from "react";
 import { bitacoraService } from "@/services/bitacora.service";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 interface Props {
     isOpen: boolean;
@@ -23,7 +25,9 @@ export function ModalSalidaProveedor({ isOpen, onClose, onSuccess, accesoId, vis
     const handleSalida = async () => {
         const targetId = accesoId || Number(inputId);
         if (!targetId) {
-            setError("Por favor, proporciona un ID de acceso válido.");
+            toast.error("Por favor, proporciona un ID de acceso válido.", {
+                description: "Debes proporcionar un ID de acceso válido para registrar la salida.",
+            });
             return;
         }
 
@@ -45,15 +49,21 @@ export function ModalSalidaProveedor({ isOpen, onClose, onSuccess, accesoId, vis
             
             // CA007: Ya tiene salida registrada
             if (status === 400 && typeof apiMessage === "string" && apiMessage.toLowerCase().includes("salida")) {
-                setError("El proveedor ya tiene una salida registrada previamente.");
+                toast.error("El proveedor ya tiene una salida registrada previamente.", {
+                    description: "No se puede registrar la salida porque ya existe una salida registrada para este proveedor.",
+                });
             } 
             // CA06: Problema técnico (falla de red o de carga)
             else if (!err.response) {
-                setError("Problema técnico: Fallo de red. Verifica tu conexión e intenta nuevamente.");
+                toast.error("Problema técnico: Fallo de red. Verifica tu conexión e intenta nuevamente.", {
+                    description: "No se pudo registrar la salida debido a un problema técnico. Verifica tu conexión o intenta más tarde.",
+                });
             } 
             // CA06: Datos incompletos o falla genérica
             else {
-                setError(apiMessage || "Datos incompletos o error técnico al registrar la salida.");
+                toast.error(apiMessage || "Datos incompletos o error técnico al registrar la salida.", {
+                    description: apiMessage || "No se pudo registrar la salida debido a datos incompletos o un error técnico. Verifica la información e intenta nuevamente.",
+                });
             }
         } finally {
             setLoading(false);
@@ -113,16 +123,11 @@ export function ModalSalidaProveedor({ isOpen, onClose, onSuccess, accesoId, vis
                         />
                     </div>
 
-                    {error && (
-                        <div className="flex items-center gap-2 p-3 text-sm text-red-800 bg-red-100 border border-red-200 rounded-md">
-                            <span>{error}</span>
-                        </div>
-                    )}
                 </div>
 
                 <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
-                    <Button onClick={handleSalida} disabled={loading || (!accesoId && !inputId)}>
+                    <Button variant="outline" onClick={onClose} disabled={loading} className="cursor-pointer">Cancelar</Button>
+                    <Button className="cursor-pointer" onClick={handleSalida} disabled={loading || (!accesoId && !inputId)}>
                         {loading ? "Registrando..." : "Confirmar Salida"}
                     </Button>
                 </div>

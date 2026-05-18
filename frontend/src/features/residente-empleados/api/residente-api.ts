@@ -1,22 +1,40 @@
 import apiClient from "@/api/axios";
-
 import type {
   EmpleadoDomesticoResponse,
   FiltroEmpleado,
-} from "@/features/empleados-domesticos/types";
+} from "@/features/empleados-domesticos/types"; 
 
+// NUEVA FUNCIÓN: Solo para que el residente vea a sus propios empleados
+export const obtenerMisEmpleados = async (
+  filtros?: FiltroEmpleado,
+  search?: string,
+  page?: number,
+) => {
+  //Cambiamos "/empleado" por "/mi-empleado"
+  const response = await apiClient.get<EmpleadoDomesticoResponse>("/mi-empleado", {
+    params: {
+      page: page || 1,
+      search: search ? search.trim() : undefined,
+      ...filtros,
+    },
+  });
+  return response.data;
+};
+
+// 
 export const actualizarEmpleadoResidente = async (id: string, data: any) => {
   try {
-    const response = await apiClient.put(`/empleado/${id}`, {
-      accion: "actualizacion_residente", // Etiqueta para el backend
+    const response = await apiClient.put(`/mi-empleado/${id.trim()}`, {
+      accion: "actualizacion_residente", 
       data: {
         nombre: data.nombre,
         telefono: data.telefono,
-        url_imagen: data.foto,
+        foto: data.foto, 
         cargo: data.cargo,
-        // Mandamos las horas por separado como se configuró en el modal
         hora_entrada: data.hora_entrada,
         hora_salida: data.hora_salida,
+        dias_autorizados: data.dias_autorizados,
+        notas: data.notas,
       },
     });
     return { success: true, data: response.data };
@@ -28,33 +46,3 @@ export const actualizarEmpleadoResidente = async (id: string, data: any) => {
   }
 };
 
-export const cambiarEstadoEmpleado = async (
-  id: string,
-  accion: "baja" | "reactivacion",
-  motivo?: string,
-) => {
-  const response = await apiClient.put(`/empleado/${id}`, {
-    accion,
-    data: {
-      motivo,
-    },
-  });
-
-  return { success: true, data: response.data };
-};
-
-export const obtenerEmpleadosDomesticos = async (
-  filtros?: FiltroEmpleado,
-  search?: string,
-  page?: number,
-) => {
-  const response = await apiClient.get<EmpleadoDomesticoResponse>("/empleado-general/mis-empleados", {
-    params: {
-      page: page || 1,
-      search: search ? search.trim() : undefined,
-      ...filtros,
-    },
-  });
-  console.log("Response from API:", response.data);
-  return response.data;
-};
