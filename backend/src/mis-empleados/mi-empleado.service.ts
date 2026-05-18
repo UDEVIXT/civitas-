@@ -440,9 +440,23 @@ async actualizarEmpleado(id: string, data: any) {
   }
 
   
-  async eliminarEmpleado(id: string, motivo?: string) {
+  async eliminarEmpleado(id: string, motivo?: string, id_residente?: string) {
     try {
       const servicio = await this.obtenerServicio(id);
+
+      let nombreAutor = 'Residente';
+      if (id_residente) {
+        const residente = await this.prisma.residente.findUnique({
+          where: { id_residente },
+          include: { usuario: { include: { persona: true } } }
+        });
+        if (residente?.usuario?.persona?.nombre) {
+          nombreAutor = residente.usuario.persona.nombre;
+        }
+      }
+
+      const fechaActual = new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
+      const comentarioEstructurado = `Baja por: ${nombreAutor} el ${fechaActual}. Motivo: ${motivo || 'No especificado'}`;
 
       // Borrado lógico
       await this.prisma.servicio.update({
@@ -457,7 +471,7 @@ async actualizarEmpleado(id: string, data: any) {
         where: { id_visitante: servicio.id_visitante },
         data: {
           estatus: 'Inactivo',
-          comentario_admin: motivo,
+          comentario_admin: comentarioEstructurado,
         },
       });
 
@@ -481,9 +495,23 @@ async actualizarEmpleado(id: string, data: any) {
     }
   }
 
-  async reactivarEmpleado(id: string) {
+  async reactivarEmpleado(id: string, id_residente?: string) {
     try {
       const servicio = await this.obtenerServicio(id);
+
+      let nombreAutor = 'Residente';
+      if (id_residente) {
+        const residente = await this.prisma.residente.findUnique({
+          where: { id_residente },
+          include: { usuario: { include: { persona: true } } }
+        });
+        if (residente?.usuario?.persona?.nombre) {
+          nombreAutor = residente.usuario.persona.nombre;
+        }
+      }
+
+      const fechaActual = new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
+      const comentarioEstructurado = `Reactivado por: ${nombreAutor} el ${fechaActual}.`;
 
       await this.prisma.servicio.update({
         where: { id_servicio: servicio.id_servicio },
@@ -494,7 +522,10 @@ async actualizarEmpleado(id: string, data: any) {
 
       await this.prisma.acceso.updateMany({
         where: { id_visitante: servicio.id_visitante },
-        data: { estatus: 'Activo' },
+        data: { 
+          estatus: 'Activo',
+          comentario_admin: comentarioEstructurado
+        },
       });
 
       return {
