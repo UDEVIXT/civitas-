@@ -168,16 +168,16 @@ function FilasYPaginacion({ incidentes, filters, onFilterChange, currentPage, to
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <Table className="border rounded-lg min-w-[700px] lg:min-w-[800px]">
+          <Table className="border rounded-lg min-w-175 lg:min-w-200">
             <TableHeader className="bg-muted">
               <TableRow>
-                <TableHead className="min-w-[120px] lg:min-w-[150px]">Motivo</TableHead>
-                <TableHead className="min-w-[150px] lg:min-w-[200px]">Descripción</TableHead>
-                <TableHead className="text-center min-w-[100px] lg:min-w-[120px]">Fecha reporte</TableHead>
-                <TableHead className="text-center min-w-[80px] lg:min-w-[100px]">Estado</TableHead>
-                <TableHead className="text-center min-w-[80px] lg:min-w-[100px]">Prioridad</TableHead>
-                <TableHead className="text-center min-w-[60px] lg:min-w-[80px]">Anónimo</TableHead>
-                <TableHead className="text-center min-w-[50px] lg:min-w-[60px]"></TableHead>
+                <TableHead className="min-w-30 lg:min-w-37.5">Motivo</TableHead>
+                <TableHead className="min-w-37.5 lg:min-w-50">Descripción</TableHead>
+                <TableHead className="text-center min-w-25 lg:min-w-30">Fecha reporte</TableHead>
+                <TableHead className="text-center min-w-20 lg:min-w-25">Estado</TableHead>
+                <TableHead className="text-center min-w-20 lg:min-w-25">Prioridad</TableHead>
+                <TableHead className="text-center min-w-15 lg:min-w-20">Anónimo</TableHead>
+                <TableHead className="text-center min-w-12.5 lg:min-w-15"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
