@@ -41,13 +41,13 @@ export default function MisEmpleadosPage() {
         </div>
       </div>
 
-      {/* Buscador opcional (puedes usar el de shadcn si gustas) */}
+      {/* Buscador */}
       <div className="flex items-center py-4">
         <input
           placeholder="Buscar empleado..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm p-2 border rounded-md"
+          className="max-w-sm p-2 border rounded-md bg-white text-sm"
         />
       </div>
 
@@ -57,16 +57,31 @@ export default function MisEmpleadosPage() {
           isLoading={isLoading}
           onEdit={modalEdit.handleEditClick}
           onVerHorario={modalHorario.handleVerHorario}
+          onBaja={modalBaja.handleBajaClick} 
         />
       </div>
 
+      {/* Modal de Edición */}
       <ModalEditarEmpleado
-      empleado={modalEdit.selectedEmpleado}
-      isOpen={modalEdit.isOpen}
-      onClose={() => modalEdit.setIsOpen(false)}
-      onSave={modalEdit.save}       // <-- Conexión con la mutación del Hook
-      isSaving={modalEdit.isSaving} // <-- Muestra el spinner si está guardando
-    />
+        empleado={modalEdit.selectedEmpleado}
+        isOpen={modalEdit.isOpen}
+        onClose={() => modalEdit.setIsOpen(false)}
+        onSave={modalEdit.save}       
+        isSaving={modalEdit.isSaving} 
+      />
+
+      {/* Modal de Baja / Suspensión Temporal */}
+      <ModalBajaEmpleado
+        open={modalBaja.isOpen}
+        onOpenChange={modalBaja.setIsOpen}
+        selectedEmpleado={modalBaja.selectedEmpleado}
+        mode={modalBaja.mode} 
+        motivo={modalBaja.motivo}
+        onMotivoChange={modalBaja.setMotivo}
+        isDeleting={modalBaja.isDeleting}
+        deleteError={modalBaja.deleteError}
+        onConfirm={modalBaja.confirm} 
+      />
 
       {/* Modal de Horarios (el de Joan) */}
       <MiEmpleadoHorarioDialog

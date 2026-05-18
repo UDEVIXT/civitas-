@@ -19,8 +19,15 @@ export function useResidenteEmpleados(idResidente: string) {
   // Estados para la UI
   const [search, setSearch] = useState("");
   const [selectedEmpleado, setSelectedEmpleado] = useState<EmpleadoDomestico | null>(null);
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isHorarioModalOpen, setIsHorarioModalOpen] = useState(false);
+  
+  // Estados para el Modal de Baja/Suspensión
+  const [isBajaModalOpen, setIsBajaModalOpen] = useState(false);
+  const [bajaMode, setBajaMode] = useState<"deactivate" | "reactivate">("deactivate");
+  const [motivoBaja, setMotivoBaja] = useState("");
+  const [bajaError, setBajaError] = useState<string | null>(null);
   
   const debouncedSearch = useDebounce(search, 300);
 

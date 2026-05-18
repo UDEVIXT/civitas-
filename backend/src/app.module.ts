@@ -8,6 +8,7 @@ import { BitacoraModule } from './bitacora/bitacora.module';
 import { ReportesModule } from './reportes/reportes.module';
 import { EvidenciaReporteModule } from './evidencia-reporte/evidencia-incidencia.module';
 import { EmpleadoModule } from './empleado/empleado.module';
+import { EmpleadoGeneralModule } from './empleado-general/empleado-general.module';
 import { AuthModule } from './auth/auth.module';
 import { IncidenciasModule } from './incidencias/incidencias.module';
 import { ResidenteModule } from './residente/residente.module';
@@ -26,6 +27,7 @@ import { MisServiciosModule } from './mis-servicios/mis-servicios.module';
     ReportesModule,
     EvidenciaReporteModule,
     EmpleadoModule,
+    EmpleadoGeneralModule,
     AuthModule,
     IncidenciasModule,
     ResidenteModule,
