@@ -7,6 +7,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateEmpleadoDomesticoDto } from './dto/create-empleado-domestico.dto';
 
 @Injectable()
 export class EmpleadoService {
@@ -368,5 +369,70 @@ export class EmpleadoService {
         'Ocurrió un error inesperado al intentar reactivar al empleado. Por favor, inténtelo de nuevo más tarde.',
       );
     }
+  }
+
+  async crearEmpleadoDomestico(
+    dto: CreateEmpleadoDomesticoDto,
+    idUsuario: string,
+  ) {
+    const residente = await this.prisma.residente.findFirst({
+      where: {
+        id_usuario: idUsuario,
+      },
+
+      include: {
+        vivienda: true,
+      },
+    });
+
+    if (!residente) {
+      throw new BadRequestException('Residente no encontrado');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const servicio = await tx.servicio.create({
+        data: {
+          nombre_servicio: `${residente.vivienda.numero_vivienda}`,
+
+          cargo: dto.cargo,
+
+          id_tipo_servicio: dto.id_tipo_servicio,
+
+          id_residente: residente.id_residente,
+          id_vivienda: residente.id_vivienda,
+
+          horarios: {
+            create: dto.horarios.map((horario) => ({
+              dia_semana: horario.dia_semana,
+              hora_inicio: new Date(`1970-01-01T${horario.hora_inicio}`),
+
+              hora_fin: new Date(`1970-01-01T${horario.hora_fin}`),
+            })),
+          },
+        },
+      });
+
+      const visitante = await tx.visitante.create({
+        data: {
+          nombre: dto.nombre_completo,
+
+          telefono: dto.telefono,
+
+          url_imagen: dto.url_imagen,
+
+          es_frecuente: true,
+
+          id_residente: residente.id_residente,
+
+          id_servicio: servicio.id_servicio,
+        },
+      });
+
+      return {
+        message: 'Empleado doméstico registrado correctamente',
+        servicio,
+        visitante,
+      };
+    });
   }
 }

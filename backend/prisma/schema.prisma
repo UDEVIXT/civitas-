@@ -71,6 +71,7 @@ model Vivienda {
   id_vivienda     String      @id @default(uuid())
   numero_vivienda String      @unique
   residentes      Residente[]
+  servicios       Servicio[]
 }
 
 model Usuario {
@@ -106,6 +107,7 @@ model Residente {
   usuario     Usuario      @relation(fields: [id_usuario], references: [id_usuario])
   vivienda    Vivienda     @relation(fields: [id_vivienda], references: [id_vivienda])
   visitantes  Visitante[]
+  servicios   Servicio[]
 }
 
 model Visitante {
@@ -160,10 +162,14 @@ model Servicio {
   rfc              String?                  @unique
   activo           Boolean                  @default(true)
   id_tipo_servicio String?
+  id_residente     String
+  id_vivienda      String
   fecha_registro   DateTime                 @default(now())
   horarios         HorarioAccesoServicios[]
   tipo_servicio    TipoServicio?            @relation(fields: [id_tipo_servicio], references: [id_tipo_servicio])
   visitantes       Visitante[]
+  residente        Residente @relation(fields: [id_residente], references: [id_residente])
+  vivienda         Vivienda @relation(fields: [id_vivienda], references: [id_vivienda])
 }
 
 model HorarioAccesoServicios {
