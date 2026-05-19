@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import { AlertCircle, Search, Star, X, Filter } from "lucide-react";
+import { ReactQRCode } from "@lglab/react-qr-code";
+import { useToast } from "@/hooks/use-toast";
 import FiltersPanel from "./FiltersPanel";
 import useMiBitacora from "../hooks/useMiBitacora";
 import RecordCard from "./RecordCard";
@@ -266,116 +268,134 @@ export function MiBitacoraPage() {
               </div>
             ) : null}
 
-            <div className="overflow-hidden rounded-[10px] border border-[#d3d3d3] bg-white">
-              <div className="flex items-center justify-between border-b border-[#d9d9d9] px-4 py-3">
-                <h2 className="text-[22px] font-semibold leading-none text-[#1f1f1f]">Mi bitácora de accesos</h2>
-                <div className="flex items-center gap-3">
-                  {isUpdating ? <span className="text-[11px] text-[#8a8a8a]">Actualizando...</span> : null}
-                  <p className="text-xs text-[#7559e8]">{sortedRecords.length} registrados</p>
+            {error ? (
+              <div className="overflow-hidden rounded-[10px] border border-[#d3d3d3] bg-white p-8">
+                <div className="mx-auto max-w-2xl text-center">
+                  <div className="flex items-center justify-center mb-4">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                      <AlertCircle className="size-7 text-red-600" />
+                    </div>
+                  </div>
+                  <h2 className="text-2xl font-semibold text-slate-900 mb-2">¡Ups! Ocurrió un problema</h2>
+                  <p className="mb-4 text-sm text-slate-600">No pudimos cargar tu bitácora en este momento. Ya lo estamos arreglando — intenta de nuevo en unos minutos.</p>
+                  <div className="flex items-center justify-center gap-3">
+                    <Button onClick={() => void fetchList(false)} className="bg-[#7559e8] text-white">Reintentar</Button>
+                    <Button variant="outline" onClick={() => { setSearch(""); setPage(1); void fetchList(false); }}>Recargar</Button>
+                  </div>
                 </div>
               </div>
-
-              {loading && sortedRecords.length === 0 ? (
-                <div className="flex min-h-45 items-center justify-center px-4 py-10 text-sm text-slate-500">Cargando registros...</div>
-              ) : paginatedFlattened.length === 0 ? (
-                <div className="flex min-h-57.5 items-center justify-center px-4 py-10">
-                  <div className="mx-auto flex max-w-sm flex-col items-center gap-2 text-center">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#fff6dd] shadow-[0_0_0_8px_rgba(251,191,36,0.12)]">
-                      <AlertCircle className="size-5 text-[#e2aa00]" />
-                    </div>
-                    <p className="text-sm font-semibold text-[#353535]">Aún no tienes registros</p>
-                    <p className="max-w-[20rem] text-xs leading-5 text-[#747474]">Cuando existan ingresos o salidas, aparecerán en tu bitácora de accesos.</p>
-                    <p className="text-xs leading-5 text-[#9a9a9a]">Podrás consultar el historial y abrir el detalle de cada registro.</p>
+            ) : (
+              <div className="overflow-hidden rounded-[10px] border border-[#d3d3d3] bg-white">
+                <div className="flex items-center justify-between border-b border-[#d9d9d9] px-4 py-3">
+                  <h2 className="text-[22px] font-semibold leading-none text-[#1f1f1f]">Mi bitácora de accesos</h2>
+                  <div className="flex items-center gap-3">
+                    {isUpdating ? <span className="text-[11px] text-[#8a8a8a]">Actualizando...</span> : null}
+                    <p className="text-xs text-[#7559e8]">{sortedRecords.length} registrados</p>
                   </div>
                 </div>
-              ) : (
-                <>
-                  <div className="space-y-3 p-3 md:hidden">
-                    {groupedRecords.map((group) => (
-                      <section key={group.method}>
-                        {groupBy !== null ? (
-                          <div className="mb-2 flex items-center gap-2">
-                            <h3 className="text-sm font-semibold">
-                              {group.method} <span className="text-xs text-[#7a7a7a]">({groupedAll.find((g) => g.method === group.method)?.items.length ?? group.items.length})</span>
-                            </h3>
-                          </div>
-                        ) : null}
 
-                        {group.items.map((record) => (
-                          <RecordCard
-                            key={record.id_bitacora}
-                            record={record}
-                            groupBy={groupBy}
-                            personTypeStyles={personTypeStyles}
-                            personTypeLabels={personTypeLabels}
-                            onSelectRecord={onSelectRecord}
-                          />
-                        ))}
-                      </section>
-                    ))}
+                {loading && sortedRecords.length === 0 ? (
+                  <div className="flex min-h-45 items-center justify-center px-4 py-10 text-sm text-slate-500">Cargando registros...</div>
+                ) : paginatedFlattened.length === 0 ? (
+                  <div className="flex min-h-57.5 items-center justify-center px-4 py-10">
+                    <div className="mx-auto flex max-w-sm flex-col items-center gap-2 text-center">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#fff6dd] shadow-[0_0_0_8px_rgba(251,191,36,0.12)]">
+                        <AlertCircle className="size-5 text-[#e2aa00]" />
+                      </div>
+                      <p className="text-sm font-semibold text-[#353535]">Aún no tienes registros</p>
+                      <p className="max-w-[20rem] text-xs leading-5 text-[#747474]">Cuando existan ingresos o salidas, aparecerán en tu bitácora de accesos.</p>
+                      <p className="text-xs leading-5 text-[#9a9a9a]">Podrás consultar el historial y abrir el detalle de cada registro.</p>
+                    </div>
                   </div>
+                ) : (
+                  <>
+                    <div className="space-y-3 p-3 md:hidden">
+                      {groupedRecords.map((group) => (
+                        <section key={group.method}>
+                          {groupBy !== null ? (
+                            <div className="mb-2 flex items-center gap-2">
+                              <h3 className="text-sm font-semibold">
+                                {group.method} <span className="text-xs text-[#7a7a7a]">({groupedAll.find((g) => g.method === group.method)?.items.length ?? group.items.length})</span>
+                              </h3>
+                            </div>
+                          ) : null}
 
-                  <div className="hidden overflow-x-auto md:block">
-                    <RecordsTable
-                      groupedRecords={groupedRecords}
-                      groupedAll={groupedAll}
-                      groupBy={groupBy}
-                      personTypeStyles={personTypeStyles}
-                      personTypeLabels={personTypeLabels}
-                      toggleGroup={toggleGroup}
-                      toggleSort={toggleSort}
-                      sortField={sortField}
-                      sort={sort}
-                      onSelectRecord={onSelectRecord}
-                    />
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#dfdfdf] px-3 py-3 text-xs text-[#5c5c5c] sm:px-4">
-                    <button
-                      type="button"
-                      onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                      disabled={page === 1}
-                      className={cn(
-                        "rounded-md border border-[#d2d2d2] bg-white px-3 py-1.5",
-                        page === 1 ? "cursor-not-allowed opacity-50" : "hover:bg-[#f8f8f8]",
-                      )}
-                    >
-                      Previous
-                    </button>
-
-                    <div className="flex items-center gap-1">
-                      {visiblePages.map((pageNumber) => (
-                        <button
-                          key={pageNumber}
-                          type="button"
-                          onClick={() => setPage(pageNumber)}
-                          className={cn(
-                            "h-6 min-w-6 rounded px-2 text-xs",
-                            pageNumber === page
-                              ? "bg-[#f2e9ff] font-semibold text-[#7c5dd8]"
-                              : "text-[#666666] hover:bg-[#f6f6f6]",
-                          )}
-                        >
-                          {pageNumber}
-                        </button>
+                          {group.items.map((record) => (
+                            <RecordCard
+                              key={record.id_bitacora}
+                              record={record}
+                              groupBy={groupBy}
+                              personTypeStyles={personTypeStyles}
+                              personTypeLabels={personTypeLabels}
+                              onSelectRecord={onSelectRecord}
+                            />
+                          ))}
+                        </section>
                       ))}
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-                      disabled={page === totalPages}
-                      className={cn(
-                        "rounded-md border border-[#d2d2d2] bg-white px-3 py-1.5",
-                        page === totalPages ? "cursor-not-allowed opacity-50" : "hover:bg-[#f8f8f8]",
-                      )}
-                    >
-                      Next
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+                    <div className="hidden overflow-x-auto md:block">
+                      <RecordsTable
+                        groupedRecords={groupedRecords}
+                        groupedAll={groupedAll}
+                        groupBy={groupBy}
+                        personTypeStyles={personTypeStyles}
+                        personTypeLabels={personTypeLabels}
+                        toggleGroup={toggleGroup}
+                        toggleSort={toggleSort}
+                        sortField={sortField}
+                        sort={sort}
+                        onSelectRecord={onSelectRecord}
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#dfdfdf] px-3 py-3 text-xs text-[#5c5c5c] sm:px-4">
+                      <button
+                        type="button"
+                        onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                        disabled={page === 1}
+                        className={cn(
+                          "rounded-md border border-[#d2d2d2] bg-white px-3 py-1.5",
+                          page === 1 ? "cursor-not-allowed opacity-50" : "hover:bg-[#f8f8f8]",
+                        )}
+                      >
+                        Previous
+                      </button>
+
+                      <div className="flex items-center gap-1">
+                        {visiblePages.map((pageNumber) => (
+                          <button
+                            key={pageNumber}
+                            type="button"
+                            onClick={() => setPage(pageNumber)}
+                            className={cn(
+                              "h-6 min-w-6 rounded px-2 text-xs",
+                              pageNumber === page
+                                ? "bg-[#f2e9ff] font-semibold text-[#7c5dd8]"
+                                : "text-[#666666] hover:bg-[#f6f6f6]",
+                            )}
+                          >
+                            {pageNumber}
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                        disabled={page === totalPages}
+                        className={cn(
+                          "rounded-md border border-[#d2d2d2] bg-white px-3 py-1.5",
+                          page === totalPages ? "cursor-not-allowed opacity-50" : "hover:bg-[#f8f8f8]",
+                        )}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {selected ? (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -468,20 +488,7 @@ export function MiBitacoraPage() {
                             </div>
 
                             {selectedDetail.detalle.qr_utilizado ? (
-                              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                                <h3 className="mb-3 font-semibold text-slate-900">Código QR Utilizado</h3>
-                                <div className="flex items-center gap-2">
-                                  <code className="flex-1 break-all rounded bg-white p-2 font-mono text-xs text-slate-600">{selectedDetail.detalle.qr_utilizado}</code>
-                                  <button
-                                    type="button"
-                                    onClick={() => { navigator.clipboard?.writeText(selectedDetail.detalle.qr_utilizado ?? ""); }}
-                                    title="Copiar QR"
-                                    className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                                  >
-                                    Copiar
-                                  </button>
-                                </div>
-                              </div>
+                              <QRCodeBlock qr={selectedDetail.detalle.qr_utilizado} />
                             ) : null}
 
                             <div className="space-y-3">
@@ -500,21 +507,23 @@ export function MiBitacoraPage() {
                             </div>
                           </div>
 
-                          <div className="lg:col-span-1">
+                            <div className="lg:col-span-1">
                             <div className="flex h-full flex-col rounded-lg border border-slate-200 bg-slate-50 p-4">
                               <h3 className="mb-3 font-semibold text-slate-900">Foto del Visitante</h3>
-                              {selectedDetail.detalle.foto_visitante ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                  src={selectedDetail.detalle.foto_visitante}
-                                  alt={`Foto de ${selectedDetail.nombre_persona}`}
-                                  className="w-full flex-1 rounded-lg object-cover"
-                                />
-                              ) : (
-                                <div className="flex flex-1 items-center justify-center rounded-lg border-2 border-dashed border-slate-300">
-                                  <p className="px-2 text-center text-xs text-slate-500">No hay foto disponible</p>
-                                </div>
-                              )}
+                              <div className="flex-1 flex items-center justify-center">
+                                {selectedDetail.detalle.foto_visitante ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={selectedDetail.detalle.foto_visitante}
+                                    alt={`Foto de ${selectedDetail.nombre_persona}`}
+                                    className="w-full h-full rounded-lg object-cover"
+                                  />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center rounded-lg border-2 border-dashed border-slate-300">
+                                    <p className="px-2 text-center text-xs text-slate-500">No hay foto disponible</p>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -526,6 +535,43 @@ export function MiBitacoraPage() {
             ) : null}
           </main>
         </section>
+      </div>
+    </div>
+  );
+}
+
+function QRCodeBlock({ qr }: { qr: string }) {
+  const { toast } = useToast();
+
+  const handleCopy = React.useCallback(() => {
+    try {
+      navigator.clipboard?.writeText(qr ?? "");
+      toast({ title: "Copiado", description: "Copiado con éxito" });
+    } catch {
+      toast({ title: "Error", description: "No se pudo copiar" });
+    }
+  }, [qr, toast]);
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+      <h3 className="mb-3 font-semibold text-slate-900">Código QR Utilizado</h3>
+      <div className="flex flex-col items-center gap-3 md:flex-row">
+        <div className="bg-white p-3 rounded-lg flex justify-center">
+          <div className="w-full" style={{ maxWidth: 180 }}>
+            <ReactQRCode value={qr} size={180} />
+          </div>
+        </div>
+        <div className="flex flex-1 w-full items-center gap-2">
+          <code className="flex-1 break-all rounded bg-white p-2 font-mono text-xs text-slate-600">{qr}</code>
+          <button
+            type="button"
+            onClick={handleCopy}
+            title="Copiar QR"
+            className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Copiar
+          </button>
+        </div>
       </div>
     </div>
   );

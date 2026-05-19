@@ -11,7 +11,7 @@ import {
   BadRequestException,
   Req,
 } from '@nestjs/common';
-import type { Request, Response } from 'express';
+import type {import type { Request, Response } from 'express';
 
 import { BitacoraService } from './bitacora.service';
 
@@ -261,11 +261,3 @@ export class BitacoraController {
     } catch {
       // No bloqueamos la respuesta si la notificación falla, sólo registramos.
     }
-
-    return {
-      success: true,
-      message: 'Operación realizada con éxito',
-      ...resultado,
-    };
-  }
-}

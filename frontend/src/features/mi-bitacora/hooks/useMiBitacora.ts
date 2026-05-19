@@ -134,8 +134,17 @@ export function useMiBitacora(residentUserId: string) {
           setDetailError(null);
         }
       } catch (cause) {
+        // limpiar datos parciales y mostrar mensaje de usuario amigable
+        setAllRecords([]);
+        hasLoadedRef.current = false;
+        setSelected(null);
+        setSelectedDetail(null);
+        setDetailError(null);
+
         setError(
-          cause instanceof Error ? cause.message : "No fue posible cargar la bitácora por un problema técnico.",
+          cause instanceof Error
+            ? cause.message
+            : "¡Ups! Ocurrió un problema al cargar tu bitácora. Ya lo estamos arreglando, intenta de nuevo en unos minutos.",
         );
       } finally {
         setLoading(false);
@@ -144,6 +153,55 @@ export function useMiBitacora(residentUserId: string) {
     },
     [dateFrom, dateTo, personType, residentUserId, search],
   );
+
+  // SSE: escuchar actualizaciones del backend para actualizar inmediatamente
+  React.useEffect(() => {
+    const apiUrl =
+      process.env.NEXT_PUBLIC_API_URL || process.env.REACT_APP_API_URL || "http://localhost:3002/api/";
+
+    // build full base URL preserving any path (e.g. /api/) so SSE hits /api/bitacora/updates
+    let backendBase = apiUrl;
+    try {
+      const u = new URL(apiUrl);
+      // keep pathname (like /api/) and origin
+      backendBase = `${u.origin}${u.pathname.replace(/\/$/, '')}`;
+    } catch {
+      // fallback
+      backendBase = apiUrl.replace(/\/$/, '');
+    }
+
+    let source: EventSource | null = null;
+    try {
+      source = new EventSource(`${backendBase}/bitacora/updates`, { withCredentials: true } as any);
+    } catch (e) {
+      return undefined;
+    }
+
+    source.onmessage = async (event) => {
+      try {
+        const payload = JSON.parse(String(event.data)) as { ids_afectados?: string[] };
+        await fetchList(true);
+
+        if (selected && payload.ids_afectados?.includes(selected.id_bitacora)) {
+          await onSelectRecord(selected);
+        }
+      } catch {
+        await fetchList(true);
+      }
+    };
+
+    return () => {
+      try {
+        if (source) {
+          source.onmessage = null;
+          source.close();
+        }
+      } catch {
+        // ignore
+      }
+    };
+    // deliberate: fetchList/onSelectRecord/selected included so SSE triggers correctly
+  }, [fetchList, onSelectRecord, selected]);
 
   async function onSelectRecord(record: MiBitacoraItem) {
     setSelected(record);
