@@ -16,6 +16,7 @@ import { Clock, Calendar, Plus } from "lucide-react";
 import { FiltrosIncidentes } from "./FiltrosIncidentes";
 import { Incidente, EstadoIncidencia } from "../api/incidencias";
 import { ModalDetalleIncidente } from "./ModalDetalleIncidente";
+import IncidenciasView from "@/features/incidencias/residente/components/IncidenciasView";
 
 interface TablaEstadoIncidentesProps {
   data: Incidente[];
@@ -155,10 +156,10 @@ function FilasYPaginacion({ incidentes, filters, onFilterChange, currentPage, to
 
   return (
     <div className="space-y-4 mt-4">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <FiltrosIncidentes filters={filters} onFilterChange={onFilterChange} />
-        <div className="text-sm text-muted-foreground">
-          Mostrando {incidentes.length} de {total} incidentes
+        <div className="shrink-0 self-start xl:self-center">
+          <IncidenciasView />
         </div>
       </div>
 
@@ -242,7 +243,10 @@ function FilasYPaginacion({ incidentes, filters, onFilterChange, currentPage, to
       )}
 
       {/* Controles de paginación debajo de la tabla, alineados a la derecha */}
-      <div className="flex justify-end">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-sm text-muted-foreground">
+          Mostrando {incidentes.length} de {total} incidentes
+        </div>
         <div className="flex items-center gap-4">
           <div className="text-sm text-muted-foreground">
             Página {currentPage} de {totalPages}
