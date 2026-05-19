@@ -1,6 +1,11 @@
 "use client";
 
-// Components
+import { useCallback, useEffect, useState } from 'react';
+
+// My components
+import { toast } from "sonner"
+
+// Components UI
 import { IncidenciaDialog } from './IncidenciaDialog';
 
 // Hooks
@@ -8,10 +13,10 @@ import { useLocationStore } from '../hooks/useLocationStore';
 import { useReverseGeocoding } from '../hooks/useGeo';
 import { useIncidenciaForm } from '../hooks/useIncidenciaForm';
 import { useSubmitIncidencia } from '../hooks/useSubmitIncidencia';
-import { useCallback, useEffect } from 'react';
-import { toast } from "sonner"
 
 function IncidenciasView() {
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [shouldReset, setShouldReset] = useState(false);
     const { position, setPosition } = useLocationStore();
     const { data: address, isLoading: isAddressLoading } = useReverseGeocoding(position);
     
@@ -22,7 +27,8 @@ function IncidenciasView() {
         setField,
         setErrors,
         clearErrors,
-        validateForm
+        validateForm,
+        resetForm
     } = useIncidenciaForm();
     
     const submitMutation = useSubmitIncidencia();
@@ -74,15 +80,32 @@ function IncidenciasView() {
     }, [setPosition, address, setField, errors.ubicacion, setErrors]);
 
     const handleSubmit = useCallback((e: React.FormEvent) => {
-        if (e && e.preventDefault) {
-            e.preventDefault();
-        }
-        
+        e.preventDefault();
+
         const isValid = validateForm();
-        
-        if (isValid && submitMutation && formData) {
-            submitMutation.mutate(formData as any);
-        }
+
+        if (!isValid) return;
+
+        submitMutation.mutate(formData as any, {
+            onSuccess: () => {
+                toast.success("Reporte creado exitosamente");
+
+                setTimeout(() => {
+                    resetForm();
+                    setPosition(null);
+                    setIsDialogOpen(false);
+                    setShouldReset(false);
+                }, 1000);
+                setShouldReset(false);
+            },
+            onError: (error: any) => {
+                toast.error(
+                    error.response?.data?.message ||
+                    "Error al crear el reporte"
+                );
+            }
+        });
+
     }, [validateForm, submitMutation, formData]);
 
     const handleFieldChange = useCallback((field: string, value: any) => {
@@ -105,21 +128,9 @@ function IncidenciasView() {
         }
     }, [address, position, setField]);
 
-    useEffect(() => {
-        if (submitMutation.isSuccess && submitMutation.data?.success) {
-            toast.success("Reporte creado exitosamente");
-        }
-    }, [submitMutation.isSuccess, submitMutation.data]);
-
-    useEffect(() => {
-        if (submitMutation.isError) {
-            const error = submitMutation.error as any;
-            toast.error(error.response?.data?.message || 'Error al crear el reporte');
-        }
-    }, [submitMutation.isError, submitMutation.error]);
-
     return (
         <IncidenciaDialog
+          key={isDialogOpen ? 'open' : 'closed'}
           formData={formData}
           errors={errors}
           address={address}
@@ -132,6 +143,12 @@ function IncidenciasView() {
           onLocationSelect={handleLocationSelect}
           selectedCoords={position ? { longitude: position.lng, latitude: position.lat } : undefined}
           onSubmit={handleSubmit}
+          open={isDialogOpen}
+          onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (open) setShouldReset(true);
+          }}
+          reset={shouldReset}
         />
     );
 }

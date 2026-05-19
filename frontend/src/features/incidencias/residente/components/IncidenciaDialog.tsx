@@ -22,6 +22,9 @@ interface IncidenciaDialogProps {
   selectedCoords?: { longitude: number; latitude: number };
   onSubmit: (e: React.FormEvent) => void;
   onClose?: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  reset?: boolean;
 }
 
 export function IncidenciaDialog({
@@ -37,10 +40,13 @@ export function IncidenciaDialog({
   onLocationSelect,
   selectedCoords,
   onSubmit,
-  onClose
+  onClose,
+  open,
+  onOpenChange,
+  reset
 }: IncidenciaDialogProps) {
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline">Agregar reporte</Button>
       </DialogTrigger>
@@ -66,6 +72,7 @@ export function IncidenciaDialog({
             onMapClick={onMapClick}
             onLocationSelect={onLocationSelect}
             selectedCoords={selectedCoords}
+            reset={reset}
           />
           
           <DialogFooter>
