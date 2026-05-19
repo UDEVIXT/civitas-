@@ -17,6 +17,7 @@ import { APP_GUARD } from '@nestjs/core/constants';
 import { MiEmpleadoModule } from './mis-empleados/mi-empleado.module'; 
 import { MailModule } from './mail/mail.module';
 import { MisServiciosModule } from './mis-servicios/mis-servicios.module';
+import { AccesosServiciosModule } from './accesos-servicios/accesos-servicios.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -34,6 +35,7 @@ import { MisServiciosModule } from './mis-servicios/mis-servicios.module';
     ViviendaModule,
     MiEmpleadoModule, 
     MisServiciosModule,
+    AccesosServiciosModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

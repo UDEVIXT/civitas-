@@ -145,19 +145,22 @@ export class EmpleadoService {
       byViviendaId,
     } = filters;
 
+    // FORZAR INNER JOIN (equivalente a SQL JOIN)
     const where: any = {
-      servicio: {},
+      servicio: {
+        isNot: null,
+      },
     };
 
     // 🔎 Buscar por nombre
     if (search) {
       where.nombre = {
         contains: search,
-        mode: 'insensitive',
+        mode: "insensitive",
       };
     }
 
-    // 👤 Filtrar por usuario (CORRECTO)
+    // 👤 Filtrar por usuario
     if (byUsuarioId) {
       where.residente = {
         usuario: {
@@ -166,7 +169,7 @@ export class EmpleadoService {
       };
     }
 
-    // 🏠 Filtrar por vivienda (CORRECTO)
+    // 🏠 Filtrar por vivienda
     if (byViviendaId) {
       where.residente = {
         vivienda: {
@@ -175,9 +178,10 @@ export class EmpleadoService {
       };
     }
 
-    // ⚡ Filtrar por estado del servicio (CORRECTO)
+    //Filtrar por estado del servicio (NO sobrescribir el where completo)
     if (isActive !== undefined) {
       where.servicio = {
+        ...where.servicio,
         activo: isActive,
       };
     }
@@ -254,18 +258,18 @@ export class EmpleadoService {
     ]);
 
     const dataWithHorario = data.map((item) => {
-      if (!item.servicio) return item;
-
       const horario_texto = this.buildHorarioTexto(
-        item.servicio.horarios ?? [],
+        item.servicio?.horarios ?? [],
       );
 
       return {
         ...item,
-        servicio: {
-          ...item.servicio,
-          horario_texto,
-        },
+        servicio: item.servicio
+          ? {
+              ...item.servicio,
+              horario_texto,
+            }
+          : null,
       };
     });
 
