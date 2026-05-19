@@ -16,6 +16,7 @@ services:
       - .:/usr/src/app
     networks:
       - civitas_network
+
   postgres:
     image: postgres:17
     ports:
