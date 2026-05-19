@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader, Di
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { accesosServiciosApi } from "../api/accesos-servicios.api";
-//import { toast } from "@/components/ui/toast/use-toast";
+import { toast } from "@/components/ui/toast/use-toast";
 import { Spinner } from "@/components/ui/spinner";
 import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
