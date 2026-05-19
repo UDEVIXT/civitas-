@@ -39,7 +39,10 @@ type MisEmpleadosTableProps = {
   isLoading: boolean;
   onEdit: (empleado: EmpleadoDomestico) => void;
   onVerHorario: (empleado: EmpleadoDomestico) => void;
-  onBaja: (empleado: EmpleadoDomestico) => void; // <-- Nueva prop requerida
+  onBaja: (
+    empleado: EmpleadoDomestico,
+    mode: "deactivate" | "reactivate"
+  ) => void;
 };
 
 export function TablaMisEmpleados({
@@ -149,7 +152,8 @@ export function TablaMisEmpleados({
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => onBaja(empleado)}
+                          onClick={() =>
+                            onBaja(empleado, isActive ? "deactivate" : "reactivate")}
                           className={cn(
                             "rounded-full",
                             isActive
