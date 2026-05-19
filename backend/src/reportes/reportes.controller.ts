@@ -13,25 +13,20 @@ export class ReportesController {
   ) {}
 
   @Post()
-  @UseInterceptors(FilesInterceptor('imagenes', 10)) 
+  @UseInterceptors(FilesInterceptor('imagen', 10)) 
   async crearReporte(
     @UploadedFiles() archivos: Array<any>, 
     @Body() datosReporte: any
   ) {
     const reporteCreado = await this.reportesService.crearConEvidencia(datosReporte);
     
-    // Cambiamos a un arreglo normal, sin promesas.
     let fotosRegistros: Array<any> = [];
 
     if (archivos && archivos.length > 0) {
-      // Magia de Promise.all: Capturamos directamente lo que el 'map' devuelve
-      // y esperamos a que TODAS las promesas se resuelvan.
       fotosRegistros = await Promise.all(
         archivos.map(async (archivo) => {
           const urlSubida = await this.archivosService.subirImagen(archivo);
           
-          // En lugar de hacer un push(), hacemos un return con el 'await'.
-          // Promise.all agarrará este resultado y lo pondrá en la posición correcta del arreglo.
           return await this.evidenciaService.create({
             id_reporte: reporteCreado.id_reporte,
             url_archivo: urlSubida,
@@ -45,7 +40,6 @@ export class ReportesController {
       return {
         message: "Reporte y evidencias registrados con éxito",
         reporte: reporteCreado,
-        // Pasamos el arreglo directamente, sin '.entries'
         fotos: fotosRegistros 
       };
     } else {
