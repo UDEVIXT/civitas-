@@ -35,16 +35,15 @@ export const toggleEmpleadoActivo = async (
       throw new Error("Empleado inválido: falta id_visitante");
     }
 
+    // 🔥 IMPORTANTE: fallback seguro
     const estaActivo = Boolean(empleado?.servicio?.activo);
 
-    const payload = estaActivo
-      ? {
-          activo: false,
-          motivo: motivo || "Baja realizada desde el panel",
-        }
-      : {
-          activo: true,
-        };
+    const payload = {
+      activo: !estaActivo, // 👈 toggle real (más limpio)
+      ...(estaActivo && {
+        motivo: motivo || "Baja realizada desde el panel",
+      }),
+    };
 
     const response = await apiClient.put(
       `/mi-empleado/${empleado.id_visitante}`,
