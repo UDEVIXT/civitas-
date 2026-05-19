@@ -1,0 +1,58 @@
+name: Backend Revisión
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+
+jobs:
+  backend-check:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: civitas
+          POSTGRES_PASSWORD: civitas123
+          POSTGRES_DB: civitas
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U civitas -d civitas"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      DATABASE_URL: postgresql://civitas:civitas123@localhost:5432/civitas?schema=public
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Apply database migrations
+        run: npx prisma migrate deploy
+
+      - name: Run database seeders
+        run: npx prisma db seed
+
+      - name: Build project
+        run: npm run build
