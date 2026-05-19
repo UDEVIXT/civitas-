@@ -99,9 +99,34 @@ function IncidenciasView() {
                 setShouldReset(false);
             },
             onError: (error: any) => {
+
+                if (!error.response) {
+                    toast.error(
+                        "No se pudo conectar al servidor. Verifica tu conexión e inténtalo nuevamente."
+                    );
+                    return;
+                }
+
+                if (error.response.status === 403) {
+                    toast.error(
+                        "No tienes permisos para realizar esta acción."
+                    );
+                    return;
+                }
+
+                if (
+                    error.response?.data?.message?.toLowerCase().includes("foto") ||
+                    error.response?.data?.message?.toLowerCase().includes("imagen")
+                ) {
+                    toast.error(
+                        "Ocurrió un problema al subir las fotos. Intenta nuevamente."
+                    );
+                    return;
+                }
+
                 toast.error(
                     error.response?.data?.message ||
-                    "Error al crear el reporte"
+                    "Ocurrió un error al crear el reporte."
                 );
             }
         });
