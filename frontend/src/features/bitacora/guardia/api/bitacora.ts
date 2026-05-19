@@ -41,6 +41,7 @@ export interface BitacoraDetalle extends BitacoraRegistro {
   documento?: string;
   telefono?: string;
   empresa?: string;
+  guardia_salida?: string;
   informacion_adicional?: string;
   residente_asociado: {
     nombre: string;
