@@ -10,10 +10,10 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Calendar, FileText, Image } from "lucide-react";
-import { Incidente, EstadoIncidencia } from "@/features/incidentes/residentes/api/incidencias";
+import { ReporteIncidencia, EstadoIncidencia } from "@/features/incidentes/residentes/api/incidencias";
 
 interface ModalDetalleIncidenteProps {
-  incidente: Incidente | null;
+  incidente: ReporteIncidencia | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }

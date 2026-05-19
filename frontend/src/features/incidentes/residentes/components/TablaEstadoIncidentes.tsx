@@ -14,11 +14,11 @@ import { Button } from "@/components/ui/button";
 import { Clock, Calendar, Plus } from "lucide-react";
 
 import { FiltrosIncidentes } from "./FiltrosIncidentes";
-import { Incidente, EstadoIncidencia } from "../api/incidencias";
+import { ReporteIncidencia, EstadoIncidencia } from "../api/incidencias";
 import { ModalDetalleIncidente } from "./ModalDetalleIncidente";
 
 interface TablaEstadoIncidentesProps {
-  data: Incidente[];
+  data: ReporteIncidencia[];
 }
 
 interface FiltrosState {
@@ -77,7 +77,7 @@ const PAGE_SIZE = 6;
 
 // ── Subcomponente que filtra localmente ──
 function TablaLocal({ data, filters, onFilterChange }: {
-  data: Incidente[];
+  data: ReporteIncidencia[];
   filters: FiltrosState;
   onFilterChange: (f: FiltrosState) => void;
 }) {
@@ -141,7 +141,7 @@ function TablaLocal({ data, filters, onFilterChange }: {
 
 // ── Subcomponente compartido: tabla + paginación ──
 function FilasYPaginacion({ incidentes, filters, onFilterChange, currentPage, totalPages, total, onPageChange, selectedId, onSelectId }: {
-  incidentes: Incidente[];
+  incidentes: ReporteIncidencia[];
   filters: FiltrosState;
   onFilterChange: (f: FiltrosState) => void;
   currentPage: number;
@@ -151,7 +151,7 @@ function FilasYPaginacion({ incidentes, filters, onFilterChange, currentPage, to
   selectedId: string | null;
   onSelectId: (id: string | null) => void;
 }) {
-  const selectedIncidente = incidentes.find(i => i.id_reporte === selectedId) || null;
+  const selectedIncidente: ReporteIncidencia | null = incidentes.find(i => i.id_reporte === selectedId) || null;
 
   return (
     <div className="space-y-4 mt-4">
