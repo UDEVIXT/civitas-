@@ -132,50 +132,79 @@ export class EmpleadoService {
     search?: string;
     page: number;
     limit?: number;
-    isActive?: boolean | undefined;
-    byResidenteId?: string;
+    isActive?: boolean;
+    byUsuarioId?: string;
     byViviendaId?: string;
   }) {
-    const { search, page, limit, isActive, byResidenteId, byViviendaId } =
-      filters;
+    const {
+      search,
+      page,
+      limit,
+      isActive,
+      byUsuarioId,
+      byViviendaId,
+    } = filters;
 
-    // ALERTA: Filtro relajado para pruebas de desarrollo
+    // FORZAR INNER JOIN (equivalente a SQL JOIN)
     const where: any = {
-      servicio: {} 
+      servicio: {
+        isNot: null,
+      },
     };
 
+    // 🔎 Buscar por nombre
     if (search) {
       where.nombre = {
         contains: search,
-        mode: 'insensitive',
+        mode: "insensitive",
       };
     }
 
-    if (byResidenteId) {
-      where.id_residente = byResidenteId;
+    // 👤 Filtrar por usuario
+    if (byUsuarioId) {
+      where.residente = {
+        usuario: {
+          id_usuario: byUsuarioId,
+        },
+      };
     }
 
+    // 🏠 Filtrar por vivienda
     if (byViviendaId) {
       where.residente = {
-        id_vivienda: byViviendaId,
+        vivienda: {
+          id_vivienda: byViviendaId,
+        },
       };
     }
 
-    if (isActive != undefined) {
-      where.servicio.activo = isActive;
+    //Filtrar por estado del servicio (NO sobrescribir el where completo)
+    if (isActive !== undefined) {
+      where.servicio = {
+        ...where.servicio,
+        activo: isActive,
+      };
     }
 
     const [data, total] = await Promise.all([
       this.prisma.visitante.findMany({
         where,
+
         select: {
           id_visitante: true,
           nombre: true,
           telefono: true,
           url_imagen: true,
+
           servicio: {
             select: {
+              id_servicio: true,
+              nombre_servicio: true,
               activo: true,
+              cargo: true,
+              nombre_empresa: true,
+              placas: true,
+
               horarios: {
                 where: {
                   activo: true,
@@ -186,6 +215,7 @@ export class EmpleadoService {
                   hora_fin: true,
                 },
               },
+
               tipo_servicio: {
                 select: {
                   nombre: true,
@@ -194,37 +224,52 @@ export class EmpleadoService {
               },
             },
           },
+
           residente: {
             select: {
+              id_residente: true,
+              id_usuario: true,
+
               vivienda: {
                 select: {
+                  id_vivienda: true,
                   numero_vivienda: true,
+                },
+              },
+
+              usuario: {
+                select: {
+                  id_usuario: true,
+                  nombre_usuario: true,
+                  correo: true,
                 },
               },
             },
           },
         },
+
         skip: (page - 1) * (limit ?? 10),
         take: limit ?? 10,
       }),
-      this.prisma.visitante.count({ where }),
+
+      this.prisma.visitante.count({
+        where,
+      }),
     ]);
 
     const dataWithHorario = data.map((item) => {
-      if (!item.servicio) {
-        return item;
-      }
-
       const horario_texto = this.buildHorarioTexto(
-        item.servicio.horarios ?? [],
+        item.servicio?.horarios ?? [],
       );
 
       return {
         ...item,
-        servicio: {
-          ...item.servicio,
-          horario_texto,
-        },
+        servicio: item.servicio
+          ? {
+              ...item.servicio,
+              horario_texto,
+            }
+          : null,
       };
     });
 
@@ -233,7 +278,7 @@ export class EmpleadoService {
       meta: {
         total,
         page,
-        limit,
+        limit: limit ?? 10,
         total_pages: limit ? Math.ceil(total / limit) : 1,
       },
       data: dataWithHorario,
@@ -243,8 +288,9 @@ export class EmpleadoService {
   async obtenerServicio(id_visitante: string) {
     const visitante = await this.prisma.visitante.findUnique({
       where: {
-        id_visitante: id_visitante,
+        id_visitante,
       },
+
       select: {
         nombre: true,
         id_visitante: true,
@@ -255,22 +301,23 @@ export class EmpleadoService {
     // Error 404
     if (!visitante) {
       throw new NotFoundException(
-        `No se encontró ningún empleado con el ID proporcionado.`,
+        "No se encontró ningún empleado con el ID proporcionado.",
       );
     }
 
     // Error 400
     if (!visitante.id_servicio) {
       throw new BadRequestException(
-        `El registro de ${visitante.nombre} no está configurado como un empleado de servicio.`,
+        "El registro de ${visitante.nombre} no está configurado como un empleado de servicio.",
       );
     }
 
-    //Verificar que el servicio asociado al empleado esté activo antes de intentar darlo de baja
+    // Buscar servicio asociado
     const servicio = await this.prisma.servicio.findFirst({
       where: {
         id_servicio: visitante.id_servicio,
       },
+
       select: {
         id_servicio: true,
       },
@@ -278,7 +325,7 @@ export class EmpleadoService {
 
     if (!servicio) {
       throw new NotFoundException(
-        `El empleado que deseas actualizar no está registrado.`,
+        "El empleado que deseas actualizar no está registrado.",
       );
     }
 
@@ -440,9 +487,23 @@ async actualizarEmpleado(id: string, data: any) {
   }
 
   
-  async eliminarEmpleado(id: string, motivo?: string) {
+  async eliminarEmpleado(id: string, motivo?: string, id_residente?: string) {
     try {
       const servicio = await this.obtenerServicio(id);
+
+      let nombreAutor = 'Residente';
+      if (id_residente) {
+        const residente = await this.prisma.residente.findUnique({
+          where: { id_residente },
+          include: { usuario: { include: { persona: true } } }
+        });
+        if (residente?.usuario?.persona?.nombre) {
+          nombreAutor = residente.usuario.persona.nombre;
+        }
+      }
+
+      const fechaActual = new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
+      const comentarioEstructurado = `Baja por: ${nombreAutor} el ${fechaActual}. Motivo: ${motivo || 'No especificado'}`;
 
       // Borrado lógico
       await this.prisma.servicio.update({
@@ -457,7 +518,7 @@ async actualizarEmpleado(id: string, data: any) {
         where: { id_visitante: servicio.id_visitante },
         data: {
           estatus: 'Inactivo',
-          comentario_admin: motivo,
+          comentario_admin: comentarioEstructurado,
         },
       });
 
@@ -481,9 +542,23 @@ async actualizarEmpleado(id: string, data: any) {
     }
   }
 
-  async reactivarEmpleado(id: string) {
+  async reactivarEmpleado(id: string, id_residente?: string) {
     try {
       const servicio = await this.obtenerServicio(id);
+
+      let nombreAutor = 'Residente';
+      if (id_residente) {
+        const residente = await this.prisma.residente.findUnique({
+          where: { id_residente },
+          include: { usuario: { include: { persona: true } } }
+        });
+        if (residente?.usuario?.persona?.nombre) {
+          nombreAutor = residente.usuario.persona.nombre;
+        }
+      }
+
+      const fechaActual = new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
+      const comentarioEstructurado = `Reactivado por: ${nombreAutor} el ${fechaActual}.`;
 
       await this.prisma.servicio.update({
         where: { id_servicio: servicio.id_servicio },
@@ -494,7 +569,10 @@ async actualizarEmpleado(id: string, data: any) {
 
       await this.prisma.acceso.updateMany({
         where: { id_visitante: servicio.id_visitante },
-        data: { estatus: 'Activo' },
+        data: { 
+          estatus: 'Activo',
+          comentario_admin: comentarioEstructurado
+        },
       });
 
       return {

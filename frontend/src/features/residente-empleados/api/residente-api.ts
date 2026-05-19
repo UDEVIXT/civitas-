@@ -21,6 +21,47 @@ export const obtenerMisEmpleados = async (
   return response.data;
 };
 
+export const toggleEmpleadoActivo = async (
+  empleado: {
+    id_visitante: string;
+    servicio?: {
+      activo?: boolean;
+    };
+  },
+  motivo?: string,
+) => {
+  try {
+    if (!empleado?.id_visitante) {
+      throw new Error("Empleado inválido: falta id_visitante");
+    }
+
+    // 🔥 IMPORTANTE: fallback seguro
+    const estaActivo = Boolean(empleado?.servicio?.activo);
+
+    const payload = {
+      activo: !estaActivo, // 👈 toggle real (más limpio)
+      ...(estaActivo && {
+        motivo: motivo || "Baja realizada desde el panel",
+      }),
+    };
+
+    const response = await apiClient.put(
+      `/mi-empleado/${empleado.id_visitante}`,
+      payload,
+    );
+
+    return response.data;
+  } catch (error: any) {
+    console.error("Error al cambiar estado del empleado:", error);
+
+    throw (
+      error?.response?.data || {
+        message: "No se pudo actualizar el estado del empleado",
+      }
+    );
+  }
+};
+
 // 
 export const actualizarEmpleadoResidente = async (id: string, data: any) => {
   try {

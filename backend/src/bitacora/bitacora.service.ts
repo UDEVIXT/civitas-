@@ -57,66 +57,23 @@ export class BitacoraService {
     // SEARCH (Búsqueda por Nombre)
     if (search) {
       accesoFiltros.push({
-        OR: [
-          // 1. Si es visitante, busca en su nombre
-          { visitante: { nombre: { contains: search, mode: 'insensitive' } } },
-
-          // 2. Si NO es visitante (residente directo), busca en el nombre del usuario
-          {
-            AND: [
-              { id_visitante: null }, // <-- AISLAMIENTO CRÍTICO
-              {
-                usuario: {
-                  persona: {
-                    nombre: { contains: search, mode: 'insensitive' },
-                  },
-                },
-              },
-            ],
-          },
-        ],
+        visitante: { nombre: { contains: search, mode: 'insensitive' } },
       });
     }
 
     // FILTRO RESIDENCIA (Búsqueda por Propiedad)
     if (residencia) {
       accesoFiltros.push({
-        OR: [
-          // 1. Si es visitante, evaluamos a la vivienda de a quién visita
-          {
-            visitante: {
-              residente: {
-                vivienda: {
-                  numero_vivienda: {
-                    startsWith: residencia,
-                    mode: 'insensitive',
-                  },
-                },
+        visitante: {
+          residente: {
+            vivienda: {
+              numero_vivienda: {
+                startsWith: residencia,
+                mode: 'insensitive',
               },
             },
           },
-
-          // 2. Si NO es visitante (residente directo), evaluamos su propia vivienda
-          {
-            AND: [
-              { id_visitante: null }, // <-- AISLAMIENTO CRÍTICO
-              {
-                usuario: {
-                  residentes: {
-                    some: {
-                      vivienda: {
-                        numero_vivienda: {
-                          startsWith: residencia,
-                          mode: 'insensitive',
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            ],
-          },
-        ],
+        },
       });
     }
 
@@ -126,52 +83,12 @@ export class BitacoraService {
       switch (tipoNormalizado) {
         case 'proveedor':
           accesoFiltros.push({
-            visitante: {
-              servicio: {
-                tipo_servicio: {
-                  OR: [
-                    {
-                      categoria: { contains: 'proveedor', mode: 'insensitive' },
-                    },
-                    {
-                      categoria: {
-                        contains: 'repartidor',
-                        mode: 'insensitive',
-                      },
-                    },
-                    {
-                      categoria: {
-                        contains: 'mantenimiento',
-                        mode: 'insensitive',
-                      },
-                    },
-                    { nombre: { contains: 'proveedor', mode: 'insensitive' } },
-                    { nombre: { contains: 'repartidor', mode: 'insensitive' } },
-                    {
-                      nombre: {
-                        contains: 'mantenimiento',
-                        mode: 'insensitive',
-                      },
-                    },
-                  ],
-                },
-              },
-            },
+            visitante: { id_servicio: { not: null } },
           });
           break;
         case 'empleado_domestico':
           accesoFiltros.push({
-            visitante: {
-              servicio: {
-                tipo_servicio: {
-                  OR: [
-                    {
-                      categoria: { contains: 'empleado', mode: 'insensitive' },
-                    },
-                  ],
-                },
-              },
-            },
+            visitante: { es_frecuente: true, id_servicio: null },
           });
           break;
         case 'visitante':
@@ -182,11 +99,6 @@ export class BitacoraService {
         case 'residente':
           accesoFiltros.push({
             id_visitante: null,
-          });
-          break;
-        default:
-          accesoFiltros.push({
-            visitante: { servicio: { tipo_servicio: { categoria: tipo } } },
           });
           break;
       }
@@ -258,6 +170,7 @@ export class BitacoraService {
             },
           },
           guardia: { select: { nombre: true } },
+          guardia_salida: { select: { nombre: true } },
         },
         orderBy,
         skip: (page - 1) * limit,
@@ -312,9 +225,11 @@ export class BitacoraService {
 
         tipo_persona: isResidenteDirecto
           ? 'residente'
-          : visitante.es_frecuente
-            ? 'empleado_domestico'
-            : (visitante.servicio?.tipo_servicio?.categoria ?? 'visitante'),
+          : visitante.id_servicio
+            ? 'proveedor'
+            : visitante.es_frecuente
+              ? 'empleado_domestico'
+              : 'visitante',
 
         residente_asociado: {
           // Si es residente directo, buscamos su propia vivienda en el arreglo.
@@ -326,6 +241,7 @@ export class BitacoraService {
         fecha_salida: item.fecha_hora_salida,
         metodo_acceso: metodoAccesoCalculado,
         guardia_registro: item.guardia.nombre,
+        guardia_salida: item.guardia_salida?.nombre ?? 'Pendiente',
         estado:
           item.fecha_hora_salida === null
             ? tiempoExcedido
@@ -343,7 +259,6 @@ export class BitacoraService {
   }
 
   // HU-1.9.1: Registrar salida (Individual o Masiva)
-  // HU-1.9.1: Registrar salida (Individual o Masiva)
   async registrarSalida(
     id_bitacora: string | string[],
     id_guardia: string,
@@ -351,7 +266,9 @@ export class BitacoraService {
   ) {
     try {
       const guardiaInfo = await this.prisma.guardia.findFirst({
-        where: { id_usuario: id_guardia },
+        where: {
+          id_usuario: id_guardia,
+        },
       });
 
       if (!guardiaInfo) {
@@ -367,12 +284,15 @@ export class BitacoraService {
 
       const resultado = await this.prisma.bitacora.updateMany({
         where: {
-          id_bitacora: { in: ids },
+          id_bitacora: {
+            in: ids,
+          },
           fecha_hora_salida: null,
         },
         data: {
           fecha_hora_salida: new Date(),
           comentario_salida: textoSalida,
+          id_guardia_salida: guardiaInfo.id_guardia,
         },
       });
 
@@ -385,6 +305,7 @@ export class BitacoraService {
       return {
         mensaje: `Se registraron ${resultado.count} salidas exitosamente.`,
         cantidad: resultado.count,
+        guardia_salida: guardiaInfo.nombre,
       };
     } catch (error) {
       if (
@@ -676,6 +597,22 @@ export class BitacoraService {
     // 4. CORRECCIÓN: Tratamiento seguro para nulos
     const visitante = registro.acceso.visitante;
     const isResidenteDirecto = !visitante; // Evaluamos si es un residente sin visitante
+    const isProveedor = !!visitante?.id_servicio;
+    if (isProveedor) {
+      const empresa = visitante?.servicio?.nombre_empresa;
+      const servicio = visitante?.servicio?.nombre_servicio;
+
+      if (!empresa || !servicio) {
+        return {
+          id: registro.id_bitacora,
+          bloqueado: true,
+          motivo_bloqueo: 'CA003',
+          mensaje:
+            'Proveedor con información incompleta (empresa o servicio faltante).',
+          estado: 'bloqueado_datos_incompletos',
+        };
+      }
+    }
 
     let tipoPersona: string;
     if (isResidenteDirecto) {

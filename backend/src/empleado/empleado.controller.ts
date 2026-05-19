@@ -12,6 +12,7 @@ import {
   UsePipes,
   ValidationPipe,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 
 import { AuthGuard } from '@nestjs/passport/dist/auth.guard';
@@ -23,6 +24,7 @@ import { EmpleadoService } from './empleado.service';
 
 //DTOs
 import { UpdateEmpleadoDto } from './dto/update-empleado.dto';
+import { CreateEmpleadoDomesticoDto } from './dto/create-empleado-domestico.dto';
 
 //types
 import { EmpleadoEditRequest } from './types';
@@ -67,11 +69,18 @@ export class EmpleadoController {
   findOne(@Param('id') id: string) {
     return { message: `Empleado ${id}` };
   }
-  @Post()
+  @Post('empleado-domestico')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Administrador')
-  create() {
-    return { message: 'Empleado creado' };
+  @Roles('Residente')
+  @UsePipes(new ValidationPipe())
+  async createEmpleadoDomestico(
+    @Body() body: CreateEmpleadoDomesticoDto,
+    @Req() req,
+  ) {
+    return this.empleadoService.crearEmpleadoDomestico(
+      body,
+      req.user.id_usuario,
+    );
   }
   @Put(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)

@@ -71,6 +71,7 @@ model Vivienda {
   id_vivienda     String      @id @default(uuid())
   numero_vivienda String      @unique
   residentes      Residente[]
+  servicios       Servicio[]
 }
 
 model Usuario {
@@ -106,6 +107,7 @@ model Residente {
   usuario     Usuario      @relation(fields: [id_usuario], references: [id_usuario])
   vivienda    Vivienda     @relation(fields: [id_vivienda], references: [id_vivienda])
   visitantes  Visitante[]
+  servicios   Servicio[]
 }
 
 model Visitante {
@@ -140,12 +142,14 @@ model Bitacora {
   id_bitacora        String    @id @default(uuid())
   id_acceso          String
   id_guardia         String
+  id_guardia_salida  String?
   fecha_hora_entrada DateTime  @default(now())
   fecha_hora_salida  DateTime?
   comentario         String?
   comentario_salida  String?
   acceso             Acceso    @relation(fields: [id_acceso], references: [id_acceso], onDelete: Cascade)
-  guardia            Guardia   @relation(fields: [id_guardia], references: [id_guardia])
+  guardia Guardia @relation("GuardiaEntrada", fields: [id_guardia], references: [id_guardia])
+  guardia_salida Guardia? @relation("GuardiaSalida", fields: [id_guardia_salida], references: [id_guardia])
 }
 
 model Servicio {
@@ -158,10 +162,14 @@ model Servicio {
   rfc              String?                  @unique
   activo           Boolean                  @default(true)
   id_tipo_servicio String?
+  id_residente     String
+  id_vivienda      String
   fecha_registro   DateTime                 @default(now())
   horarios         HorarioAccesoServicios[]
   tipo_servicio    TipoServicio?            @relation(fields: [id_tipo_servicio], references: [id_tipo_servicio])
   visitantes       Visitante[]
+  residente        Residente @relation(fields: [id_residente], references: [id_residente])
+  vivienda         Vivienda @relation(fields: [id_vivienda], references: [id_vivienda])
 }
 
 model HorarioAccesoServicios {
@@ -181,7 +189,8 @@ model Guardia {
   id_usuario String     @unique
   nombre     String     @db.VarChar(128)
   turno      String
-  bitacoras  Bitacora[]
+  bitacoras         Bitacora[] @relation("GuardiaEntrada")
+  bitacoras_salida  Bitacora[] @relation("GuardiaSalida")
   usuario    Usuario    @relation(fields: [id_usuario], references: [id_usuario])
 }
 

@@ -21,6 +21,7 @@ interface IncidenciaFormProps {
   onMapClick: (lng: number, lat: number) => void;
   onLocationSelect?: (coords: { longitude: number; latitude: number }) => void;
   selectedCoords?: { longitude: number; latitude: number };
+  reset?: boolean;
 }
 
 export function IncidenciaForm({
@@ -32,7 +33,8 @@ export function IncidenciaForm({
   onFileChange,
   onMapClick,
   onLocationSelect,
-  selectedCoords
+  selectedCoords,
+  reset
 }: IncidenciaFormProps) {
   return (
     <FieldGroup className="no-scrollbar max-h-[60vh] overflow-y-auto px-2">
@@ -78,6 +80,7 @@ export function IncidenciaForm({
         onMapClick={onMapClick}
         onLocationSelect={onLocationSelect}
         selectedCoords={selectedCoords}
+        reset={reset}
       />
 
       <Field>

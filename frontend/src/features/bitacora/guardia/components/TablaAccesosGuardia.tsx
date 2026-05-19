@@ -170,9 +170,16 @@ function RegistroCard({
 
           <div className="flex items-center gap-2 text-muted-foreground">
             <ShieldCheck className="h-4 w-4 shrink-0" />
-            <span className="font-medium mr-1">Guardia:</span>
+            <span className="font-medium mr-1">G. entrada:</span>
             <span>{registro.guardia_registro}</span>
           </div>
+          {fechaSalida && (
+            <div className="flex items-center gap-2 text-muted-foreground mt-1">
+              <ShieldCheck className="h-4 w-4 shrink-0" />
+              <span className="font-medium mr-1">G. salida:</span>
+              <span>{(registro as any).guardia_salida || "-"}</span>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3 pt-1">
             <div className="space-y-1">
@@ -309,7 +316,7 @@ export function TablaAccesosGuardia({
             <TableHead className="text-center">Tipo de acceso</TableHead>
             <TableHead className="text-center">Residente asociado</TableHead>
             <TableHead className="text-center">Método de acceso</TableHead>
-            <TableHead className="text-center">Guardia que registró</TableHead>
+            <TableHead className="text-center">Guardias (Ent / Sal)</TableHead>
             <TableHead className="text-center">Estado</TableHead>
             <TableHead className="text-center">Fecha y hora entrada</TableHead>
             <TableHead className="text-center">Fecha y hora salida</TableHead>
@@ -391,9 +398,17 @@ export function TablaAccesosGuardia({
                   )}
                 </TableCell>
                 <TableCell className="text-center">
-                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                    <ShieldCheck className="h-4 w-4" />
-                    <span>{registro.guardia_registro}</span>
+                  <div className="flex flex-col items-center justify-center gap-1 text-muted-foreground whitespace-nowrap">
+                    <div className="flex items-center gap-1.5" title="Guardia entrada">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      <span className="text-xs">Ent: {registro.guardia_registro}</span>
+                    </div>
+                    {fechaSalida && (
+                      <div className="flex items-center gap-1.5" title="Guardia salida">
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        <span className="text-xs">Sal: {(registro as any).guardia_salida || "-"}</span>
+                      </div>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell className="text-center">

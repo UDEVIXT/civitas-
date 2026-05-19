@@ -1,4 +1,3 @@
-//BitacoraGuardiaPage.tsx
 "use client";
 
 import * as React from "react";
@@ -17,9 +16,11 @@ import {
 import { ModalRegistrarSalida } from "../components/ModalRegistrarSalida";
 import { bitacoraService } from "@/services/bitacora.service";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function BitacoraGuardiaPage() {
   const [isMounted, setIsMounted] = React.useState(false);
+  const queryClient = useQueryClient();
 
   React.useEffect(() => {
     setIsMounted(true);
@@ -31,7 +32,6 @@ export function BitacoraGuardiaPage() {
     ordenar: "reciente",
   });
 
-  // Limpiar filtros que no deben enviarse al backend
   const cleanFilters = React.useMemo(() => {
     const cleaned: BitacoraFiltro = {};
 
@@ -57,9 +57,72 @@ export function BitacoraGuardiaPage() {
     React.useState<BitacoraRegistro | null>(null);
   const [isMassLoading, setIsMassLoading] = React.useState(false);
 
+  React.useEffect(() => {
+    const apiUrl =
+      process.env.NEXT_PUBLIC_API_URL ||
+      process.env.REACT_APP_API_URL ||
+      "http://localhost:3001/api/";
+    const eventSource = new EventSource(`${apiUrl}bitacora/updates`, {
+      withCredentials: true,
+    });
+
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      console.log("📡 SSE recibido:", data);
+
+      queryClient.setQueryData(
+        ["bitacora-historica", cleanFilters],
+        (old: any) => {
+          if (!old) return old;
+
+          return {
+            ...old,
+            data: old.data.map((item: any) =>
+              data.ids_afectados.includes(item.id)
+                ? {
+                    ...item,
+                    estado: "fuera",
+                    comentario_salida:
+                      data.comentario_salida ?? item.comentario_salida,
+                    guardia_salida: data.guardia_salida ?? item.guardia_salida,
+                    fecha_salida: data.fecha_salida ?? new Date().toISOString(),
+                  }
+                : item
+            ),
+          };
+        }
+      );
+
+      data.ids_afectados.forEach((id: string) => {
+        queryClient.setQueryData(["bitacora-detalle", id], (old: any) => {
+          if (!old) return old;
+
+          return {
+            ...old,
+            data: {
+              ...old.data,
+              estado: "fuera",
+              comentario_salida: data.comentario_salida ?? old.data.comentario_salida,
+              guardia_salida: data.guardia_salida ?? old.data.guardia_salida,
+              fecha_salida: data.fecha_salida ?? new Date().toISOString(),
+            },
+          };
+        });
+      });
+    };
+
+    eventSource.onerror = () => {
+      console.warn("SSE desconectado");
+      eventSource.close();
+    };
+
+    return () => eventSource.close();
+  }, [queryClient, cleanFilters]);
+
   const toggleSelection = (id: string) => {
     setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
     );
   };
 
@@ -67,7 +130,7 @@ export function BitacoraGuardiaPage() {
     setFilters((prev) => ({
       ...prev,
       ...newFilters,
-      page: "1", // Reset page when filters change
+      page: "1",
     }));
     setSelectedIds([]);
   };
@@ -91,6 +154,7 @@ export function BitacoraGuardiaPage() {
 
   const handleSuccess = () => {
     refetch();
+    queryClient.invalidateQueries({ queryKey: ["bitacora-detalle"] });
     setRegistroParaSalida(null);
     setIsMassModalOpen(false);
     setSelectedIds([]);
@@ -98,15 +162,18 @@ export function BitacoraGuardiaPage() {
 
   const confirmMassExit = async () => {
     if (selectedIds.length === 0) return;
+
     setIsMassLoading(true);
+
     try {
-      await Promise.all(selectedIds.map(id => bitacoraService.registrarSalida(id.toString())));
+      await Promise.all(
+        selectedIds.map((id) => bitacoraService.registrarSalida(id.toString())),
+      );
+
       handleSuccess();
     } catch (error) {
       console.error("Error al registrar salidas masivas:", error);
-      toast.error("Error al registrar las salidas masivas. Intenta nuevamente.", {
-        description: "Ocurrió un error al registrar las salidas masivas. Por favor, intenta nuevamente.",
-      });
+      toast.error("Error al registrar las salidas masivas.");
     } finally {
       setIsMassLoading(false);
     }
@@ -114,12 +181,10 @@ export function BitacoraGuardiaPage() {
 
   const selectedRecordsData =
     bitacoraData?.data?.filter((r: BitacoraRegistro) =>
-      selectedIds.includes(r.id)
+      selectedIds.includes(r.id),
     ) || [];
 
-  if (!isMounted) {
-    return null; // Evita el error de hidratación forzando el render solo en el navegador
-  }
+  if (!isMounted) return null;
 
   return (
     <div className="container mx-auto py-6 px-4 sm:px-6 space-y-6">
@@ -131,6 +196,7 @@ export function BitacoraGuardiaPage() {
           Supervisa todas las entradas y autoriza las salidas de la residencia.
         </p>
       </div>
+
       <FiltrosTabla
         filters={filters}
         onChange={handleFilterChange}
@@ -138,6 +204,7 @@ export function BitacoraGuardiaPage() {
         selectedIds={selectedIds}
         onMassExitClick={() => setIsMassModalOpen(true)}
       />
+
       <TablaAccesosGuardia
         filtros={cleanFilters}
         onPageChange={handlePageChange}
@@ -166,28 +233,41 @@ export function BitacoraGuardiaPage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Confirmar Salida Masiva</DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground mt-1">
-              Se registrará la salida para {selectedIds.length} persona(s). Esta
-              acción no se puede deshacer.
+            <DialogDescription>
+              Se registrará la salida para {selectedIds.length} persona(s).
             </DialogDescription>
           </DialogHeader>
 
           <div className="py-4 space-y-4">
             <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
               {selectedRecordsData.map((reg: BitacoraRegistro) => (
-                <div key={reg.id} className="p-3 border rounded-md text-sm grid grid-cols-2 gap-2 text-left bg-muted/30">
-                  <p><span className="font-medium">Nombre:</span> {reg.nombre}</p>
-                  <p><span className="font-medium">Tipo:</span> {reg.tipo_persona}</p>
-                  {reg.residente_asociado?.nombre && <p><span className="font-medium">Asociado a:</span> {reg.residente_asociado.nombre}</p>}
+                <div
+                  key={reg.id}
+                  className="p-3 border rounded-md text-sm grid grid-cols-2 gap-2"
+                >
+                  <p>Nombre: {reg.nombre}</p>
+                  <p>Tipo: {reg.tipo_persona}</p>
                 </div>
               ))}
             </div>
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsMassModalOpen(false)} disabled={isMassLoading} className="cursor-pointer">Cancelar</Button>
-            <Button onClick={confirmMassExit} disabled={isMassLoading || selectedIds.length === 0} className="cursor-pointer">
-              {isMassLoading ? "Registrando..." : `Confirmar ${selectedIds.length} Salidas`}
+            <Button
+              variant="outline"
+              onClick={() => setIsMassModalOpen(false)}
+              disabled={isMassLoading}
+            >
+              Cancelar
+            </Button>
+
+            <Button
+              onClick={confirmMassExit}
+              disabled={isMassLoading || selectedIds.length === 0}
+            >
+              {isMassLoading
+                ? "Registrando..."
+                : `Confirmar ${selectedIds.length} Salidas`}
             </Button>
           </div>
         </DialogContent>

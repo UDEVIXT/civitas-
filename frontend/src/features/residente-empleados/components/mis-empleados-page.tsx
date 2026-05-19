@@ -8,14 +8,14 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { TablaMisEmpleados } from "./TablaMisEmpleados";
 import { ModalEditarEmpleado } from "./ModalEditarEmpleado";
 import { MiEmpleadoHorarioDialog } from "./MiEmpleadoHorarioDialog";
+import { ModalBajaEmpleado } from "./ModalBajaEmpleado";
 
 export default function MisEmpleadosPage() {
   // 2. Obtén el usuario logueado dinámicamente
   const { user } = useAuth(); 
 
   // 3. Le pasas el ID dinámico
-  // const idResidenteActivo = user?.id_residente ? String(user.id_residente) : "";
-  const idResidenteActivo = "98bbddf7-cfd0-4ef0-b1d9-6355e8bc1603";
+  const idUsuarioActivo = user?.id ? String(user.id) : "";
 
   const { 
     empleados, 
@@ -23,8 +23,9 @@ export default function MisEmpleadosPage() {
     search, 
     setSearch, 
     modalEdit, 
-    modalHorario 
-  } = useResidenteEmpleados(idResidenteActivo);
+    modalHorario,
+    modalBaja
+  } = useResidenteEmpleados(idUsuarioActivo); // <-- Le pasamos el ID normal
 
   console.log("Lo que llega al hook:", empleados);
 
@@ -41,13 +42,13 @@ export default function MisEmpleadosPage() {
         </div>
       </div>
 
-      {/* Buscador opcional (puedes usar el de shadcn si gustas) */}
+      {/* Buscador */}
       <div className="flex items-center py-4">
         <input
           placeholder="Buscar empleado..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm p-2 border rounded-md"
+          className="max-w-sm p-2 border rounded-md bg-white text-sm"
         />
       </div>
 
@@ -57,16 +58,31 @@ export default function MisEmpleadosPage() {
           isLoading={isLoading}
           onEdit={modalEdit.handleEditClick}
           onVerHorario={modalHorario.handleVerHorario}
+          onBaja={modalBaja.handleBajaClick} 
         />
       </div>
 
+      {/* Modal de Edición */}
       <ModalEditarEmpleado
-      empleado={modalEdit.selectedEmpleado}
-      isOpen={modalEdit.isOpen}
-      onClose={() => modalEdit.setIsOpen(false)}
-      onSave={modalEdit.save}       // <-- Conexión con la mutación del Hook
-      isSaving={modalEdit.isSaving} // <-- Muestra el spinner si está guardando
-    />
+        empleado={modalEdit.selectedEmpleado}
+        isOpen={modalEdit.isOpen}
+        onClose={() => modalEdit.setIsOpen(false)}
+        onSave={modalEdit.save}       
+        isSaving={modalEdit.isSaving} 
+      />
+
+      {/* Modal de Baja / Suspensión Temporal */}
+      <ModalBajaEmpleado
+        open={modalBaja.isOpen}
+        onOpenChange={modalBaja.setIsOpen}
+        selectedEmpleado={modalBaja.selectedEmpleado}
+        mode={modalBaja.mode} 
+        motivo={modalBaja.motivo}
+        onMotivoChange={modalBaja.setMotivo}
+        isDeleting={modalBaja.isDeleting}
+        deleteError={modalBaja.deleteError}
+        onConfirm={modalBaja.confirm} 
+      />
 
       {/* Modal de Horarios (el de Joan) */}
       <MiEmpleadoHorarioDialog

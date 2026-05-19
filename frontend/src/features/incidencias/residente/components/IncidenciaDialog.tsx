@@ -1,5 +1,5 @@
 // Icons
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, Plus } from "lucide-react";
 
 // Components UI
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,9 @@ interface IncidenciaDialogProps {
   selectedCoords?: { longitude: number; latitude: number };
   onSubmit: (e: React.FormEvent) => void;
   onClose?: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  reset?: boolean;
 }
 
 export function IncidenciaDialog({
@@ -37,12 +40,18 @@ export function IncidenciaDialog({
   onLocationSelect,
   selectedCoords,
   onSubmit,
-  onClose
+  onClose,
+  open,
+  onOpenChange,
+  reset
 }: IncidenciaDialogProps) {
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline">Agregar reporte</Button>
+        <Button className="h-9 gap-2 px-4 font-semibold text-foreground">
+          <Plus className="h-4 w-4" />
+          Nuevo reporte
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader className="items-center">
@@ -66,6 +75,7 @@ export function IncidenciaDialog({
             onMapClick={onMapClick}
             onLocationSelect={onLocationSelect}
             selectedCoords={selectedCoords}
+            reset={reset}
           />
           
           <DialogFooter>
