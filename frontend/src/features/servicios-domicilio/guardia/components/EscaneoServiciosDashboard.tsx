@@ -21,9 +21,8 @@ export function EscaneoServiciosDashboard() {
     queryFn: accesosServiciosApi.obtenerActividadReciente,
   });
 
-  // Simular escaneo para la demo
+
   const handleSimulateScan = () => {
-    // Tomamos el primer servicio pendiente (si existe) para simular su lectura
     setSelectedAccessId("mock-scan-id");
   };
 
@@ -31,7 +30,7 @@ export function EscaneoServiciosDashboard() {
     <div className="p-6 max-w-7xl mx-auto flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-zinc-900">Escaneo de códigos QR</h1>
-        <Button 
+        <Button
           onClick={() => setIsManualModalOpen(true)}
           className="bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-sm"
         >
@@ -47,7 +46,7 @@ export function EscaneoServiciosDashboard() {
               <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
               Escáner - Entrada 1
             </div>
-            
+
             <CardContent className="p-0 flex-1 flex items-center justify-center relative">
               {isScannerActive ? (
                 <div className="w-full h-full bg-zinc-200 flex flex-col items-center justify-center border-4 border-dashed border-zinc-300">
@@ -66,7 +65,7 @@ export function EscaneoServiciosDashboard() {
           </Card>
         </div>
 
-        {/* Panel Derecho - Actividad Reciente */}
+        { }
         <div className="flex flex-col gap-4">
           <Card className="border-zinc-200 shadow-sm h-full flex flex-col">
             <div className="p-5 border-b border-zinc-100 flex items-center justify-between">
@@ -119,13 +118,13 @@ export function EscaneoServiciosDashboard() {
         </div>
       </div>
 
-      <ModalValidacionServicio 
+      <ModalValidacionServicio
         open={!!selectedAccessId}
         onOpenChange={(isOpen) => !isOpen && setSelectedAccessId(null)}
         scannedId={selectedAccessId}
       />
 
-      <ModalRegistroManualServicio 
+      <ModalRegistroManualServicio
         open={isManualModalOpen}
         onOpenChange={setIsManualModalOpen}
       />
