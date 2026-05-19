@@ -57,66 +57,23 @@ export class BitacoraService {
     // SEARCH (Búsqueda por Nombre)
     if (search) {
       accesoFiltros.push({
-        OR: [
-          // 1. Si es visitante, busca en su nombre
-          { visitante: { nombre: { contains: search, mode: 'insensitive' } } },
-
-          // 2. Si NO es visitante (residente directo), busca en el nombre del usuario
-          {
-            AND: [
-              { id_visitante: null }, // <-- AISLAMIENTO CRÍTICO
-              {
-                usuario: {
-                  persona: {
-                    nombre: { contains: search, mode: 'insensitive' },
-                  },
-                },
-              },
-            ],
-          },
-        ],
+        visitante: { nombre: { contains: search, mode: 'insensitive' } },
       });
     }
 
     // FILTRO RESIDENCIA (Búsqueda por Propiedad)
     if (residencia) {
       accesoFiltros.push({
-        OR: [
-          // 1. Si es visitante, evaluamos a la vivienda de a quién visita
-          {
-            visitante: {
-              residente: {
-                vivienda: {
-                  numero_vivienda: {
-                    startsWith: residencia,
-                    mode: 'insensitive',
-                  },
-                },
+        visitante: {
+          residente: {
+            vivienda: {
+              numero_vivienda: {
+                startsWith: residencia,
+                mode: 'insensitive',
               },
             },
           },
-
-          // 2. Si NO es visitante (residente directo), evaluamos su propia vivienda
-          {
-            AND: [
-              { id_visitante: null }, // <-- AISLAMIENTO CRÍTICO
-              {
-                usuario: {
-                  residentes: {
-                    some: {
-                      vivienda: {
-                        numero_vivienda: {
-                          startsWith: residencia,
-                          mode: 'insensitive',
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            ],
-          },
-        ],
+        },
       });
     }
 
@@ -126,52 +83,12 @@ export class BitacoraService {
       switch (tipoNormalizado) {
         case 'proveedor':
           accesoFiltros.push({
-            visitante: {
-              servicio: {
-                tipo_servicio: {
-                  OR: [
-                    {
-                      categoria: { contains: 'proveedor', mode: 'insensitive' },
-                    },
-                    {
-                      categoria: {
-                        contains: 'repartidor',
-                        mode: 'insensitive',
-                      },
-                    },
-                    {
-                      categoria: {
-                        contains: 'mantenimiento',
-                        mode: 'insensitive',
-                      },
-                    },
-                    { nombre: { contains: 'proveedor', mode: 'insensitive' } },
-                    { nombre: { contains: 'repartidor', mode: 'insensitive' } },
-                    {
-                      nombre: {
-                        contains: 'mantenimiento',
-                        mode: 'insensitive',
-                      },
-                    },
-                  ],
-                },
-              },
-            },
+            visitante: { id_servicio: { not: null } },
           });
           break;
         case 'empleado_domestico':
           accesoFiltros.push({
-            visitante: {
-              servicio: {
-                tipo_servicio: {
-                  OR: [
-                    {
-                      categoria: { contains: 'empleado', mode: 'insensitive' },
-                    },
-                  ],
-                },
-              },
-            },
+            visitante: { es_frecuente: true, id_servicio: null },
           });
           break;
         case 'visitante':
@@ -182,11 +99,6 @@ export class BitacoraService {
         case 'residente':
           accesoFiltros.push({
             id_visitante: null,
-          });
-          break;
-        default:
-          accesoFiltros.push({
-            visitante: { servicio: { tipo_servicio: { categoria: tipo } } },
           });
           break;
       }
@@ -313,9 +225,11 @@ export class BitacoraService {
 
         tipo_persona: isResidenteDirecto
           ? 'residente'
-          : visitante.es_frecuente
-            ? 'empleado_domestico'
-            : (visitante.servicio?.tipo_servicio?.categoria ?? 'visitante'),
+          : visitante.id_servicio
+            ? 'proveedor'
+            : visitante.es_frecuente
+              ? 'empleado_domestico'
+              : 'visitante',
 
         residente_asociado: {
           // Si es residente directo, buscamos su propia vivienda en el arreglo.
