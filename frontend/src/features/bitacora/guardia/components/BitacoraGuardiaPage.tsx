@@ -82,6 +82,8 @@ React.useEffect(() => {
                   estado: "fuera",
                   comentario_salida:
                     data.comentario_salida ?? item.comentario_salida,
+                  guardia_salida: data.guardia_salida ?? item.guardia_salida,
+                  fecha_salida: data.fecha_salida ?? new Date().toISOString(),
                 }
               : item
           ),
@@ -99,7 +101,8 @@ React.useEffect(() => {
             ...old.data,
             estado: "fuera",
             comentario_salida: data.comentario_salida ?? old.data.comentario_salida,
-            fecha_salida: new Date().toISOString(),
+            guardia_salida: data.guardia_salida ?? old.data.guardia_salida,
+            fecha_salida: data.fecha_salida ?? new Date().toISOString(),
           },
         };
       });
@@ -148,6 +151,7 @@ React.useEffect(() => {
 
   const handleSuccess = () => {
     refetch();
+    queryClient.invalidateQueries({ queryKey: ["bitacora-detalle"] });
     setRegistroParaSalida(null);
     setIsMassModalOpen(false);
     setSelectedIds([]);
