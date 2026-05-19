@@ -6,25 +6,14 @@ import { randomUUID } from 'crypto';
 export class ReportesService {
   constructor(private prisma: PrismaService) {}
 
-  private generarTokenSeguimiento(): string { //Este metodo genera un token unico para cada reporte anonimo, con el prefijo "REP-"
+  private generarTokenSeguimiento(): string {  
     return `REP-${randomUUID().slice(0, 8).toUpperCase()}`;
   }
 
-  async crearConEvidencia(datos: any, /*urlArchivo?: string | null, nombreArchivo?: string | null*/) {
+  async crearConEvidencia(datos: any) {
     const latitud = parseFloat(datos.latitud);
     const longitud = parseFloat(datos.longitud);
     const es_anonimo = datos.es_anonimo === 'true' || datos.es_anonimo === true;
-
-    // 1. Buscamos primero si el Controlador nos mandó un archivo físico.
-    /*let urlFinal = urlArchivo;
-    let nombreFinal = nombreArchivo;*/
-
-    // 2. Si NO hay archivo físico, revisamos si enviaste la estructura manual en el JSON crudo.
-    // El operador '?.' (Optional Chaining) evita que el servidor explote si 'evidencias' no existe en el JSON.
-    /*if (!urlFinal && datos.evidencias?.create?.[0]) {
-      urlFinal = datos.evidencias.create[0].url_archivo;
-      nombreFinal = datos.evidencias.create[0].nombre_archivo;
-    }*/
 
     return this.prisma.reporte.create({
       data: {
@@ -38,34 +27,16 @@ export class ReportesService {
         prioridad: datos.prioridad || 'MEDIA',
         es_anonimo: es_anonimo,
 
-        token_seguimiento: es_anonimo  //el tojen se genera solo si el reporte es anonimo, si no lo deja como null
+        token_seguimiento: es_anonimo 
           ? this.generarTokenSeguimiento()
           : null,
         
-        // 3. Ahora usamos nuestras variables 'Finales'. 
-        // Prisma creará la evidencia si encontró datos en el archivo físico o en el JSON.
-        /*...(urlFinal && nombreFinal && {
-          evidencias: {
-            create: [
-              {
-                url_archivo: urlFinal,
-                nombre_archivo: nombreFinal,
-              },
-            ],
-          },
-        }),*/
       },
-      /*include: {
-        evidencias: true, 
-      },*/
     });
   }
 
   async obtenerTodos() {
     return this.prisma.reporte.findMany({
-      /*include: {
-        evidencias: true,
-      },*/
     });
   }
 

@@ -57,69 +57,72 @@ export function BitacoraGuardiaPage() {
     React.useState<BitacoraRegistro | null>(null);
   const [isMassLoading, setIsMassLoading] = React.useState(false);
 
-React.useEffect(() => {
-  const eventSource = new EventSource(
-    "http://localhost:3000/bitacora/updates",
-    { withCredentials: true }
-  );
-
-  eventSource.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-
-    console.log("📡 SSE recibido:", data);
-
-    queryClient.setQueryData(
-      ["bitacora-historica", cleanFilters],
-      (old: any) => {
-        if (!old) return old;
-
-        return {
-          ...old,
-          data: old.data.map((item: any) =>
-            data.ids_afectados.includes(item.id)
-              ? {
-                  ...item,
-                  estado: "fuera",
-                  comentario_salida:
-                    data.comentario_salida ?? item.comentario_salida,
-                  guardia_salida: data.guardia_salida ?? item.guardia_salida,
-                  fecha_salida: data.fecha_salida ?? new Date().toISOString(),
-                }
-              : item
-          ),
-        };
-      }
-    );
-
-    data.ids_afectados.forEach((id: string) => {
-      queryClient.setQueryData(["bitacora-detalle", id], (old: any) => {
-        if (!old) return old;
-
-        return {
-          ...old,
-          data: {
-            ...old.data,
-            estado: "fuera",
-            comentario_salida: data.comentario_salida ?? old.data.comentario_salida,
-            guardia_salida: data.guardia_salida ?? old.data.guardia_salida,
-            fecha_salida: data.fecha_salida ?? new Date().toISOString(),
-          },
-        };
-      });
+  React.useEffect(() => {
+    const apiUrl =
+      process.env.NEXT_PUBLIC_API_URL ||
+      process.env.REACT_APP_API_URL ||
+      "http://localhost:3001/api/";
+    const eventSource = new EventSource(`${apiUrl}bitacora/updates`, {
+      withCredentials: true,
     });
-  };
 
-  eventSource.onerror = () => {
-    console.warn("SSE desconectado");
-    eventSource.close();
-  };
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
 
-  return () => eventSource.close();
-}, [queryClient, cleanFilters]);
+      console.log("📡 SSE recibido:", data);
+
+      queryClient.setQueryData(
+        ["bitacora-historica", cleanFilters],
+        (old: any) => {
+          if (!old) return old;
+
+          return {
+            ...old,
+            data: old.data.map((item: any) =>
+              data.ids_afectados.includes(item.id)
+                ? {
+                    ...item,
+                    estado: "fuera",
+                    comentario_salida:
+                      data.comentario_salida ?? item.comentario_salida,
+                    guardia_salida: data.guardia_salida ?? item.guardia_salida,
+                    fecha_salida: data.fecha_salida ?? new Date().toISOString(),
+                  }
+                : item
+            ),
+          };
+        }
+      );
+
+      data.ids_afectados.forEach((id: string) => {
+        queryClient.setQueryData(["bitacora-detalle", id], (old: any) => {
+          if (!old) return old;
+
+          return {
+            ...old,
+            data: {
+              ...old.data,
+              estado: "fuera",
+              comentario_salida: data.comentario_salida ?? old.data.comentario_salida,
+              guardia_salida: data.guardia_salida ?? old.data.guardia_salida,
+              fecha_salida: data.fecha_salida ?? new Date().toISOString(),
+            },
+          };
+        });
+      });
+    };
+
+    eventSource.onerror = () => {
+      console.warn("SSE desconectado");
+      eventSource.close();
+    };
+
+    return () => eventSource.close();
+  }, [queryClient, cleanFilters]);
 
   const toggleSelection = (id: string) => {
     setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
     );
   };
 
@@ -164,9 +167,7 @@ React.useEffect(() => {
 
     try {
       await Promise.all(
-        selectedIds.map((id) =>
-          bitacoraService.registrarSalida(id.toString())
-        )
+        selectedIds.map((id) => bitacoraService.registrarSalida(id.toString())),
       );
 
       handleSuccess();
@@ -180,7 +181,7 @@ React.useEffect(() => {
 
   const selectedRecordsData =
     bitacoraData?.data?.filter((r: BitacoraRegistro) =>
-      selectedIds.includes(r.id)
+      selectedIds.includes(r.id),
     ) || [];
 
   if (!isMounted) return null;
