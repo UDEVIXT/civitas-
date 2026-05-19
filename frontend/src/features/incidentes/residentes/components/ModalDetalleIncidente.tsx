@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Calendar, User, ArrowRight } from "lucide-react";
+import { Clock, Calendar, FileText, Image } from "lucide-react";
 import { Incidente, EstadoIncidencia } from "@/features/incidentes/residentes/api/incidencias";
 
 interface ModalDetalleIncidenteProps {
@@ -37,13 +37,11 @@ const getEstadoColor = (estado: EstadoIncidencia) => {
 
 const formatFecha = (fechaISO: string) => {
   const fecha = new Date(fechaISO);
-  if (isNaN(fecha.getTime())) return { fecha: "—", hora: "—" };
-  const dia = String(fecha.getDate()).padStart(2, "0");
-  const mes = String(fecha.getMonth() + 1).padStart(2, "0");
-  const anio = fecha.getFullYear();
-  const horas = String(fecha.getHours()).padStart(2, "0");
-  const minutos = String(fecha.getMinutes()).padStart(2, "0");
-  return { fecha: `${dia}/${mes}/${anio}`, hora: `${horas}:${minutos}` };
+  if (isNaN(fecha.getTime())) return "—";
+  return fecha.toLocaleDateString("es-MX", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
 };
 
 export function ModalDetalleIncidente({
@@ -53,16 +51,13 @@ export function ModalDetalleIncidente({
 }: ModalDetalleIncidenteProps) {
   if (!incidente) return null;
 
-  const fechaCreacion = formatFecha(incidente.fecha_creacion);
-  const fechaActualizacion = formatFecha(incidente.updatedAt);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6 w-[95vw] md:w-full">
         <DialogHeader>
           <DialogTitle className="text-xl md:text-2xl">Detalle de Incidencia</DialogTitle>
           <DialogDescription>
-            Información completa y historial de cambios
+            Información completa de la incidencia reportada
           </DialogDescription>
         </DialogHeader>
 
@@ -70,96 +65,85 @@ export function ModalDetalleIncidente({
           {/* Información principal */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold mb-2">{incidente.titulo}</h3>
+              <h3 className="text-lg font-semibold mb-2">{incidente.motivo}</h3>
               <p className="text-sm text-muted-foreground">{incidente.descripcion}</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{fechaCreacion.fecha}</span>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{fechaCreacion.hora}</span>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <Badge className={getEstadoColor(incidente.estado)}>
-                  {estadoLabel[incidente.estado]}
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge className={getEstadoColor(incidente.estado)}>
+                {estadoLabel[incidente.estado]}
+              </Badge>
+              {incidente.prioridad && (
+                <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">
+                  {incidente.prioridad.charAt(0).toUpperCase() +
+                    incidente.prioridad.slice(1).toLowerCase()}
                 </Badge>
-                {incidente.prioridad && (
-                  <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">
-                    {incidente.prioridad.charAt(0).toUpperCase() +
-                      incidente.prioridad.slice(1).toLowerCase()}
-                  </Badge>
-                )}
-              </div>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Calendar className="h-4 w-4" />
+                <span>{formatFecha(incidente.createdAt)}</span>
+              </div>
               <div>
-                <span className="text-muted-foreground">Reportado anónimamente:</span>{" "}
+                <span className="text-muted-foreground">Anónimo: </span>
                 {incidente.es_anonimo ? "Sí" : "No"}
               </div>
-              <div>
-                <span className="text-muted-foreground">Última actualización:</span>{" "}
-                {fechaActualizacion.fecha} {fechaActualizacion.hora}
-              </div>
+              {incidente.token_seguimiento && (
+                <div>
+                  <span className="text-muted-foreground">Token: </span>
+                  <span className="font-mono text-xs">{incidente.token_seguimiento}</span>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Historial de cambios */}
-          <div className="border-t pt-4">
-            <h4 className="font-semibold mb-3 flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Historial de Cambios
-            </h4>
+          {/* Resultado esperado */}
+          {incidente.resultado_esperado && (
+            <div className="border-t pt-4">
+              <h4 className="font-semibold mb-2 flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Resultado esperado
+              </h4>
+              <p className="text-sm text-muted-foreground">{incidente.resultado_esperado}</p>
+            </div>
+          )}
 
-            {incidente.historial && incidente.historial.length > 0 ? (
-              <div className="space-y-3">
-                {incidente.historial.map((historial, index) => (
-                  <div
-                    key={historial.id_historial}
-                    className="bg-muted/50 rounded-lg p-3 space-y-2"
+          {/* Resultado solución */}
+          {incidente.resultado_solucion && (
+            <div className="border-t pt-4">
+              <h4 className="font-semibold mb-2 flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Solución aplicada
+              </h4>
+              <p className="text-sm text-muted-foreground">{incidente.resultado_solucion}</p>
+            </div>
+          )}
+
+          {/* Evidencias */}
+          {incidente.evidencias && incidente.evidencias.length > 0 && (
+            <div className="border-t pt-4">
+              <h4 className="font-semibold mb-3 flex items-center gap-2">
+                <Image className="h-4 w-4" />
+                Evidencias adjuntas
+              </h4>
+              <div className="grid grid-cols-2 gap-3">
+                {incidente.evidencias.map((ev, idx) => (
+                  <a
+                    key={idx}
+                    href={ev.url_archivo}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-blue-600 hover:underline truncate"
                   >
-                    <div className="flex items-center gap-2 text-sm flex-wrap">
-                      <Badge className={getEstadoColor(historial.estado_anterior)}>
-                        {estadoLabel[historial.estado_anterior]}
-                      </Badge>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                      <Badge className={getEstadoColor(historial.nuevo_estado)}>
-                        {estadoLabel[historial.nuevo_estado]}
-                      </Badge>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {formatFecha(historial.fecha).fecha}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {formatFecha(historial.fecha).hora}
-                      </div>
-                    </div>
-
-                    {historial.comentario && (
-                      <p className="text-sm italic">"{historial.comentario}"</p>
-                    )}
-
-                    {historial.actualizado_por && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <User className="h-3 w-3" />
-                        Actualizado por: {historial.actualizado_por}
-                      </div>
-                    )}
-                  </div>
+                    <FileText className="h-3.5 w-3.5 shrink-0" />
+                    {ev.nombre_archivo}
+                  </a>
                 ))}
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground italic">
-                No hay historial de cambios para esta incidencia.
-              </p>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
