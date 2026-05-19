@@ -117,6 +117,7 @@ model Visitante {
   telefono     String?
   url_imagen   String?
   tipo_vehiculo String?
+  motivo       String?
   id_residente String
   id_servicio  String?
   accesos      Acceso[]
