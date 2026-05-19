@@ -8,24 +8,46 @@ import {
   Delete,
   Body,
   BadRequestException,
+  Req,
 } from '@nestjs/common';
 
 // Importamos tu servicio especializado de la carpeta mis-empleados
+import { UseGuards } from '@nestjs/common';
+import { Roles } from 'src/auth/decorators/roles/roles.decorator';
 import { EmpleadoService } from './mi-empleado.service';
+import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth/jwt-auth.guard';
+import type { Request } from 'express';
+import { AuthGuard } from '@nestjs/passport';
+import { use } from 'passport';
+
+interface AuthenticatedRequest extends Request {
+  user: {
+    userId: string;
+    username: string;
+    role: 'Administrador' | 'Guardia' | 'Residente';
+  };
+}
 
 @Controller('mi-empleado') // 1. Cambiado para que sea tu endpoint exclusivo
 export class EmpleadoController {
   constructor(private empleadoService: EmpleadoService) {}
 
 @Get()
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Residente')
   async findAll(
+    @Req() req: AuthenticatedRequest,
     @Query('search') search?: string,
     @Query('page') page = '1',
-    @Query('limit') limit = '7',
+    @Query('limit') limit = '100',
     @Query('isActive') isActive?: string,
-    @Query('byResidenteId') byResidenteId?: string,
     @Query('byViviendaId') byViviendaId?: string,
   ) {
+    /*console.log("REQ:", req);
+    console.log("USER:", req.user);*/
+    const id_user = req.user.userId; 
+    //console.log(id_user);
     const isActiveValue = isActive?.toLowerCase();
     const isActiveBool =
       isActiveValue === 'true'
@@ -35,7 +57,7 @@ export class EmpleadoController {
           : undefined;
 
     // 1. Declaramos las variables correctamente aquí arriba como strings
-    const byResidenteIdValue = byResidenteId || undefined;
+    //const byResidenteIdValue = id_user|| undefined;
     const byViviendaIdValue = byViviendaId || undefined;
 
     // 2. Pasamos solo las propiedades y sus valores dentro del objeto
@@ -44,7 +66,7 @@ export class EmpleadoController {
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
       isActive: isActiveBool,
-      byResidenteId: byResidenteIdValue,
+      byUsuarioId: id_user,
       byViviendaId: byViviendaIdValue,   
     });
   }
