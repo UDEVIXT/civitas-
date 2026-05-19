@@ -28,12 +28,12 @@ jobs:
       run:
         working-directory: backend
 
-    env:
-      DATABASE_URL: postgresql://civitas:civitas123@localhost:5432/civitas?schema=public
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Copy env file
+        run: cp .env.example .env
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
