@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { Search, CalendarIcon, ArrowUpDown, X } from "lucide-react";
 import { type DateRange } from "react-day-picker";
@@ -37,8 +37,8 @@ export function FiltrosTabla({
   const dateRange = React.useMemo(() => {
     if (!filters.fecha_inicio) return undefined;
     return {
-      from: new Date(`${filters.fecha_inicio}T12:00:00`),
-      to: filters.fecha_fin ? new Date(`${filters.fecha_fin}T12:00:00`) : undefined,
+      from: new Date(filters.fecha_inicio),
+      to: filters.fecha_fin ? new Date(filters.fecha_fin) : undefined,
     };
   }, [filters.fecha_inicio, filters.fecha_fin]);
 
@@ -122,8 +122,8 @@ export function FiltrosTabla({
             date={dateRange}
             onChangeDate={(from, to) => {
               onChange({
-                fecha_inicio: from ? format(from, "yyyy-MM-dd") : undefined,
-                fecha_fin: to ? format(to, "yyyy-MM-dd") : undefined,
+                fecha_inicio: from ? format(startOfDay(from), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+                fecha_fin: to ? format(endOfDay(to), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
               });
             }}
           />
