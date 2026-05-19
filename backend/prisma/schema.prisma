@@ -71,6 +71,7 @@ model Vivienda {
   id_vivienda     String      @id @default(uuid())
   numero_vivienda String      @unique
   residentes      Residente[]
+  servicios       Servicio[]
 }
 
 model Usuario {
@@ -83,8 +84,8 @@ model Usuario {
   estado             EstadoUsuario  @default(ACTIVO)
   // --- Campos nuevos para recuperación de contraseña ---
   // Almacena el código (ej. "123456") o un token generado
-  resetPasswordToken   String?   
-  
+  resetPasswordToken   String?
+
   // Almacena la fecha y hora exacta en que el código dejará de ser válido
   resetPasswordExpires DateTime?
   correo_verificado  Boolean        @default(false)
@@ -106,6 +107,7 @@ model Residente {
   usuario     Usuario      @relation(fields: [id_usuario], references: [id_usuario])
   vivienda    Vivienda     @relation(fields: [id_vivienda], references: [id_vivienda])
   visitantes  Visitante[]
+  servicios   Servicio[]
 }
 
 model Visitante {
@@ -114,6 +116,7 @@ model Visitante {
   es_frecuente Boolean   @default(false)
   telefono     String?
   url_imagen   String?
+  tipo_vehiculo String?
   motivo       String?
   id_residente String
   id_servicio  String?
@@ -160,10 +163,14 @@ model Servicio {
   rfc              String?                  @unique
   activo           Boolean                  @default(true)
   id_tipo_servicio String?
+  id_residente     String
+  id_vivienda      String
   fecha_registro   DateTime                 @default(now())
   horarios         HorarioAccesoServicios[]
   tipo_servicio    TipoServicio?            @relation(fields: [id_tipo_servicio], references: [id_tipo_servicio])
   visitantes       Visitante[]
+  residente        Residente @relation(fields: [id_residente], references: [id_residente])
+  vivienda         Vivienda @relation(fields: [id_vivienda], references: [id_vivienda])
 }
 
 model HorarioAccesoServicios {
@@ -206,8 +213,8 @@ model Administrador {
 }
 
 model EvidenciaReporte {
-  id_evidencia   String   @id @default(uuid()) 
-  id_reporte     String   
+  id_evidencia   String   @id @default(uuid())
+  id_reporte     String
   reporte        Reporte  @relation(fields: [id_reporte], references: [id_reporte])
   url_archivo    String   @db.Text
   nombre_archivo String   @db.VarChar(256)
@@ -215,8 +222,8 @@ model EvidenciaReporte {
 }
 
 model Reporte {
-  id_reporte         String           @id @default(uuid()) 
-  id_usuario         String           
+  id_reporte         String           @id @default(uuid())
+  id_usuario         String
   usuario            Usuario          @relation(fields: [id_usuario], references: [id_usuario])
   motivo             String           @db.VarChar(100)
   descripcion        String           @db.Text

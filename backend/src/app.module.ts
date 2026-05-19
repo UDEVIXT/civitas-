@@ -18,6 +18,7 @@ import { MiEmpleadoModule } from './mis-empleados/mi-empleado.module';
 import { MailModule } from './mail/mail.module';
 import { MisServiciosModule } from './mis-servicios/mis-servicios.module';
 import { AccesosServiciosModule } from './accesos-servicios/accesos-servicios.module';
+import { VisitanteModule } from './visitante/visitante.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -41,7 +42,7 @@ import { AccesosServiciosModule } from './accesos-servicios/accesos-servicios.mo
         ttl: 60000,
         limit: 50,
       },
-    ]), MailModule,
+    ]), MailModule, VisitanteModule,
   ],
   controllers: [AppController],
   providers: [
