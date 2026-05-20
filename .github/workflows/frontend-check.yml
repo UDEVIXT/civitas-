@@ -1,4 +1,4 @@
-name: Revisión de Frontend
+name: Frontend Revisión
 
 on:
   pull_request:

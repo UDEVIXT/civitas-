@@ -1,28 +1,33 @@
 "use client";
 
 import * as React from "react";
-import { useResidenteEmpleados } from "../hooks/useResidenteEmpleados"; 
+import { useResidenteEmpleados } from "../hooks/useResidenteEmpleados";
 // 1. Importa el hook de autenticación que maneja el equipo
-import { useAuth } from "@/features/auth/hooks/useAuth"; 
+import { useAuth } from "@/features/auth/hooks/useAuth";
+
+import { Button } from "@/components/ui/button";
 
 import { TablaMisEmpleados } from "./TablaMisEmpleados";
 import { ModalEditarEmpleado } from "./ModalEditarEmpleado";
 import { MiEmpleadoHorarioDialog } from "./MiEmpleadoHorarioDialog";
 import { ModalBajaEmpleado } from "./ModalBajaEmpleado";
+import { ModalAgregarEmpleado } from "./ModalAgregarEmpleado";
 
 export default function MisEmpleadosPage() {
   // 2. Obtén el usuario logueado dinámicamente
-  const { user } = useAuth(); 
+  const { user } = useAuth();
 
   // 3. Le pasas el ID dinámico
   const idUsuarioActivo = user?.id ? String(user.id) : "";
 
-  const { 
-    empleados, 
-    isLoading, 
-    search, 
-    setSearch, 
-    modalEdit, 
+  const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
+
+  const {
+    empleados,
+    isLoading,
+    search,
+    setSearch,
+    modalEdit,
     modalHorario,
     modalBaja
   } = useResidenteEmpleados(idUsuarioActivo); // <-- Le pasamos el ID normal
@@ -50,6 +55,13 @@ export default function MisEmpleadosPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm p-2 border rounded-md bg-white text-sm"
         />
+        <Button
+          size="sm"
+          className="w-full p-2 sm:w-auto cursor-pointer"
+          onClick={() => setIsAddModalOpen(true)}
+        >
+          Agregar empleado
+        </Button>
       </div>
 
       <div className="space-y-4">
@@ -58,7 +70,7 @@ export default function MisEmpleadosPage() {
           isLoading={isLoading}
           onEdit={modalEdit.handleEditClick}
           onVerHorario={modalHorario.handleVerHorario}
-          onBaja={modalBaja.handleBajaClick} 
+          onBaja={modalBaja.handleBajaClick}
         />
       </div>
 
@@ -67,8 +79,18 @@ export default function MisEmpleadosPage() {
         empleado={modalEdit.selectedEmpleado}
         isOpen={modalEdit.isOpen}
         onClose={() => modalEdit.setIsOpen(false)}
-        onSave={modalEdit.save}       
-        isSaving={modalEdit.isSaving} 
+        onSave={modalEdit.save}
+        isSaving={modalEdit.isSaving}
+      />
+      
+      {/* Modal de Agregar Empleado */}
+      <ModalAgregarEmpleado
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSave={(values) => {
+          console.log("Valores para crear empleado:", values);
+          // TODO: Manda a llamar el método para hacer POST a tu backend
+        }}
       />
 
       {/* Modal de Baja / Suspensión Temporal */}
@@ -76,12 +98,12 @@ export default function MisEmpleadosPage() {
         open={modalBaja.isOpen}
         onOpenChange={modalBaja.setIsOpen}
         selectedEmpleado={modalBaja.selectedEmpleado}
-        mode={modalBaja.mode} 
+        mode={modalBaja.mode}
         motivo={modalBaja.motivo}
         onMotivoChange={modalBaja.setMotivo}
         isDeleting={modalBaja.isDeleting}
         deleteError={modalBaja.deleteError}
-        onConfirm={modalBaja.confirm} 
+        onConfirm={modalBaja.confirm}
       />
 
       {/* Modal de Horarios (el de Joan) */}
