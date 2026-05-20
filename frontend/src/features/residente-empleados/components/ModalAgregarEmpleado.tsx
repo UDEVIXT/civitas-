@@ -1,0 +1,337 @@
+"use client";
+
+import * as React from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Loader2, Camera, X } from "lucide-react";
+
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+const DIAS_SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"] as const;
+
+const horarioDiaSchema = z.object({
+    dia: z.enum(DIAS_SEMANA),
+    activo: z.boolean(),
+    hora_entrada: z.string(),
+    hora_salida: z.string(),
+});
+
+const formSchema = z.object({
+    nombre: z.string()
+        .trim()
+        .min(1, "Campo obligatorio")
+        .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, "Solo se permiten letras"),
+
+    // El teléfono es opcional, pero si se escribe, debe cumplir la validación de 10 dígitos.
+    telefono: z.string()
+        .trim()
+        .optional()
+        .refine(val => !val || val.length === 10, "El teléfono debe tener exactamente 10 dígitos")
+        .refine(val => !val || /^\d+$/.test(val), "Solo se permiten números"),
+
+    cargo: z.string()
+        .trim()
+        .min(1, "Campo obligatorio")
+        .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, "Solo se permiten letras"),
+
+    notas: z.string().optional(),
+    foto: z.string().optional(),
+    horarios: z.array(horarioDiaSchema),
+}).superRefine((data, ctx) => {
+    let tieneDiasActivos = false;
+
+    data.horarios.forEach((horario, index) => {
+        if (horario.activo) {
+            tieneDiasActivos = true;
+            if (horario.hora_entrada >= horario.hora_salida) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "La salida debe ser después de la entrada",
+                    path: ["horarios", index, "hora_salida"],
+                });
+            }
+        }
+    });
+
+    if (!tieneDiasActivos) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Debes autorizar al menos un día de acceso",
+            path: ["horarios"],
+        });
+    }
+});
+
+type FormValues = z.infer<typeof formSchema>;
+
+interface ModalAgregarEmpleadoProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (values: FormValues) => void;
+    isSaving?: boolean;
+}
+
+export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: ModalAgregarEmpleadoProps) {
+    const horariosPorDefecto = DIAS_SEMANA.map(dia => ({
+        dia,
+        activo: false,
+        hora_entrada: "08:00",
+        hora_salida: "16:00"
+    }));
+
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    const form = useForm<FormValues>({
+        resolver: zodResolver(formSchema),
+        defaultValues: {
+            nombre: "",
+            telefono: "",
+            cargo: "",
+            notas: "",
+            foto: "",
+            horarios: horariosPorDefecto,
+        },
+    });
+
+    // Limpiar el formulario cada vez que se abre el modal
+    React.useEffect(() => {
+        if (isOpen) {
+            form.reset({
+                nombre: "",
+                telefono: "",
+                cargo: "",
+                notas: "",
+                foto: "",
+                horarios: horariosPorDefecto,
+            });
+        }
+    }, [isOpen, form]);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                // Guardamos el resultado en base64 en el formulario
+                form.setValue("foto", reader.result as string, { shouldValidate: true, shouldDirty: true });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleRemovePhoto = () => {
+        form.setValue("foto", "");
+        // Limpiamos el input de archivo para poder volver a seleccionar la misma imagen si el usuario lo desea
+        if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+
+    const onSubmit = (values: FormValues) => {
+        onSave(values);
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="w-[95vw] sm:max-w-[550px] p-4 sm:p-6 max-h-[95vh] overflow-y-auto overflow-x-hidden rounded-2xl">
+                <DialogHeader className="border-b pb-4 mb-4">
+                    <DialogTitle className="text-xl font-bold text-center text-gray-800">
+                        Registrar Nuevo Empleado
+                    </DialogTitle>
+                </DialogHeader>
+
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+
+                        {/* Header con Foto */}
+                        <div className="flex flex-col items-center justify-center gap-3 bg-gray-50 p-4 rounded-xl text-center">
+                            
+                            <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                                <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-4 border-white shadow-md">
+                                    <AvatarImage src={form.watch("foto") || undefined} className="object-cover" />
+                                    <AvatarFallback className="bg-emerald-100 text-emerald-700 font-bold text-2xl">
+                                        {form.watch("nombre")?.charAt(0)?.toUpperCase() || "+"}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Camera className="h-6 w-6 text-white" />
+                                </div>
+                            </div>
+
+                            <input 
+                                type="file" 
+                                accept="image/*" 
+                                className="hidden" 
+                                ref={fileInputRef} 
+                                onChange={handleFileChange} 
+                            />
+
+                            <div className="flex flex-col gap-0.5">
+                                <p className="text-base sm:text-lg font-extrabold text-gray-950 tracking-tight">
+                                    {form.watch("nombre") || "Nuevo Empleado"}
+                                </p>
+                                <p className="text-sm text-gray-500 font-medium">Completar información</p>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <Button type="button" variant="outline" size="sm" className="text-xs h-8" onClick={() => fileInputRef.current?.click()}>
+                                    <Camera className="h-3 w-3 mr-2" />
+                                    {form.watch("foto") ? "Cambiar foto" : "Subir foto"}
+                                </Button>
+                                {form.watch("foto") && (
+                                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleRemovePhoto} title="Quitar foto">
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                )}
+                            </div>
+                            
+                        </div>
+
+                        {/* Datos Personales */}
+                        <div className="flex flex-col gap-4">
+                            <FormField control={form.control} name="nombre" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="font-bold">Nombre Completo *</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="Ej. María López"
+                                            {...field}
+                                            onChange={(e) => {
+                                                const valorLimpio = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
+                                                field.onChange(valorLimpio);
+                                            }}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+
+                            <FormField control={form.control} name="telefono" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="font-bold">Teléfono <span className="text-xs font-normal text-gray-400">(Opcional)</span></FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            type="tel"
+                                            maxLength={10}
+                                            placeholder="10 dígitos"
+                                            {...field}
+                                            onChange={(e) => {
+                                                const valorLimpio = e.target.value.replace(/\D/g, "");
+                                                field.onChange(valorLimpio);
+                                            }}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+
+                            <FormField control={form.control} name="cargo" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="font-bold">Tipo de Empleado / Cargo *</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="Ej. Chofer, Limpieza, Cuidador..."
+                                            {...field}
+                                            onChange={(e) => {
+                                                const valorLimpio = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
+                                                field.onChange(valorLimpio);
+                                            }}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                        </div>
+
+                        {/* Tabla de Horarios */}
+                        <div className="space-y-3">
+                            <div>
+                                <h3 className="font-bold text-sm">Días y Horario Autorizado *</h3>
+                                <p className="text-xs text-muted-foreground">Selecciona los días y el horario permitido de acceso.</p>
+                            </div>
+
+                            <div className="hidden sm:grid grid-cols-[100px_60px_1fr_1fr] gap-4 px-2 py-1 bg-gray-100 rounded-t-md text-xs font-semibold text-gray-600">
+                                <div>Día</div>
+                                <div className="text-center">Activo</div>
+                                <div>Entrada</div>
+                                <div>Salida</div>
+                            </div>
+
+                            <div className="flex flex-col gap-3 sm:gap-1">
+                                {form.watch("horarios").map((horario, index) => (
+                                    <div key={horario.dia} className="grid grid-cols-1 sm:grid-cols-[100px_60px_1fr_1fr] items-center gap-2 sm:gap-4 p-3 sm:p-2 bg-gray-50 sm:bg-transparent rounded-lg border sm:border-none">
+
+                                        <div className="flex items-center justify-between sm:justify-start gap-2">
+                                            <span className="text-sm font-medium">{horario.dia}</span>
+                                            <FormField control={form.control} name={`horarios.${index}.activo`} render={({ field }) => (
+                                                <FormControl>
+                                                    <Checkbox checked={field.value} onCheckedChange={field.onChange} className="sm:hidden" />
+                                                </FormControl>
+                                            )} />
+                                        </div>
+
+                                        <div className="hidden sm:flex justify-center">
+                                            <FormField control={form.control} name={`horarios.${index}.activo`} render={({ field }) => (
+                                                <FormControl>
+                                                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                                </FormControl>
+                                            )} />
+                                        </div>
+
+                                        <FormField control={form.control} name={`horarios.${index}.hora_entrada`} render={({ field }) => (
+                                            <FormItem className="space-y-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs text-gray-500 sm:hidden w-12">Entrada</span>
+                                                    <FormControl><Input type="time" disabled={!form.watch(`horarios.${index}.activo`)} className="h-8 w-full min-w-0" {...field} /></FormControl>
+                                                </div>
+                                            </FormItem>
+                                        )} />
+
+                                        <FormField control={form.control} name={`horarios.${index}.hora_salida`} render={({ field }) => (
+                                            <FormItem className="space-y-0 relative">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs text-gray-500 sm:hidden w-12">Salida</span>
+                                                    <FormControl><Input type="time" disabled={!form.watch(`horarios.${index}.activo`)} className="h-8 w-full min-w-0" {...field} /></FormControl>
+                                                </div>
+                                                <FormMessage className="text-[10px] absolute -bottom-4 left-0 sm:left-auto" />
+                                            </FormItem>
+                                        )} />
+                                    </div>
+                                ))}
+                            </div>
+                            {form.formState.errors.horarios?.root && (
+                                <p className="text-sm font-medium text-destructive">{form.formState.errors.horarios.root.message}</p>
+                            )}
+                        </div>
+
+                        <FormField control={form.control} name="notas" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="font-bold">Notas Adicionales <span className="text-xs font-normal text-gray-400">(Opcional)</span></FormLabel>
+                                <FormControl>
+                                    <Textarea placeholder="Ej. El empleado utilizará la entrada trasera..." className="resize-none" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+
+                        {/* Botones */}
+                        <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t mt-6">
+                            <Button type="button" variant="outline" onClick={onClose} className="flex-1 order-2 sm:order-1" disabled={isSaving}>
+                                Cancelar
+                            </Button>
+                            <Button type="submit" disabled={isSaving} className="flex-1 text-white font-bold order-1 sm:order-2">
+                                {isSaving ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : "Guardar Empleado"}
+                            </Button>
+                        </div>
+
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+    );
+}
