@@ -39,10 +39,10 @@ export class VisitanteController {
     @UploadedFile(
       new ParseFilePipe({
         validators: [
-          new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 5 }), // 5MB
+          new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 10 }), // 10MB
           new FileTypeValidator({ fileType: '.(png|jpeg|jpg)' }),
         ],
-        fileIsRequired: false, //Esto luego lo cambio a true cuando ya implemente la conexión con Cloudfare R2...
+        fileIsRequired: true,
       }),
     )
     file?: Express.Multer.File,

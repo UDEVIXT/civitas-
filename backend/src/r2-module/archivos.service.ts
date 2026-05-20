@@ -1,19 +1,23 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ArchivosService {
   private s3: S3Client;
   private nombreBucket = 'civitas';
 
-  constructor() {
+  constructor(private configService: ConfigService) {
     this.s3 = new S3Client({
       region: 'auto',
-      endpoint: `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      endpoint: `https://${this.configService.get('CLOUDFLARE_ACCOUNT_ID')}.r2.cloudflarestorage.com`,
       forcePathStyle: true,
       credentials: {
-        accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+        accessKeyId: this.configService.get('R2_ACCESS_KEY_ID')!,
+        secretAccessKey: this.configService.get('R2_SECRET_ACCESS_KEY')!,
       },
     });
   }
@@ -35,7 +39,7 @@ export class ArchivosService {
 
       await this.s3.send(comando);
 
-      return `${process.env.R2_VISUAL_URL}${rutaArchivo}`;
+      return `${this.configService.get('R2_VISUAL_URL')}${rutaArchivo}`;
     } catch (error) {
       console.error('Error al subir a R2:', error);
       throw new InternalServerErrorException(
