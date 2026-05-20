@@ -1,7 +1,14 @@
-import { Controller, Post, Get, Body, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  UploadedFiles,
+  UseInterceptors,
+} from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ReportesService } from './reportes.service';
-import { ArchivosService } from './archivos.service'; 
+import { ArchivosService } from '../r2-module/archivos.service';
 import { EvidenciaReporteService } from 'src/evidencia-reporte/evidencia-incidencia.service';
 
 @Controller('reportes')
@@ -13,39 +20,43 @@ export class ReportesController {
   ) {}
 
   @Post()
-  @UseInterceptors(FilesInterceptor('imagen', 10)) 
+  @UseInterceptors(FilesInterceptor('imagen', 10))
   async crearReporte(
-    @UploadedFiles() archivos: Array<any>, 
-    @Body() datosReporte: any
+    @UploadedFiles() archivos: Array<any>,
+    @Body() datosReporte: any,
   ) {
-    const reporteCreado = await this.reportesService.crearConEvidencia(datosReporte);
-    
+    const reporteCreado =
+      await this.reportesService.crearConEvidencia(datosReporte);
+
     let fotosRegistros: Array<any> = [];
 
     if (archivos && archivos.length > 0) {
       fotosRegistros = await Promise.all(
         archivos.map(async (archivo) => {
-          const urlSubida = await this.archivosService.subirImagen(archivo);
-          
+          const urlSubida = await this.archivosService.subirImagen(
+            archivo,
+            '/incidencias',
+          );
+
           return await this.evidenciaService.create({
             id_reporte: reporteCreado.id_reporte,
             url_archivo: urlSubida,
             nombre_archivo: archivo.originalname,
           });
-        })
+        }),
       );
     }
 
-    if(fotosRegistros.length > 0){
+    if (fotosRegistros.length > 0) {
       return {
-        message: "Reporte y evidencias registrados con éxito",
+        message: 'Reporte y evidencias registrados con éxito',
         reporte: reporteCreado,
-        fotos: fotosRegistros 
+        fotos: fotosRegistros,
       };
     } else {
       return {
-        message: "Reporte registrado con éxito (Sin evidencias)",
-        reporte: reporteCreado
+        message: 'Reporte registrado con éxito (Sin evidencias)',
+        reporte: reporteCreado,
       };
     }
   }
