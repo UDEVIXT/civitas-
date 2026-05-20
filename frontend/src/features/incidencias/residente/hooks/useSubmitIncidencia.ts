@@ -12,12 +12,10 @@ export const useSubmitIncidencia = () => {
             setIsSubmitting(true);
         },
         onSuccess: (data) => {
-            if (data.success) {
-                resetForm();
+            resetForm();
 
-                queryClient.invalidateQueries({ queryKey: ['reportes'] });
-                queryClient.invalidateQueries({ queryKey: ['incidencias'] });
-            }
+            queryClient.invalidateQueries({ queryKey: ['reportes'] });
+            queryClient.invalidateQueries({ queryKey: ['incidencias'] });
         },
         onError: (error: any) => {
             console.error('Error al enviar:', error);

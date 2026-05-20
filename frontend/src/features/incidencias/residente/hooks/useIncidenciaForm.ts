@@ -76,6 +76,8 @@ export const useIncidenciaForm = create<FormState>((set, get) => ({
 
         if (!formData.motivo || formData.motivo.trim().length === 0) {
             errors.motivo = "Es necesario que indiques el motivo";
+        } else if (formData.motivo.length > 100) {
+            errors.motivo = "No puede exceder los 100 caracteres";
         }
 
         if (!formData.descripcion || formData.descripcion.trim().length === 0) {
