@@ -7,7 +7,6 @@ import { Loader2, HelpCircle } from "lucide-react";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -26,12 +25,12 @@ export function ModalVisitante({ isOpen, onClose, onSave, isSaving }: ModalVisit
     resolver: zodResolver(visitanteSchema),
     defaultValues: {
       nombre_completo: "",
-      telefono: "",        // Nuevo campo
+      telefono: "",        
       tipo_visitante: "",
       motivo_visita: "",
       fecha_visita: "",
-      hora_estimada: "12:00",
-      foto: "",            // Nuevo campo
+      hora_estimada: "",
+      foto: "",            
       es_frecuente: false,
     },
   });
@@ -45,9 +44,8 @@ export function ModalVisitante({ isOpen, onClose, onSave, isSaving }: ModalVisit
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] sm:max-w-[500px] p-6 rounded-2xl bg-white border-none shadow-lg">
+      <DialogContent className="w-[95vw] sm:max-w-[500px] p-6 rounded-2xl bg-white border-none shadow-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader className="flex flex-col items-center text-center space-y-3 pb-2">
-          {/* Icono decorativo del Figma */}
           <div className="bg-amber-50 text-amber-500 p-3 rounded-full">
             <HelpCircle className="h-6 w-6" />
           </div>
@@ -62,7 +60,6 @@ export function ModalVisitante({ isOpen, onClose, onSave, isSaving }: ModalVisit
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             
-            {/* Campos apilados en una sola columna */}
             <FormField control={form.control} name="nombre_completo" render={({ field }) => (
               <FormItem>
                 <FormLabel className="font-semibold text-gray-700">Nombre:</FormLabel>
@@ -103,7 +100,7 @@ export function ModalVisitante({ isOpen, onClose, onSave, isSaving }: ModalVisit
 
             <FormField control={form.control} name="fecha_visita" render={({ field }) => (
               <FormItem>
-                <FormLabel className="font-semibold text-gray-700">Fecha:</FormLabel>
+                <FormLabel className="font-semibold text-gray-700">Fecha de visita:</FormLabel>
                 <FormControl>
                   <Input 
                     type="date" 
@@ -116,22 +113,34 @@ export function ModalVisitante({ isOpen, onClose, onSave, isSaving }: ModalVisit
               </FormItem>
             )} />
 
+            {/* ¡Ya no están escondidos! */}
+            <FormField control={form.control} name="hora_estimada" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="font-semibold text-gray-700">Hora estimada de llegada:</FormLabel>
+                <FormControl>
+                  {/* Lo dejé como time para que salga el relojito, pero puedes cambiar type a "text" si lo prefieres */}
+                  <Input type="time" className="bg-white border-gray-200 focus-visible:ring-amber-500" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="motivo_visita" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="font-semibold text-gray-700">Motivo de la visita:</FormLabel>
+                <FormControl>
+                  <Input placeholder="ej. Fiesta de cumpleaños" className="bg-white border-gray-200 focus-visible:ring-amber-500" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
             <FormField control={form.control} name="tipo_visitante" render={({ field }) => (
               <FormItem>
-                <FormLabel className="font-semibold text-gray-700">Tipo de vehículo:</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger className="bg-white border-gray-200 focus-visible:ring-amber-500">
-                      <SelectValue placeholder="Camioneta" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="Auto">Auto</SelectItem>
-                    <SelectItem value="Camioneta">Camioneta</SelectItem>
-                    <SelectItem value="Motocicleta">Motocicleta</SelectItem>
-                    <SelectItem value="Peatón">Peatón</SelectItem>
-                  </SelectContent>
-                </Select>
+                <FormLabel className="font-semibold text-gray-700">Tipo de visitante / Vehículo:</FormLabel>
+                <FormControl>
+                  <Input placeholder="ej. Familiar, Proveedor en camioneta..." className="bg-white border-gray-200 focus-visible:ring-amber-500" {...field} />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )} />
@@ -150,7 +159,6 @@ export function ModalVisitante({ isOpen, onClose, onSave, isSaving }: ModalVisit
               </FormItem>
             )} />
 
-            {/* Switch de Visitante Frecuente */}
             <FormField control={form.control} name="es_frecuente" render={({ field }) => (
               <FormItem className="flex flex-row items-center justify-between mt-2">
                 <div className="space-y-0.5">
@@ -165,23 +173,12 @@ export function ModalVisitante({ isOpen, onClose, onSave, isSaving }: ModalVisit
                   <Switch 
                     checked={field.value} 
                     onCheckedChange={field.onChange} 
-                    className="data-[state=checked]:bg-indigo-500" 
+                    className="data-[state=checked]:bg-amber-500" 
                   />
                 </FormControl>
               </FormItem>
             )} />
 
-            {/* Campos ocultos pero necesarios para tu backend/CA */}
-            <div className="hidden">
-              <FormField control={form.control} name="motivo_visita" render={({ field }) => (
-                <FormItem><FormControl><Input {...field} value="Visita registrada" /></FormControl></FormItem>
-              )} />
-              <FormField control={form.control} name="hora_estimada" render={({ field }) => (
-                <FormItem><FormControl><Input type="time" {...field} value="12:00" /></FormControl></FormItem>
-              )} />
-            </div>
-
-            {/* Botones Flexibles 50/50 */}
             <div className="flex gap-4 w-full pt-4 mt-4">
               <Button 
                 type="button" 
