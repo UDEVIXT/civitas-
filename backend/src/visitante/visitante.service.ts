@@ -11,10 +11,14 @@ import { CreateVisitanteDto } from './dto/create-visitante.dto';
 import { UpdateVisitanteDto } from './dto/update-visitante.dto';
 import 'multer';
 import { randomStringGenerator } from '@nestjs/common/utils/random-string-generator.util';
+import { ArchivosService } from '../r2-module/archivos.service';
 
 @Injectable()
 export class VisitanteService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly archivosService: ArchivosService,
+  ) {}
 
   async create(
     createVisitanteDto: CreateVisitanteDto,
@@ -37,6 +41,11 @@ export class VisitanteService {
     const fechaExpiracion =
       dataVisitante.fecha_fin || dataVisitante.fecha_inicio;
 
+    //Subimos la imagen a R2 y obtenemos la URL (si se mandó la imagen desde el front)
+    const urlImagen = file
+      ? await this.archivosService.subirImagen(file, '/visitantes')
+      : null;
+
     //Registramos al visitante con sus datos
     return await this.prisma.$transaction(async (prisma) => {
       try {
@@ -47,7 +56,7 @@ export class VisitanteService {
             telefono: dataVisitante.telefono,
             tipo_vehiculo: dataVisitante.tipo_vehiculo,
             motivo: dataVisitante.tipo_visitante,
-            url_imagen: null,
+            url_imagen: urlImagen,
             residente: {
               connect: { id_residente: residente.id_residente },
             },
