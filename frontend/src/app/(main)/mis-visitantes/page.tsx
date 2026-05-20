@@ -11,29 +11,26 @@ import { TablaVisitantes } from "@/features/mis-visitantes/components/tabla-visi
 import { EmptyStateVisitantes } from "@/features/mis-visitantes/components/empty-state-visitantes";
 import type { VisitanteFormValues } from "@/features/mis-visitantes/schemas/visitante.schema";
 import type { Visitante } from "@/features/mis-visitantes/types";
-
-// Mock Data (Simulando lo que traería el backend de Joan)
-const VISITANTES_MOCK: Visitante[] = [
-  { id_visitante: "1", nombre_completo: "Olivia Rhye", motivo_visita: "Visita por cumpleaños", tipo_visitante: "Visita Personal", fecha_visita: "2026-05-20", hora_estimada: "14:00", es_frecuente: false, estatus: "Activo" },
-  { id_visitante: "2", nombre_completo: "Phoenix Baker", motivo_visita: "Masajista personal", tipo_visitante: "Servicio", fecha_visita: "2026-05-21", hora_estimada: "10:00", es_frecuente: true, estatus: "Activo" },
-];
+import { crearVisitante } from "@/features/mis-visitantes/api/visitante.api";
 
 export default function MisVisitantesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Cambia esto a [] para probar cómo se ve el Empty State
-  const [visitantes, setVisitantes] = useState<Visitante[]>(VISITANTES_MOCK); 
+  // Iniciamos la tabla vacía.
+  const [visitantes, setVisitantes] = useState<Visitante[]>([]); 
 
   const handleSaveVisitante = async (values: VisitanteFormValues) => {
     setIsSaving(true);
     try {
-      console.log("Enviando a BD:", values);
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simula latencia
+      console.log("Enviando a BD de Joan:", values);
       
-      // Simula agregar a la lista para que se quite el Empty State temporalmente
+      // 1. Llamada REAL a tu backend usando Axios
+      await crearVisitante(values);
+      
+      // 2. Si Axios no tira error, significa que se guardó. Lo agregamos visualmente a la tabla.
       const nuevoVisitante: Visitante = {
-        id_visitante: Math.random().toString(),
+        id_visitante: Math.random().toString(), // ID temporal para que React no se queje en el map
         ...values,
         tipo_visitante: values.tipo_visitante as any,
         estatus: "Activo"
@@ -42,7 +39,8 @@ export default function MisVisitantesPage() {
       
       setIsModalOpen(false);
     } catch (error) {
-      console.error(error);
+      console.error("Error al registrar en la API:", error);
+      alert("Hubo un problema al guardar el visitante.");
     } finally {
       setIsSaving(false);
     }
