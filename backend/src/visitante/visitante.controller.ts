@@ -42,7 +42,7 @@ export class VisitanteController {
           new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 10 }), // 10MB
           new FileTypeValidator({ fileType: '.(png|jpeg|jpg)' }),
         ],
-        fileIsRequired: false,
+        fileIsRequired: true,
       }),
     )
     file?: Express.Multer.File,
