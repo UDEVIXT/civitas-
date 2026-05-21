@@ -28,7 +28,11 @@ export class ArchivosService {
         .replace(/\s+/g, '_')
         .replace(/[^a-zA-Z0-9._-]/g, '');
 
-      const rutaArchivo = route + `${Date.now()}_${nombreLimpio}`;
+      // Limpia la ruta: quita slashes iniciales/finales y asegura un separador con el nombre del archivo
+      const folder = route.replace(/^\/+|\/+$/g, '');
+      const rutaArchivo = folder
+        ? `${folder}/${Date.now()}_${nombreLimpio}`
+        : `${Date.now()}_${nombreLimpio}`;
 
       const comando = new PutObjectCommand({
         Bucket: this.nombreBucket,
