@@ -43,7 +43,7 @@ export class VisitanteService {
 
     //Subimos la imagen a R2 y obtenemos la URL (si se mandó la imagen desde el front)
     const urlImagen = file
-      ? await this.archivosService.subirImagen(file, '/visitantes')
+      ? await this.archivosService.subirImagen(file, 'visitantes')
       : null;
 
     //Registramos al visitante con sus datos
