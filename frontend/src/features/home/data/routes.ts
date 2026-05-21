@@ -63,7 +63,7 @@ export const routes: Route[] = [
   {
     path: "/mis-visitantes",
     label: "Mis Visitantes",
-    description: "Gestiona los visitantes registrados en el sistema.",
+    description: "Gestiona los visitantes registrados en civitas.",
     icon: Users,
   },
 ];
