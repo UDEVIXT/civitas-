@@ -3,7 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   InternalServerErrorException,
-  For  ForbiddenException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -725,3 +725,4 @@ export class BitacoraService {
 
     return Array.from(usernames);
   }
+}

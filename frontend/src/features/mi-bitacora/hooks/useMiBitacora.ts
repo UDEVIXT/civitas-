@@ -154,6 +154,26 @@ export function useMiBitacora(residentUserId: string) {
     [dateFrom, dateTo, personType, residentUserId, search],
   );
 
+  const onSelectRecord = React.useCallback(async (record: MiBitacoraItem) => {
+    setSelected(record);
+    setSelectedDetail(null);
+    setDetailError(null);
+    setDetailLoading(true);
+
+    try {
+      const response = await getMiBitacoraDetalle(record.id_bitacora);
+      setSelectedDetail(response.data);
+    } catch (cause) {
+      setDetailError(
+        cause instanceof Error
+          ? cause.message
+          : "No se pudo cargar el detalle del registro.",
+      );
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
+
   // SSE: escuchar actualizaciones del backend para actualizar inmediatamente
   React.useEffect(() => {
     const apiUrl =
@@ -172,8 +192,9 @@ export function useMiBitacora(residentUserId: string) {
 
     let source: EventSource | null = null;
     try {
-      source = new EventSource(`${backendBase}/bitacora/updates`, { withCredentials: true } as any);
-    } catch (e) {
+      const eventSourceOptions: EventSourceInit = { withCredentials: true };
+      source = new EventSource(`${backendBase}/bitacora/updates`, eventSourceOptions);
+    } catch {
       return undefined;
     }
 
@@ -203,21 +224,7 @@ export function useMiBitacora(residentUserId: string) {
     // deliberate: fetchList/onSelectRecord/selected included so SSE triggers correctly
   }, [fetchList, onSelectRecord, selected]);
 
-  async function onSelectRecord(record: MiBitacoraItem) {
-    setSelected(record);
-    setSelectedDetail(null);
-    setDetailError(null);
-    setDetailLoading(true);
 
-    try {
-      const response = await getMiBitacoraDetalle(record.id_bitacora);
-      setSelectedDetail(response.data);
-    } catch (cause) {
-      setDetailError(cause instanceof Error ? cause.message : "No se pudo cargar el detalle del registro.");
-    } finally {
-      setDetailLoading(false);
-    }
-  }
 
   async function onToggleFrecuencia(idBitacora: string, currentEsFrecuente: boolean) {
     setUpdatingFrecuenciaId(idBitacora);
