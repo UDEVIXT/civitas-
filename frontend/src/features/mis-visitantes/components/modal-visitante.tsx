@@ -1,20 +1,15 @@
-/**
- * Aquí aplicamos el formulario con las protecciones de Zod (CA002) y la restricción de teclado para el nombre.
- */
-
 "use client";
 
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, HelpCircle } from "lucide-react";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 
 import { visitanteSchema, type VisitanteFormValues } from "../schemas/visitante.schema";
 
@@ -30,15 +25,18 @@ export function ModalVisitante({ isOpen, onClose, onSave, isSaving }: ModalVisit
     resolver: zodResolver(visitanteSchema),
     defaultValues: {
       nombre_completo: "",
+      telefono: "",        
       tipo_visitante: "",
       motivo_visita: "",
       fecha_visita: "",
-      hora_estimada: "12:00",
-      es_frecuente: false, // React Hook Form maneja el default aquí
+      hora_estimada: "",
+      foto: "",            
+      es_frecuente: false,
     },
   });
 
   const onSubmit = (values: VisitanteFormValues) => {
+    console.log("Valores validados por Zod listos para enviar:", values);
     onSave(values);
   };
 
@@ -46,26 +44,29 @@ export function ModalVisitante({ isOpen, onClose, onSave, isSaving }: ModalVisit
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] sm:max-w-[500px] p-4 sm:p-6 rounded-2xl">
-        <DialogHeader className="border-b pb-4 mb-4">
-          <DialogTitle className="text-2xl font-bold text-gray-900">
-            Registrar Visitante
+      <DialogContent className="w-[95vw] sm:max-w-[500px] p-6 rounded-2xl bg-white border-none shadow-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="flex flex-col items-center text-center space-y-3 pb-2">
+          <div className="bg-amber-50 text-amber-500 p-3 rounded-full">
+            <HelpCircle className="h-6 w-6" />
+          </div>
+          <DialogTitle className="text-xl font-bold text-gray-900">
+            Registrar visitante
           </DialogTitle>
-          <DialogDescription className="text-gray-500">
-            Ingresa los datos de tu visita para agilizar su acceso en caseta.
+          <DialogDescription className="text-sm text-gray-500">
+            Ingresa los datos de la persona que vendrá de visita
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          {/* Añadimos void para callar a TS si se queja de promesas no retornadas */}
-          <form onSubmit={form.handleSubmit((data) => void onSubmit(data))} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             
             <FormField control={form.control} name="nombre_completo" render={({ field }) => (
               <FormItem>
-                <FormLabel className="font-bold">Nombre Completo *</FormLabel>
+                <FormLabel className="font-semibold text-gray-700">Nombre:</FormLabel>
                 <FormControl>
                   <Input 
-                    placeholder="Ej. Carlos Pérez" 
+                    placeholder="ej. Antonina" 
+                    className="bg-white border-gray-200 focus-visible:ring-amber-500"
                     {...field} 
                     onChange={(e) => {
                       const val = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
@@ -77,75 +78,126 @@ export function ModalVisitante({ isOpen, onClose, onSave, isSaving }: ModalVisit
               </FormItem>
             )} />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField control={form.control} name="tipo_visitante" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-bold">Tipo *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      <SelectItem value="Visita Personal">Visita Personal</SelectItem>
-                      <SelectItem value="Proveedor">Proveedor</SelectItem>
-                      <SelectItem value="Familiar">Familiar</SelectItem>
-                      <SelectItem value="Servicio">Servicio</SelectItem>
-                      <SelectItem value="Otro">Otro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-
-              <FormField control={form.control} name="motivo_visita" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-bold">Motivo *</FormLabel>
-                  <FormControl><Input placeholder="Ej. Cumpleaños" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField control={form.control} name="fecha_visita" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-bold">Fecha *</FormLabel>
-                  <FormControl><Input type="date" min={hoyStr} {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-
-              <FormField control={form.control} name="hora_estimada" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-bold">Hora Estimada *</FormLabel>
-                  <FormControl><Input type="time" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            </div>
-
-            <FormField control={form.control} name="es_frecuente" render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm bg-gray-50">
+            <FormField control={form.control} name="telefono" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="font-semibold text-gray-700">Número telefónico:</FormLabel>
                 <FormControl>
-                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  <Input 
+                    type="tel"
+                    maxLength={10}
+                    placeholder="ej. 971 100 2998" 
+                    className="bg-white border-gray-200 focus-visible:ring-amber-500"
+                    {...field} 
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "");
+                      field.onChange(val);
+                    }}
+                  />
                 </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel className="font-bold cursor-pointer">
-                    Guardar como visitante frecuente
-                  </FormLabel>
-                  <p className="text-xs text-gray-500">
-                    Facilita futuros registros agregando a esta persona a tus favoritos (NTH001).
-                  </p>
-                </div>
+                <FormMessage />
               </FormItem>
             )} />
 
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
+            <FormField control={form.control} name="fecha_visita" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="font-semibold text-gray-700">Fecha de visita:</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="date" 
+                    min={hoyStr} 
+                    className="bg-white border-gray-200 focus-visible:ring-amber-500" 
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            {/* ¡Ya no están escondidos! */}
+            <FormField control={form.control} name="hora_estimada" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="font-semibold text-gray-700">Hora estimada de llegada:</FormLabel>
+                <FormControl>
+                  {/* Lo dejé como time para que salga el relojito, pero puedes cambiar type a "text" si lo prefieres */}
+                  <Input type="time" className="bg-white border-gray-200 focus-visible:ring-amber-500" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="motivo_visita" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="font-semibold text-gray-700">Motivo de la visita:</FormLabel>
+                <FormControl>
+                  <Input placeholder="ej. Fiesta de cumpleaños" className="bg-white border-gray-200 focus-visible:ring-amber-500" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="tipo_visitante" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="font-semibold text-gray-700">Tipo de visitante / Vehículo:</FormLabel>
+                <FormControl>
+                  <Input placeholder="ej. Familiar, Proveedor en camioneta..." className="bg-white border-gray-200 focus-visible:ring-amber-500" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="foto" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="font-semibold text-gray-700">Foto:</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="Ingresa un link con la foto de tu visitante..." 
+                    className="bg-white border-gray-200 focus-visible:ring-amber-500" 
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="es_frecuente" render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between mt-2">
+                <div className="space-y-0.5">
+                  <FormLabel className="font-semibold text-gray-800 cursor-pointer">
+                    Visitante frecuente
+                  </FormLabel>
+                  <p className="text-sm text-gray-500">
+                    Agregar a la lista de personas que visitan tu hogar frecuentemente.
+                  </p>
+                </div>
+                <FormControl>
+                  <Switch 
+                    checked={field.value} 
+                    onCheckedChange={field.onChange} 
+                    className="data-[state=checked]:bg-amber-500" 
+                  />
+                </FormControl>
+              </FormItem>
+            )} />
+
+            <div className="flex gap-4 w-full pt-4 mt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onClose} 
+                disabled={isSaving} 
+                className="flex-1 bg-white border-gray-300 text-gray-700 hover:bg-gray-50 font-bold"
+              >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSaving} className="bg-amber-500 hover:bg-amber-600 text-white font-bold">
-                {isSaving ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : "Guardar Visitante"}
+              <Button 
+                type="submit" 
+                disabled={isSaving} 
+                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold"
+              >
+                {isSaving ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : "Guardar"}
               </Button>
             </div>
+            
           </form>
         </Form>
       </DialogContent>
