@@ -11,36 +11,45 @@ import { TablaVisitantes } from "@/features/mis-visitantes/components/tabla-visi
 import { EmptyStateVisitantes } from "@/features/mis-visitantes/components/empty-state-visitantes";
 import type { VisitanteFormValues } from "@/features/mis-visitantes/schemas/visitante.schema";
 import type { Visitante } from "@/features/mis-visitantes/types";
+
+// Importamos la API que acabamos de crear
 import { crearVisitante } from "@/features/mis-visitantes/api/visitante.api";
 
 export default function MisVisitantesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Iniciamos la tabla vacía.
+  // Empezamos sin visitantes para ver tu Empty State de Figma
   const [visitantes, setVisitantes] = useState<Visitante[]>([]); 
 
   const handleSaveVisitante = async (values: VisitanteFormValues) => {
     setIsSaving(true);
     try {
-      console.log("Enviando a BD de Joan:", values);
+      // 1. Enviamos los datos reales al backend de Joan
+      const responseBackend = await crearVisitante(values);
+      console.log("¡Éxito! Respuesta del servidor:", responseBackend);
       
-      // 1. Llamada REAL a tu backend usando Axios
-      await crearVisitante(values);
-      
-      // 2. Si Axios no tira error, significa que se guardó. Lo agregamos visualmente a la tabla.
+      // 2. Agregamos el nuevo visitante a la tabla visualmente usando los datos del form
       const nuevoVisitante: Visitante = {
-        id_visitante: Math.random().toString(), // ID temporal para que React no se queje en el map
-        ...values,
+        // Si el backend te devuelve el ID real, cámbialo aquí. Por ahora usamos random:
+        id_visitante: responseBackend?.id_visitante || Math.random().toString(), 
+        nombre_completo: values.nombre_completo,
+        motivo_visita: values.motivo_visita,
         tipo_visitante: values.tipo_visitante as any,
+        fecha_visita: values.fecha_visita,
+        hora_estimada: values.hora_estimada,
+        es_frecuente: values.es_frecuente,
+        telefono: values.telefono,
         estatus: "Activo"
       };
-      setVisitantes([nuevoVisitante, ...visitantes]);
       
+      // Ponemos al nuevo visitante al inicio de la tabla
+      setVisitantes([nuevoVisitante, ...visitantes]);
       setIsModalOpen(false);
+      
     } catch (error) {
       console.error("Error al registrar en la API:", error);
-      alert("Hubo un problema al guardar el visitante.");
+      alert("Hubo un problema al guardar el visitante en la base de datos.");
     } finally {
       setIsSaving(false);
     }
@@ -49,7 +58,6 @@ export default function MisVisitantesPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       
-      {/* Header superior idéntico a tu Figma */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Visitantes</h1>
         
@@ -61,7 +69,6 @@ export default function MisVisitantesPage() {
         </div>
       </div>
 
-      {/* Barra de Filtros (Figma) */}
       <div className="flex flex-wrap items-center gap-3">
         <Button onClick={() => setIsModalOpen(true)} variant="outline" className="bg-white hover:bg-gray-50 text-gray-700">
           <UserPlus className="mr-2 h-4 w-4" /> Nuevo
@@ -74,14 +81,13 @@ export default function MisVisitantesPage() {
         </Button>
       </div>
 
-      {/* Renderizado Condicional: ¿Hay visitantes? */}
+      {/* Aquí entra la magia: Si es 0 muestra tu Empty State, si no, pinta la tabla */}
       {visitantes.length === 0 ? (
         <EmptyStateVisitantes />
       ) : (
         <TablaVisitantes visitantes={visitantes} />
       )}
 
-      {/* Modal */}
       {isModalOpen && (
         <ModalVisitante
           isOpen={isModalOpen}
