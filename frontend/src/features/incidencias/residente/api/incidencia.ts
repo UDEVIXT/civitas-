@@ -11,27 +11,34 @@ const mapFormDataToBackend = (formData: IncidenciaFormData) => {
 
   const isAnonymous = formData.usuario === "anonimo";
 
-  return {
-    id_usuario: user.id,
-    motivo: formData.motivo.substring(0, 100),
-    descripcion: formData.descripcion,
-    tipo: formData.tipoReporte,
-    latitud: formData.ubicacion.lat,
-    longitud: formData.ubicacion.lng,
-    es_anonimo: isAnonymous,
-    resultado_esperado: formData.solucionEsperada,
-    imagenes:
-      formData.imagen?.map((file) => ({
-        nombre_archivo: file.name,
-      })) || [],
-  };
+  const formDataToSend = new FormData();
+  formDataToSend.append('id_usuario', user.id);
+  formDataToSend.append('motivo', formData.motivo.substring(0, 100));
+  formDataToSend.append('descripcion', formData.descripcion);
+  formDataToSend.append('tipo', formData.tipoReporte);
+  formDataToSend.append('latitud', formData.ubicacion.lat.toString());
+  formDataToSend.append('longitud', formData.ubicacion.lng.toString());
+  formDataToSend.append('es_anonimo', isAnonymous.toString());
+  formDataToSend.append('resultado_esperado', formData.solucionEsperada);
+
+  if (formData.imagen && formData.imagen.length > 0) {
+    formData.imagen.forEach((file) => {
+      formDataToSend.append('imagen', file);
+    });
+  }
+
+  return formDataToSend;
 };
 
 export const submitIncidencia = async (
   formData: IncidenciaFormData,
 ): Promise<{ success: boolean; message: string }> => {
   const payload = mapFormDataToBackend(formData);
-  const response = await apiClient.post("/reportes", payload);
+  const response = await apiClient.post("/reportes", payload, {
+    headers: {
+      'Content-Type': undefined,
+    },
+  });
 
   return response.data;
 };
