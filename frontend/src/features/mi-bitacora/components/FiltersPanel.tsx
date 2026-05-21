@@ -71,7 +71,7 @@ export function FiltersPanel({
           <input
             type="checkbox"
             checked={groupBy === 'metodo'}
-            onChange={() => setGroupBy((prev) => (prev === 'metodo' ? null : 'metodo'))}
+            onChange={() => setGroupBy(groupBy === 'metodo' ? null : 'metodo')}
             className="h-4 w-4 rounded border-[#c7c7c7]"
           />
         </label>

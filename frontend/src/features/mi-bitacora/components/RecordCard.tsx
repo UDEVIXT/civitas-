@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Badge } from "@/components/ui/badge";
-import { Search, QrCode, Calendar, Clock } from "lucide-react";
+import { Search, QrCode, ListCheck, Shield, Calendar, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import type { MiBitacoraItem } from "../types";
@@ -88,16 +88,28 @@ export default function RecordCard({ record, groupBy, personTypeStyles, personTy
           <span>{record.fecha_hora_salida ? formatDateTime(record.fecha_hora_salida) : "-"}</span>
         </div>
         <div className="flex items-center gap-2">
-          <QrCode
-            className={cn(
-              "size-3.5",
-              groupBy === 'metodo' ? (record.metodo_acceso === "QR" ? "text-[#2f2f2f]" : "text-[#9b9b9b]") : "text-[#6b6b6b]",
-            )}
-          />
+          {record.metodo_acceso === 'QR' ? (
+            <QrCode
+              className={cn(
+                "size-3.5",
+                groupBy === 'metodo' ? (record.metodo_acceso === "QR" ? "text-[#2f2f2f]" : "text-[#9b9b9b]") : "text-[#6b6b6b]",
+              )}
+            />
+          ) : record.metodo_acceso === 'lista' ? (
+            <ListCheck
+              className={cn(
+                "size-3.5",
+                groupBy === 'metodo' ? (record.metodo_acceso === "lista" ? "text-[#2f2f2f]" : "text-[#9b9b9b]") : "text-[#6b6b6b]",
+              )}
+            />
+          ) : (
+            <QrCode className={cn("size-3.5", "text-[#6b6b6b]")} />
+          )}
           <span className="font-medium">Método:</span>
           <span>{record.metodo_acceso}</span>
         </div>
         <div className="flex items-center gap-2">
+          <Shield className="size-3.5 text-[#6b6b6b]" />
           <span className="font-medium">Guardia:</span>
           <span>{record.guardia?.nombre ?? record.guardia?.id_guardia ?? "-"}</span>
         </div>
