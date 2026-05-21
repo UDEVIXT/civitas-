@@ -39,6 +39,7 @@ export class ArchivosService {
 
       await this.s3.send(comando);
 
+      //Se retorna la URL pública del archivo subido a R2
       return `${this.configService.get('R2_VISUAL_URL')}${rutaArchivo}`;
     } catch (error) {
       console.error('Error al subir a R2:', error);
