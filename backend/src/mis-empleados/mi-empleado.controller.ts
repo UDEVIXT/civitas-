@@ -17,25 +17,17 @@ import { Roles } from 'src/auth/decorators/roles/roles.decorator';
 import { EmpleadoService } from './mi-empleado.service';
 import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth/jwt-auth.guard';
-import type { Request } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { use } from 'passport';
-
-interface AuthenticatedRequest extends Request {
-  user: {
-    userId: string;
-    username: string;
-    role: 'Administrador' | 'Guardia' | 'Residente';
-  };
-}
+import type { AuthenticatedRequest } from 'src/request/AuthenticatedRequest';
 
 @Controller('mi-empleado') // 1. Cambiado para que sea tu endpoint exclusivo
 export class EmpleadoController {
   constructor(private empleadoService: EmpleadoService) {}
 
-@Get()
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('Residente')
+  @Get()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Residente')
   async findAll(
     @Req() req: AuthenticatedRequest,
     @Query('search') search?: string,
@@ -46,7 +38,7 @@ export class EmpleadoController {
   ) {
     /*console.log("REQ:", req);
     console.log("USER:", req.user);*/
-    const id_user = req.user.userId; 
+    const id_user = req.user.userId;
     //console.log(id_user);
     const isActiveValue = isActive?.toLowerCase();
     const isActiveBool =
@@ -67,35 +59,45 @@ export class EmpleadoController {
       limit: parseInt(limit, 10),
       isActive: isActiveBool,
       byUsuarioId: id_user,
-      byViviendaId: byViviendaIdValue,   
+      byViviendaId: byViviendaIdValue,
     });
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-      return { message: `Empleado ${id}` };
+    return { message: `Empleado ${id}` };
   }
 
   @Post()
   create() {
     return { message: 'Empleado creado' };
   }
-  
+
   @Put(':id')
   async update(
     @Param('id') id: string,
-    @Body() body: { accion?: string; data?: any; activo?: boolean; motivo?: string; id_residente?: string },
+    @Body()
+    body: {
+      accion?: string;
+      data?: any;
+      activo?: boolean;
+      motivo?: string;
+      id_residente?: string;
+    },
   ) {
     const { accion, data } = body;
     // Soporte para peticiones donde los datos vienen en la raíz o dentro del objeto 'data'
     const activo = body.activo !== undefined ? body.activo : data?.activo;
     const motivo = body.motivo !== undefined ? body.motivo : data?.motivo;
-    const id_residente = body.id_residente !== undefined ? body.id_residente : data?.id_residente;
+    const id_residente =
+      body.id_residente !== undefined ? body.id_residente : data?.id_residente;
 
     // ESCENARIO A: Tu actualización personalizada desde el modal del residente
     if (accion === 'actualizacion_residente') {
       if (!data || !data.nombre) {
-        throw new BadRequestException('El nombre del empleado es obligatorio para actualizar');
+        throw new BadRequestException(
+          'El nombre del empleado es obligatorio para actualizar',
+        );
       }
       // Llamamos al servicio pasando los datos estructurados del modal
       return this.empleadoService.actualizarEmpleado(id, data);
@@ -113,7 +115,9 @@ export class EmpleadoController {
     }
 
     // Si no entra en ninguna condición válida
-    throw new BadRequestException('Petición no reconocida. Verifica los parámetros enviados.');
+    throw new BadRequestException(
+      'Petición no reconocida. Verifica los parámetros enviados.',
+    );
   }
 
   @Delete(':id')

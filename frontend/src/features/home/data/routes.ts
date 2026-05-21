@@ -60,4 +60,10 @@ export const routes: Route[] = [
     description: "Administra los empleados registrados a tu cargo.",
     icon: UserCheck,
   },
+  {
+    path: "/mis-visitantes",
+    label: "Mis Visitantes",
+    description: "Gestiona los visitantes registrados en civitas.",
+    icon: Users,
+  },
 ];

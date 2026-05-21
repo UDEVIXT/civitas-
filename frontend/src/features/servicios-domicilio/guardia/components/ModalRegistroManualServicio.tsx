@@ -19,9 +19,6 @@ export function ModalRegistroManualServicio({ open, onOpenChange }: ModalRegistr
   const [motivo, setMotivo] = useState("");
 
   const handleRegister = () => {
-    // Aquí iría la lógica para enviar al API un registro manual si no existe.
-    // CA007 menciona que si no está registrado, se debe indicar que el servicio no está autorizado,
-    // o el guardia puede requerir autorización verbal del residente.
     onOpenChange(false);
   };
 
@@ -52,9 +49,9 @@ export function ModalRegistroManualServicio({ open, onOpenChange }: ModalRegistr
             <label className="text-xs font-semibold text-zinc-900 uppercase">Nombre del proveedor/repartidor</label>
             <div className="relative">
               <User className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
-              <Input 
-                className="pl-9 bg-zinc-50/50" 
-                placeholder="Ej. Juan Pérez" 
+              <Input
+                className="pl-9 bg-zinc-50/50"
+                placeholder="Ej. Juan Pérez"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
               />
@@ -64,9 +61,9 @@ export function ModalRegistroManualServicio({ open, onOpenChange }: ModalRegistr
             <label className="text-xs font-semibold text-zinc-900 uppercase">Empresa / Plataforma</label>
             <div className="relative">
               <Briefcase className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
-              <Input 
-                className="pl-9 bg-zinc-50/50" 
-                placeholder="Ej. Amazon, Uber Eats..." 
+              <Input
+                className="pl-9 bg-zinc-50/50"
+                placeholder="Ej. Amazon, Uber Eats..."
                 value={empresa}
                 onChange={(e) => setEmpresa(e.target.value)}
               />
@@ -74,9 +71,9 @@ export function ModalRegistroManualServicio({ open, onOpenChange }: ModalRegistr
           </div>
           <div className="space-y-2">
             <label className="text-xs font-semibold text-zinc-900 uppercase">Motivo o Descripción</label>
-            <Textarea 
-              className="bg-zinc-50/50 resize-none" 
-              placeholder="Ej. Entrega de paquete" 
+            <Textarea
+              className="bg-zinc-50/50 resize-none"
+              placeholder="Ej. Entrega de paquete"
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
             />
@@ -84,14 +81,14 @@ export function ModalRegistroManualServicio({ open, onOpenChange }: ModalRegistr
         </div>
 
         <DialogFooter className="grid grid-cols-2 gap-3 p-6 pt-0 border-t border-zinc-100 bg-zinc-50/50 mt-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => onOpenChange(false)}
             className="w-full bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50 rounded-xl"
           >
             Cancelar
           </Button>
-          <Button 
+          <Button
             onClick={handleRegister}
             className="w-full font-bold shadow-sm rounded-xl text-white bg-amber-500 hover:bg-amber-600"
             disabled={!nombre || !empresa}

@@ -27,6 +27,14 @@ export async function seedVisitantes(prisma: PrismaClient) {
     'Jardinería',
   ];
 
+  const vehiculos = [
+    'Automóvil',
+    'Motocicleta',
+    'Bicicleta',
+    'Camioneta',
+    'Ninguno',
+  ];
+
   for (let i = 0; i < 200; i++) {
     const residente = faker.helpers.arrayElement(residentes);
 
@@ -39,6 +47,8 @@ export async function seedVisitantes(prisma: PrismaClient) {
     const motivo = faker.helpers.arrayElement(motivos);
 
     const es_frecuente = faker.datatype.boolean();
+
+    const tipo_vehiculo = faker.helpers.arrayElement(vehiculos);
 
     const requiereServicio = faker.datatype.boolean();
 
@@ -95,6 +105,8 @@ export async function seedVisitantes(prisma: PrismaClient) {
       id_residente: residente.id_residente,
 
       id_servicio: servicioId,
+
+      tipo_vehiculo,
     };
 
     if (existente) {
