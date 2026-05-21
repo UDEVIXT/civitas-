@@ -2,7 +2,7 @@ import apiClient from "@/api/axios";
 import type {
   EmpleadoDomesticoResponse,
   FiltroEmpleado,
-} from "@/features/empleados-domesticos/types"; 
+} from "@/features/empleados-domesticos/types";
 
 // NUEVA FUNCIÓN: Solo para que el residente vea a sus propios empleados
 export const obtenerMisEmpleados = async (
@@ -11,13 +11,16 @@ export const obtenerMisEmpleados = async (
   page?: number,
 ) => {
   //Cambiamos "/empleado" por "/mi-empleado"
-  const response = await apiClient.get<EmpleadoDomesticoResponse>("/mi-empleado", {
-    params: {
-      page: page || 1,
-      search: search ? search.trim() : undefined,
-      ...filtros,
+  const response = await apiClient.get<EmpleadoDomesticoResponse>(
+    "/mi-empleado",
+    {
+      params: {
+        page: page || 1,
+        search: search ? search.trim() : undefined,
+        ...filtros,
+      },
     },
-  });
+  );
   return response.data;
 };
 
@@ -35,16 +38,15 @@ export const toggleEmpleadoActivo = async (
       throw new Error("Empleado inválido: falta id_visitante");
     }
 
+    // 🔥 IMPORTANTE: fallback seguro
     const estaActivo = Boolean(empleado?.servicio?.activo);
 
-    const payload = estaActivo
-      ? {
-          activo: false,
-          motivo: motivo || "Baja realizada desde el panel",
-        }
-      : {
-          activo: true,
-        };
+    const payload = {
+      activo: !estaActivo, // 👈 toggle real (más limpio)
+      ...(estaActivo && {
+        motivo: motivo || "Baja realizada desde el panel",
+      }),
+    };
 
     const response = await apiClient.put(
       `/mi-empleado/${empleado.id_visitante}`,
@@ -63,15 +65,14 @@ export const toggleEmpleadoActivo = async (
   }
 };
 
-// 
 export const actualizarEmpleadoResidente = async (id: string, data: any) => {
   try {
     const response = await apiClient.put(`/mi-empleado/${id.trim()}`, {
-      accion: "actualizacion_residente", 
+      accion: "actualizacion_residente",
       data: {
         nombre: data.nombre,
         telefono: data.telefono,
-        foto: data.foto, 
+        foto: data.foto,
         cargo: data.cargo,
         hora_entrada: data.hora_entrada,
         hora_salida: data.hora_salida,
@@ -83,8 +84,37 @@ export const actualizarEmpleadoResidente = async (id: string, data: any) => {
   } catch (error: any) {
     return {
       success: false,
-      message: error.response?.data?.message || "Error al actualizar los datos.",
+      message:
+        error.response?.data?.message || "Error al actualizar los datos.",
     };
   }
 };
 
+export interface HorarioEmpleadoDomestico {
+  dia_semana:
+    | "LUNES"
+    | "MARTES"
+    | "MIERCOLES"
+    | "JUEVES"
+    | "VIERNES"
+    | "SABADO"
+    | "DOMINGO";
+  hora_inicio: string;
+  hora_fin: string;
+}
+
+export interface CrearEmpleadoDomesticoRequest {
+  nombre_completo: string;
+  id_tipo_servicio: string;
+  cargo: string;
+  telefono?: string;
+  url_imagen?: string;
+  horarios: HorarioEmpleadoDomestico[];
+}
+
+export const crearEmpleadoDomestico = async (
+  data: CrearEmpleadoDomesticoRequest,
+) => {
+  const response = await apiClient.post("/empleado/empleado-domestico", data);
+  return response.data;
+};

@@ -117,6 +117,7 @@ export function ModalDetalleRegistro({
     comentario_salida?: string;
     qr_utilizado?: string;
     hora_validacion?: string;
+    guardia_salida?: string;
   };
 
   return (
@@ -308,10 +309,12 @@ export function ModalDetalleRegistro({
                 )}
               </div>
 
-              <div className="flex items-center gap-2 text-sm flex-wrap">
-                <ShieldCheck className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="font-medium">Guardia:</span>
-                <span className="text-muted-foreground">{registro.guardia_registro}</span>
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-2 text-sm">
+                  <ShieldCheck className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="font-medium">Guardia entrada:</span>
+                  <span className="text-muted-foreground">{registro.guardia_registro}</span>
+                </div>
               </div>
             </CardContent>
           </Card>

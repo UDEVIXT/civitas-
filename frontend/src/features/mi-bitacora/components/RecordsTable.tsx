@@ -31,30 +31,26 @@ export default function RecordsTable({ groupedRecords, groupedAll, groupBy, pers
   return (
     <table className="w-full min-w-245 table-fixed text-sm">
       <colgroup>
-        <col className="w-55" />
-        <col className="w-45" />
-        <col className="w-45" />
-        <col className="w-35" />
-        <col className="w-35" />
+        <col className="w-60" />
+        <col className="w-50" />
         <col className="w-40" />
+        <col className="w-40" />
+        <col className="w-45" />
         <col className="w-27.5" />
       </colgroup>
       <thead className="bg-[#f5f5f5] sticky top-0 z-10">
         <tr className="border-b border-[#dfdfdf] text-[#4f4f4f]">
-          <th className="px-2 py-3 text-center font-medium">
-            <input type="checkbox" className="h-4 w-4 rounded border-[#c7c7c7]" />
-          </th>
-          <th className="px-3 py-3 text-left font-medium">
+          <th className="px-5 py-3 text-left font-medium">
             <button type="button" onClick={() => toggleGroup('nombre')} className={cn('flex items-center gap-2 text-left', groupBy === 'nombre' ? 'font-semibold underline' : '')}>
               <span className="truncate">Name</span>
             </button>
           </th>
-          <th className="px-3 py-3 text-left font-medium">
+          <th className="px-5 py-3 text-left font-medium">
             <button type="button" onClick={() => toggleGroup('tipo')} className={cn('flex items-center gap-2 text-left', groupBy === 'tipo' ? 'font-semibold underline' : '')}>
               <span className="truncate">Tipo</span>
             </button>
           </th>
-          <th className="px-3 py-3 text-left font-medium">
+          <th className="px-5 py-3 text-left font-medium">
             <button type="button" onClick={() => toggleSort('fecha_hora_entrada')} className="flex w-full items-center gap-2 text-left">
               <Calendar className="size-4 shrink-0 text-[#6b6b6b]" />
               <span className="truncate">Hora Entrada</span>
@@ -67,7 +63,7 @@ export default function RecordsTable({ groupedRecords, groupedAll, groupBy, pers
               </span>
             </button>
           </th>
-          <th className="px-3 py-3 text-left font-medium">
+          <th className="px-5 py-3 text-left font-medium">
             <button type="button" onClick={() => toggleSort('fecha_hora_salida')} className="flex w-full items-center gap-2 text-left">
               <Clock className="size-4 shrink-0 text-[#6b6b6b]" />
               <span className="truncate">Hora Salida</span>
@@ -80,7 +76,7 @@ export default function RecordsTable({ groupedRecords, groupedAll, groupBy, pers
               </span>
             </button>
           </th>
-          <th className="px-3 py-3 text-left font-medium">
+          <th className="px-5 py-3 text-left font-medium">
             <button type="button" onClick={() => toggleSort('metodo')} className="flex w-full items-center gap-2 text-left">
               <span className="truncate">Método</span>
               <span className="ml-auto flex size-4 items-center justify-center shrink-0">
@@ -92,12 +88,12 @@ export default function RecordsTable({ groupedRecords, groupedAll, groupBy, pers
               </span>
             </button>
           </th>
-          <th className="px-3 py-3 text-left font-medium">
+          <th className="px-5 py-3 text-left font-medium">
             <button type="button" onClick={() => toggleGroup('guardia')} className={cn('flex items-center gap-2 text-left', groupBy === 'guardia' ? 'font-semibold underline' : '')}>
               <span className="truncate">Guardia</span>
             </button>
           </th>
-          <th className="px-3 py-3 text-right font-medium" />
+          <th className="px-5 py-3 text-right font-medium" />
         </tr>
       </thead>
       <tbody className="divide-y divide-[#ececec]">

@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   Clock,
   UserCheck,
+  Scan,
 } from "lucide-react";
 
 export const routes: Route[] = [
@@ -28,6 +29,12 @@ export const routes: Route[] = [
     label: "Bitácora Administrador",
     description: "Vista administrativa de todos los accesos registrados.",
     icon: FileText,
+  },
+  {
+    path: "/servicios-repartidores/guardia",
+    label: "Servicios y Repartidores",
+    description: "Escaneo y validación de servicios a domicilio.",
+    icon: Scan,
   },
   {
     path: "/empleados-domesticos",
@@ -52,5 +59,11 @@ export const routes: Route[] = [
     label: "Mis Empleados",
     description: "Administra los empleados registrados a tu cargo.",
     icon: UserCheck,
+  },
+  {
+    path: "/mis-visitantes",
+    label: "Mis Visitantes",
+    description: "Gestiona los visitantes registrados en civitas.",
+    icon: Users,
   },
 ];

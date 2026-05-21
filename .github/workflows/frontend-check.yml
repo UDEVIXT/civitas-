@@ -1,4 +1,4 @@
-name: Revisión de Frontend
+name: Frontend Revisión
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
       - 'frontend/**'
 
 jobs:
-  build:
+  frontend-check:
     runs-on: ubuntu-latest
 
     defaults:
