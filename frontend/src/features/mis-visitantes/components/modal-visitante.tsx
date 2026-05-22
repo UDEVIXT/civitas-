@@ -30,7 +30,7 @@ export function ModalVisitante({ isOpen, onClose, onSave, isSaving }: ModalVisit
       motivo_visita: "",
       fecha_visita: "",
       hora_estimada: "",
-      foto: "",            
+      foto: "" as any,            
       es_frecuente: false,
     },
   });
@@ -117,7 +117,6 @@ export function ModalVisitante({ isOpen, onClose, onSave, isSaving }: ModalVisit
               <FormItem>
                 <FormLabel className="font-semibold text-gray-700">Hora estimada de llegada:</FormLabel>
                 <FormControl>
-                  {/* Lo dejé como time para que salga el relojito */}
                   <Input type="time" className="bg-white border-gray-200 focus-visible:ring-amber-500" {...field} />
                 </FormControl>
                 <FormMessage />
@@ -155,7 +154,7 @@ export function ModalVisitante({ isOpen, onClose, onSave, isSaving }: ModalVisit
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        onChange(file); // Guardamos el objeto File real
+                        onChange(file);
                       }
                     }}
                     {...fieldProps} 
