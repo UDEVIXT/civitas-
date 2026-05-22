@@ -11,6 +11,8 @@ export const crearVisitante = async (data: VisitanteFormValues) => {
   fechaFin.setHours(fechaFin.getHours() + 4);
   const fechaFinISO = fechaFin.toISOString();
 
+  const formDataToSend = new FormData();
+
   // 3. Mapeamos tus campos del formulario al JSON exacto que espera Joan
   const payload = {
     nombre: data.nombre_completo,
@@ -22,10 +24,15 @@ export const crearVisitante = async (data: VisitanteFormValues) => {
     es_frecuente: data.es_frecuente
   };
 
-  // 4. Hacemos la petición POST al endpoint de Joan
-  // Nota: Joan preparó el backend para fotos (@UseInterceptors), pero como te
-  // dijo que la foto "solo falta que se guarde", enviar este JSON funcionará perfecto.
-  const response = await apiClient.post("/visitante", payload);
+  if (data.foto) {
+    formDataToSend.append("foto_visitante", data.foto);
+  }
+
+  const response = await apiClient.post("/visitante", formDataToSend, {
+    headers: {
+      'Content-Type': undefined,
+    },
+  });
   
   return response.data;
 };
