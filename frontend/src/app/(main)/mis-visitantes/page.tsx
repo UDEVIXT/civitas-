@@ -25,12 +25,13 @@ export default function MisVisitantesPage() {
   const handleSaveVisitante = async (values: VisitanteFormValues) => {
     setIsSaving(true);
     try {
-      // 1. Mandamos el FormData al back
+      // 1. Enviamos los datos reales al backend de Joan
       const responseBackend = await crearVisitante(values);
-      console.log("Respuesta del backend con foto:", responseBackend);
+      console.log("¡Éxito! Respuesta del servidor:", responseBackend);
       
-      // 2. Armamos el visitante para la tabla, mapeando la URL de la imagen
+      // 2. Agregamos el nuevo visitante a la tabla visualmente usando los datos del form
       const nuevoVisitante: Visitante = {
+        // Si el backend te devuelve el ID real, cámbialo aquí. Por ahora usamos random:
         id_visitante: responseBackend?.id_visitante || Math.random().toString(), 
         nombre_completo: values.nombre_completo,
         motivo_visita: values.motivo_visita,
@@ -39,10 +40,10 @@ export default function MisVisitantesPage() {
         hora_estimada: values.hora_estimada,
         es_frecuente: values.es_frecuente,
         telefono: values.telefono,
-        estatus: "Activo",
-        url_foto: responseBackend?.url_imagen 
+        estatus: "Activo"
       };
       
+      // Ponemos al nuevo visitante al inicio de la tabla
       setVisitantes([nuevoVisitante, ...visitantes]);
       setIsModalOpen(false);
       
