@@ -24,6 +24,14 @@ export const crearVisitante = async (data: VisitanteFormValues) => {
     es_frecuente: data.es_frecuente
   };
 
+  // Agregamos cada campo del payload a FormData
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value !== null && value !== undefined) {
+      formDataToSend.append(key, String(value));
+    }
+  });
+
+  // 4. Agregamos la foto si existe
   if (data.foto) {
     formDataToSend.append("foto_visitante", data.foto);
   }
