@@ -113,12 +113,11 @@ export function ModalVisitante({ isOpen, onClose, onSave, isSaving }: ModalVisit
               </FormItem>
             )} />
 
-            {/* ¡Ya no están escondidos! */}
             <FormField control={form.control} name="hora_estimada" render={({ field }) => (
               <FormItem>
                 <FormLabel className="font-semibold text-gray-700">Hora estimada de llegada:</FormLabel>
                 <FormControl>
-                  {/* Lo dejé como time para que salga el relojito, pero puedes cambiar type a "text" si lo prefieres */}
+                  {/* Lo dejé como time para que salga el relojito */}
                   <Input type="time" className="bg-white border-gray-200 focus-visible:ring-amber-500" {...field} />
                 </FormControl>
                 <FormMessage />
@@ -145,14 +144,21 @@ export function ModalVisitante({ isOpen, onClose, onSave, isSaving }: ModalVisit
               </FormItem>
             )} />
 
-            <FormField control={form.control} name="foto" render={({ field }) => (
+            <FormField control={form.control} name="foto" render={({ field: { value, onChange, ...fieldProps } }) => (
               <FormItem>
-                <FormLabel className="font-semibold text-gray-700">Foto:</FormLabel>
+                <FormLabel className="font-semibold text-gray-700">Foto del visitante:</FormLabel>
                 <FormControl>
                   <Input 
-                    placeholder="Ingresa un link con la foto de tu visitante..." 
-                    className="bg-white border-gray-200 focus-visible:ring-amber-500" 
-                    {...field} 
+                    type="file"
+                    accept="image/png, image/jpeg, image/jpg" 
+                    className="bg-white border-gray-200 focus-visible:ring-amber-500 cursor-pointer file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-600 hover:file:bg-amber-100" 
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        onChange(file); // Guardamos el objeto File real
+                      }
+                    }}
+                    {...fieldProps} 
                   />
                 </FormControl>
                 <FormMessage />

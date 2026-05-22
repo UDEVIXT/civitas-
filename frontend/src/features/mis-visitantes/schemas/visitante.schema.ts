@@ -32,7 +32,7 @@ export const visitanteSchema = z.object({
   hora_estimada: z.string()
     .min(1, "La hora de llegada es obligatoria"),
   
-  foto: z.string().trim().optional(),
+  foto: z.any().optional(), // Ahora acepta el archivo físico
 
   es_frecuente: z.boolean(), 
 });
