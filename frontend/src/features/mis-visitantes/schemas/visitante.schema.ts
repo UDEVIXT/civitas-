@@ -32,9 +32,23 @@ export const visitanteSchema = z.object({
   hora_estimada: z.string()
     .min(1, "La hora de llegada es obligatoria"),
   
-  foto: z.any().optional(), // Ahora acepta el archivo físico
+  // NUEVO: Hora de salida
+  hora_salida: z.string()
+    .min(1, "La hora de salida es obligatoria"),
+
+  motivo_visita: z.string(),
+    .trim()
+    .min(1, "Especifica el motivo de la visita"),
+
+  // ACTUALIZADO: Ya es solo el tipo de visitante
+  tipo_visitante: z.string()
+    .min(1, "Selecciona el tipo de visitante"),
+
+  // NUEVO: Vehículo opcional
+  vehiculo: z.string().trim().optional(),
+
+  foto: z.any().optional(),
 
   es_frecuente: z.boolean(), 
 });
-
 export type VisitanteFormValues = z.infer<typeof visitanteSchema>;
