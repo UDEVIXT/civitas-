@@ -33,36 +33,41 @@ import { EmpleadoEditRequest } from './types';
 export class EmpleadoController {
   constructor(private empleadoService: EmpleadoService) {}
 
-  @Get()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Administrador')
-  async findAll(
-    @Query('search') search?: string,
-    @Query('page') page = '1',
-    @Query('limit') limit = '7',
-    @Query('isActive') isActive?: string,
-    @Query('byResidenteId') byResidenteId?: string,
-    @Query('byViviendaId') byViviendaId?: string,
-  ) {
-    const isActiveValue = isActive?.toLowerCase();
-    const isActiveBool =
-      isActiveValue === 'true'
-        ? true
-        : isActiveValue === 'false'
-          ? false
-          : undefined;
-    const byResidenteIdValue = byResidenteId || undefined;
-    const byViviendaIdValue = byViviendaId || undefined;
+ @Get()
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Administrador', 'Residente') // 1. Permitimos acceso al residente
+async findAll(
+  @Req() req, // 2. Inyectamos la request para leer al usuario logueado
+  @Query('search') search?: string,
+  @Query('page') page = '1',
+  @Query('limit') limit = '7',
+  @Query('isActive') isActive?: string,
+  @Query('byResidenteId') byResidenteId?: string,
+  @Query('byViviendaId') byViviendaId?: string,
+) {
+  const isActiveValue = isActive?.toLowerCase();
+  const isActiveBool =
+    isActiveValue === 'true'
+      ? true
+      : isActiveValue === 'false'
+        ? false
+        : undefined;
 
-    return this.empleadoService.obtenerEmpleados({
-      search,
-      page: parseInt(page, 10),
-      limit: parseInt(limit, 10),
-      isActive: isActiveBool,
-      byResidenteId: byResidenteIdValue,
-      byViviendaId: byViviendaIdValue,
-    });
-  }
+  // 3. Determinamos si quien llama es el residente
+  const esResidente = req.user?.role === 'Residente';
+
+  return this.empleadoService.obtenerEmpleados({
+    search,
+    page: parseInt(page, 10),
+    limit: parseInt(limit, 10),
+    isActive: isActiveBool,
+    // Si es residente, ignoramos el query de la URL por seguridad.
+    byResidenteId: esResidente ? undefined : (byResidenteId || undefined),
+    byViviendaId: byViviendaId || undefined,
+    // Pasamos el ID real de su sesión al servicio para que este lo resuelva
+    idUsuarioActivo: esResidente ? req.user.id_usuario : undefined, 
+  });
+}
   @Get(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Administrador')
@@ -77,10 +82,15 @@ export class EmpleadoController {
     @Body() body: CreateEmpleadoDomesticoDto,
     @Req() req,
   ) {
-    return this.empleadoService.crearEmpleadoDomestico(
-      body,
-      req.user.id_usuario,
-    );
+    // Normalizamos la extracción del ID desde el payload JWT
+    // El JwtStrategy devuelve `userId` en `req.user` (payload.sub)
+    const userId = req.user?.userId || req.user?.id || req.user?.id_usuario || req.user?.sub;
+
+    if (!userId) {
+      throw new BadRequestException('No se pudo identificar al usuario en la sesión actual.');
+    }
+
+    return this.empleadoService.crearEmpleadoDomestico(body, String(userId));
   }
   @Put(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)

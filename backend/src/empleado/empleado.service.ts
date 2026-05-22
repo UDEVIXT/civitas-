@@ -15,24 +15,39 @@ export class EmpleadoService {
   constructor(private prisma: PrismaService) {}
 
   //HU-1.5.6: Administrador puede ver empleados domesticos dentro del residencial
-  async obtenerEmpleados(filters: {
-    search?: string;
-    page: number;
-    limit?: number;
-    isActive?: boolean | undefined;
-    byResidenteId?: string;
-    byViviendaId?: string;
-  }) {
-    const { search, page, limit, isActive, byResidenteId, byViviendaId } =
-      filters;
+async obtenerEmpleados(filters: {
+  search?: string;
+  page: number;
+  limit?: number;
+  isActive?: boolean | undefined;
+  byResidenteId?: string;
+  byViviendaId?: string;
+  idUsuarioActivo?: string; // <-- Agrega esto a la interfaz
+}) {
+  const { search, page, limit, isActive, byResidenteId, byViviendaId, idUsuarioActivo } = filters;
 
-    const where: any = {
-      servicio: {
-        tipo_servicio: {
-          categoria: 'Empleado',
-        },
+  const where: any = {
+    servicio: {
+      tipo_servicio: {
+        // Asegúrate de que la categoría coincida con la que asignaste en la BD (como hablamos antes)
+        categoria: 'Empleado', 
       },
-    };
+    },
+  };
+
+  // Si nos mandan el id de usuario del residente, buscamos su registro primero
+  if (idUsuarioActivo) {
+    const residente = await this.prisma.residente.findFirst({
+      where: { id_usuario: idUsuarioActivo },
+      select: { id_residente: true },
+    });
+    
+    if (residente) {
+      where.id_residente = residente.id_residente;
+    }
+  } else if (byResidenteId) {
+    where.id_residente = byResidenteId;
+  }
 
     if (search) {
       where.nombre = {
@@ -461,9 +476,9 @@ export class EmpleadoService {
           horarios: {
             create: dto.horarios.map((horario) => ({
               dia_semana: horario.dia_semana,
-              hora_inicio: new Date(`1970-01-01T${horario.hora_inicio}`),
-
-              hora_fin: new Date(`1970-01-01T${horario.hora_fin}`),
+              // En crearEmpleadoDomestico (aprox línea 312)
+              hora_inicio: new Date(`1970-01-01T${horario.hora_inicio}:00.000Z`),
+              hora_fin: new Date(`1970-01-01T${horario.hora_fin}:00.000Z`),
             })),
           },
         },
