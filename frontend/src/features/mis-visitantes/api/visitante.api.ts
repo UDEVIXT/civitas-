@@ -1,4 +1,4 @@
-import apiClient from "@/api/axios"; // Ajusta la ruta si tu instancia de axios está en otro lado
+import apiClient from "@/api/axios";  
 import type { VisitanteFormValues } from "../schemas/visitante.schema";
 
 export const crearVisitante = async (data: VisitanteFormValues) => {
@@ -13,7 +13,7 @@ export const crearVisitante = async (data: VisitanteFormValues) => {
 
   const formDataToSend = new FormData();
 
-  // 3. Mapeamos tus campos del formulario al JSON exacto que espera Joan
+  // 3. Mapeamos tus campos del formulario al JSON  que espera el backend, usando FormData para incluir la foto
   const payload = {
     nombre: data.nombre_completo,
     fecha_inicio: fechaInicioISO,

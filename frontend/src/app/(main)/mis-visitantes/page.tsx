@@ -19,7 +19,7 @@ export default function MisVisitantesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Empezamos sin visitantes para ver tu Empty State de Figma
+  // Empezamos sin visitantes para ver el Empty State de Figma
   const [visitantes, setVisitantes] = useState<Visitante[]>([]); 
 
   const handleSaveVisitante = async (values: VisitanteFormValues) => {
