@@ -12,37 +12,44 @@ import { EmptyStateVisitantes } from "@/features/mis-visitantes/components/empty
 import type { VisitanteFormValues } from "@/features/mis-visitantes/schemas/visitante.schema";
 import type { Visitante } from "@/features/mis-visitantes/types";
 
-// Mock Data (Simulando lo que traería el backend de Joan)
-const VISITANTES_MOCK: Visitante[] = [
-  { id_visitante: "1", nombre_completo: "Olivia Rhye", motivo_visita: "Visita por cumpleaños", tipo_visitante: "Visita Personal", fecha_visita: "2026-05-20", hora_estimada: "14:00", es_frecuente: false, estatus: "Activo" },
-  { id_visitante: "2", nombre_completo: "Phoenix Baker", motivo_visita: "Masajista personal", tipo_visitante: "Servicio", fecha_visita: "2026-05-21", hora_estimada: "10:00", es_frecuente: true, estatus: "Activo" },
-];
+// Importamos la API que acabamos de crear
+import { crearVisitante } from "@/features/mis-visitantes/api/visitante.api";
 
 export default function MisVisitantesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Cambia esto a [] para probar cómo se ve el Empty State
-  const [visitantes, setVisitantes] = useState<Visitante[]>(VISITANTES_MOCK); 
+  // Empezamos sin visitantes para ver tu Empty State de Figma
+  const [visitantes, setVisitantes] = useState<Visitante[]>([]); 
 
   const handleSaveVisitante = async (values: VisitanteFormValues) => {
     setIsSaving(true);
     try {
-      console.log("Enviando a BD:", values);
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simula latencia
+      // 1. Enviamos los datos reales al backend de Joan
+      const responseBackend = await crearVisitante(values);
+      console.log("¡Éxito! Respuesta del servidor:", responseBackend);
       
-      // Simula agregar a la lista para que se quite el Empty State temporalmente
+      // 2. Agregamos el nuevo visitante a la tabla visualmente usando los datos del form
       const nuevoVisitante: Visitante = {
-        id_visitante: Math.random().toString(),
-        ...values,
+        // Si el backend te devuelve el ID real, cámbialo aquí. Por ahora usamos random:
+        id_visitante: responseBackend?.id_visitante || Math.random().toString(), 
+        nombre_completo: values.nombre_completo,
+        motivo_visita: values.motivo_visita,
         tipo_visitante: values.tipo_visitante as any,
+        fecha_visita: values.fecha_visita,
+        hora_estimada: values.hora_estimada,
+        es_frecuente: values.es_frecuente,
+        telefono: values.telefono,
         estatus: "Activo"
       };
-      setVisitantes([nuevoVisitante, ...visitantes]);
       
+      // Ponemos al nuevo visitante al inicio de la tabla
+      setVisitantes([nuevoVisitante, ...visitantes]);
       setIsModalOpen(false);
+      
     } catch (error) {
-      console.error(error);
+      console.error("Error al registrar en la API:", error);
+      alert("Hubo un problema al guardar el visitante en la base de datos.");
     } finally {
       setIsSaving(false);
     }
@@ -51,7 +58,6 @@ export default function MisVisitantesPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       
-      {/* Header superior idéntico a tu Figma */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Visitantes</h1>
         
@@ -63,7 +69,6 @@ export default function MisVisitantesPage() {
         </div>
       </div>
 
-      {/* Barra de Filtros (Figma) */}
       <div className="flex flex-wrap items-center gap-3">
         <Button onClick={() => setIsModalOpen(true)} variant="outline" className="bg-white hover:bg-gray-50 text-gray-700">
           <UserPlus className="mr-2 h-4 w-4" /> Nuevo
@@ -76,14 +81,13 @@ export default function MisVisitantesPage() {
         </Button>
       </div>
 
-      {/* Renderizado Condicional: ¿Hay visitantes? */}
+      {/* Aquí entra la magia: Si es 0 muestra tu Empty State, si no, pinta la tabla */}
       {visitantes.length === 0 ? (
         <EmptyStateVisitantes />
       ) : (
         <TablaVisitantes visitantes={visitantes} />
       )}
 
-      {/* Modal */}
       {isModalOpen && (
         <ModalVisitante
           isOpen={isModalOpen}
