@@ -5,6 +5,7 @@ import {
   NotFoundException,
   InternalServerErrorException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmpleadoDomesticoDto } from './dto/create-empleado-domestico.dto';
@@ -238,14 +239,14 @@ export class EmpleadoService {
             nombre: data.nombre,
             telefono: data.telefono,
             // Soporta tanto 'url_imagen' como 'foto' que viene de tu modal
-            url_imagen: data.url_imagen || data.foto, 
+            url_imagen: data.url_imagen || data.foto,
             motivo: data.notas, // Si usas el campo motivo como notas/comentarios
           },
         });
 
         // 3. Si tiene un servicio asociado, actualizamos el Cargo y los Horarios Dinámicos
         if (visitante.id_servicio) {
-          
+
           // Mapeamos los días del modal al formato ENUM de tu schema.prisma
           const mapeoDias: Record<string, any> = {
             'Lunes': 'LUNES',
@@ -375,6 +376,60 @@ export class EmpleadoService {
     dto: CreateEmpleadoDomesticoDto,
     idUsuario: string,
   ) {
+    const rfc = dto.rfc.trim().toUpperCase();
+    const telefono = dto.telefono?.trim() || undefined;
+
+    const empleadoExistente = telefono
+      ? await this.prisma.visitante.findFirst({
+          where: {
+            telefono,
+            servicio: {
+              rfc,
+            },
+          },
+          select: {
+            id_visitante: true,
+            nombre: true,
+            telefono: true,
+            servicio: {
+              select: {
+                id_servicio: true,
+                nombre_servicio: true,
+                id_residente: true,
+                id_vivienda: true,
+              },
+            },
+          },
+        })
+      : await this.prisma.visitante.findFirst({
+          where: {
+            servicio: {
+              rfc,
+            },
+          },
+          select: {
+            id_visitante: true,
+            nombre: true,
+            telefono: true,
+            servicio: {
+              select: {
+                id_servicio: true,
+                nombre_servicio: true,
+                id_residente: true,
+                id_vivienda: true,
+              },
+            },
+          },
+        });
+
+    if (empleadoExistente && !dto.confirmar_reuso_rfc) {
+      throw new ConflictException(
+        telefono
+          ? 'Ya existe un empleado registrado con ese RFC y teléfono. Confirma si deseas vincularlo también a esta vivienda.'
+          : 'Ya existe un empleado registrado con ese RFC. Confirma si deseas vincularlo también a esta vivienda.',
+      );
+    }
+
     const residente = await this.prisma.residente.findFirst({
       where: {
         id_usuario: idUsuario,
@@ -398,6 +453,8 @@ export class EmpleadoService {
 
           id_tipo_servicio: dto.id_tipo_servicio,
 
+          rfc,
+
           id_residente: residente.id_residente,
           id_vivienda: residente.id_vivienda,
 
@@ -416,7 +473,7 @@ export class EmpleadoService {
         data: {
           nombre: dto.nombre_completo,
 
-          telefono: dto.telefono,
+          telefono,
 
           url_imagen: dto.url_imagen,
 

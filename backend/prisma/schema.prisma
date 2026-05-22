@@ -160,7 +160,7 @@ model Servicio {
   nombre_empresa   String?
   tipo_carro       String?
   placas           String?                  @unique
-  rfc              String?                  @unique
+  rfc              String?
   activo           Boolean                  @default(true)
   id_tipo_servicio String?
   id_residente     String
@@ -171,6 +171,8 @@ model Servicio {
   visitantes       Visitante[]
   residente        Residente @relation(fields: [id_residente], references: [id_residente])
   vivienda         Vivienda @relation(fields: [id_vivienda], references: [id_vivienda])
+
+  @@index([rfc])
 }
 
 model HorarioAccesoServicios {

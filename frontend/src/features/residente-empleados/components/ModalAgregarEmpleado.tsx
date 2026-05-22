@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2, Camera, X } from "lucide-react";
+import apiClient from "@/api/axios";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -29,6 +30,12 @@ const formSchema = z.object({
         .min(1, "Campo obligatorio")
         .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, "Solo se permiten letras"),
 
+    rfc: z.string()
+        .trim()
+        .min(12, "RFC obligatorio")
+        .max(13, "RFC inválido")
+        .regex(/^[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}$/i, "RFC inválido"),
+
     // El teléfono es opcional, pero si se escribe, debe cumplir la validación de 10 dígitos.
     telefono: z.string()
         .trim()
@@ -40,6 +47,8 @@ const formSchema = z.object({
         .trim()
         .min(1, "Campo obligatorio")
         .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, "Solo se permiten letras"),
+
+    tipo_servicio_sugerido: z.string().min(1, "Selecciona un tipo de servicio"),
 
     notas: z.string().optional(),
     foto: z.string().optional(),
@@ -74,7 +83,7 @@ type FormValues = z.infer<typeof formSchema>;
 interface ModalAgregarEmpleadoProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (values: FormValues) => void;
+    onSave: (values: FormValues & { id_tipo_servicio: string }) => void;
     isSaving?: boolean;
 }
 
@@ -87,13 +96,16 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
     }));
 
     const fileInputRef = React.useRef<HTMLInputElement>(null);
+    const [tipos, setTipos] = React.useState<Array<{ id_tipo_servicio: string; nombre: string }>>([]);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             nombre: "",
+                rfc: "",
             telefono: "",
             cargo: "",
+            tipo_servicio_sugerido: "",
             notas: "",
             foto: "",
             horarios: horariosPorDefecto,
@@ -105,14 +117,30 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
         if (isOpen) {
             form.reset({
                 nombre: "",
+                rfc: "",
                 telefono: "",
                 cargo: "",
+                tipo_servicio_sugerido: "",
                 notas: "",
                 foto: "",
                 horarios: horariosPorDefecto,
             });
         }
     }, [isOpen, form]);
+
+    // Cargar tipos de servicio
+    React.useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                const res = await apiClient.get('/tipo-servicio');
+                if (mounted) setTipos(res.data || []);
+            } catch (e) {
+                console.error('No se pudieron cargar tipos de servicio', e);
+            }
+        })();
+        return () => { mounted = false; };
+    }, []);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -133,12 +161,47 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
     };
 
     const onSubmit = (values: FormValues) => {
-        onSave(values);
+        const tipoOtro = tipos.find((tipo) => tipo.nombre.toLowerCase() === 'otro');
+        const id_tipo_servicio =
+            values.tipo_servicio_sugerido && values.tipo_servicio_sugerido !== 'OTRO'
+                ? values.tipo_servicio_sugerido
+                : tipoOtro?.id_tipo_servicio ?? '';
+
+        onSave({
+            ...values,
+            id_tipo_servicio,
+        });
     };
+
+    const seleccionarTipoServicio = (valor: string) => {
+        form.setValue("tipo_servicio_sugerido", valor, {
+            shouldDirty: true,
+            shouldValidate: true,
+        });
+
+        if (!valor || valor === "OTRO") {
+            form.setValue("cargo", "", {
+                shouldDirty: true,
+                shouldValidate: true,
+            });
+            return;
+        }
+
+        const tipoSeleccionado = tipos.find((tipo) => tipo.id_tipo_servicio === valor);
+        if (tipoSeleccionado) {
+            form.setValue("cargo", tipoSeleccionado.nombre, {
+                shouldDirty: true,
+                shouldValidate: true,
+            });
+        }
+    };
+
+    const tipoSeleccionado = form.watch("tipo_servicio_sugerido");
+    const esOtro = tipoSeleccionado === "OTRO";
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="w-[95vw] sm:max-w-[550px] p-4 sm:p-6 max-h-[95vh] overflow-y-auto overflow-x-hidden rounded-2xl">
+            <DialogContent className="w-[95vw] sm:max-w-137.5 p-4 sm:p-6 max-h-[95vh] overflow-y-auto overflow-x-hidden rounded-2xl">
                 <DialogHeader className="border-b pb-4 mb-4">
                     <DialogTitle className="text-xl font-bold text-center text-gray-800">
                         Registrar Nuevo Empleado
@@ -150,7 +213,7 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
 
                         {/* Header con Foto */}
                         <div className="flex flex-col items-center justify-center gap-3 bg-gray-50 p-4 rounded-xl text-center">
-                            
+
                             <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                                 <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-4 border-white shadow-md">
                                     <AvatarImage src={form.watch("foto") || undefined} className="object-cover" />
@@ -163,12 +226,12 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
                                 </div>
                             </div>
 
-                            <input 
-                                type="file" 
-                                accept="image/*" 
-                                className="hidden" 
-                                ref={fileInputRef} 
-                                onChange={handleFileChange} 
+                            <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                ref={fileInputRef}
+                                onChange={handleFileChange}
                             />
 
                             <div className="flex flex-col gap-0.5">
@@ -189,7 +252,7 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
                                     </Button>
                                 )}
                             </div>
-                            
+
                         </div>
 
                         {/* Datos Personales */}
@@ -203,6 +266,24 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
                                             {...field}
                                             onChange={(e) => {
                                                 const valorLimpio = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
+                                                field.onChange(valorLimpio);
+                                            }}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+
+                            <FormField control={form.control} name="rfc" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="font-bold">RFC *</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="Ej. GODE561231GR8"
+                                            maxLength={13}
+                                            {...field}
+                                            onChange={(e) => {
+                                                const valorLimpio = e.target.value.toUpperCase().replace(/[^A-Z0-9&Ñ]/g, "");
                                                 field.onChange(valorLimpio);
                                             }}
                                         />
@@ -234,18 +315,41 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
                                 <FormItem>
                                     <FormLabel className="font-bold">Tipo de Empleado / Cargo *</FormLabel>
                                     <FormControl>
-                                        <Input
-                                            placeholder="Ej. Chofer, Limpieza, Cuidador..."
-                                            {...field}
-                                            onChange={(e) => {
-                                                const valorLimpio = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
-                                                field.onChange(valorLimpio);
-                                            }}
-                                        />
+                                        <select
+                                            className="w-full h-10 rounded-md border px-2 mb-2"
+                                            value={tipoSeleccionado || ""}
+                                            onChange={(e) => seleccionarTipoServicio(e.target.value)}
+                                        >
+                                            <option value="">Selecciona un tipo sugerido...</option>
+                                            {tipos.map((tipo) => (
+                                                <option key={tipo.id_tipo_servicio} value={tipo.id_tipo_servicio}>
+                                                    {tipo.nombre}
+                                                </option>
+                                            ))}
+                                            <option value="OTRO">Otro</option>
+                                        </select>
                                     </FormControl>
+
+                                    {esOtro ? (
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Escribe el tipo de servicio o cargo"
+                                                {...field}
+                                                onChange={(e) => {
+                                                    const valorLimpio = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
+                                                    field.onChange(valorLimpio);
+                                                }}
+                                            />
+                                        </FormControl>
+                                    ) : null}
+
                                     <FormMessage />
                                 </FormItem>
                             )} />
+
+                            <p className="text-xs text-muted-foreground">
+                                El tipo sugerido sólo ayuda a capturar el dato más rápido; si no existe, usa "Otro" y escribe el cargo exacto.
+                            </p>
                         </div>
 
                         {/* Tabla de Horarios */}

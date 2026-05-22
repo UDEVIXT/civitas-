@@ -7,6 +7,7 @@ import {
   ValidateNested,
   IsUUID,
   IsEnum,
+  IsBoolean,
 } from 'class-validator';
 
 import { Type } from 'class-transformer';
@@ -28,12 +29,20 @@ export class CreateEmpleadoDomesticoDto {
   @IsNotEmpty()
   nombre_completo: string;
 
+  @IsString()
+  @IsNotEmpty()
+  rfc: string;
+
   @IsUUID()
   id_tipo_servicio: string;
 
+  @IsOptional()
+  @IsBoolean()
+  confirmar_reuso_rfc?: boolean;
+
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  cargo: string;
+  cargo?: string;
 
   @IsOptional()
   @IsPhoneNumber('MX')

@@ -28,6 +28,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
           adapter: new HandlebarsAdapter(),
           options: {
             strict: true,
+            // Desactivar inline CSS para evitar la dependencia nativa
+            inlineCss: false,
           },
         },
       }),

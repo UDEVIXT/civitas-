@@ -105,8 +105,10 @@ export interface HorarioEmpleadoDomestico {
 
 export interface CrearEmpleadoDomesticoRequest {
   nombre_completo: string;
+  rfc: string;
   id_tipo_servicio: string;
-  cargo: string;
+  confirmar_reuso_rfc?: boolean;
+  cargo?: string;
   telefono?: string;
   url_imagen?: string;
   horarios: HorarioEmpleadoDomestico[];

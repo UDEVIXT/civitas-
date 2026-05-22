@@ -15,6 +15,7 @@ import { ResidenteModule } from './residente/residente.module';
 import { ViviendaModule } from './vivienda/vivienda.module';
 import { APP_GUARD } from '@nestjs/core/constants';
 import { MiEmpleadoModule } from './mis-empleados/mi-empleado.module';
+import { TipoServicioModule } from './tipo-servicio/tipo-servicio.module';
 import { MailModule } from './mail/mail.module';
 import { MisServiciosModule } from './mis-servicios/mis-servicios.module';
 import { AccesosServiciosModule } from './accesos-servicios/accesos-servicios.module';
@@ -36,6 +37,7 @@ import { VisitanteModule } from './visitante/visitante.module';
     ViviendaModule,
     MiEmpleadoModule,
     MisServiciosModule,
+    TipoServicioModule,
     AccesosServiciosModule,
     ThrottlerModule.forRoot([
       {
