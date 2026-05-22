@@ -13,7 +13,7 @@ export const crearVisitante = async (data: VisitanteFormValues) => {
 
   const formDataToSend = new FormData();
 
-  // 3. Mapeamos tus campos del formulario al JSON  que espera el backend, usando FormData para incluir la foto
+  // 3. Mapeamos los campos del formulario al JSON  que espera el backend, usando FormData para incluir la foto
   const payload = {
     nombre: data.nombre_completo,
     fecha_inicio: fechaInicioISO,
