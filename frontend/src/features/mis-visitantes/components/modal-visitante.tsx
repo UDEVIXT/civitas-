@@ -135,7 +135,7 @@ export function ModalVisitante({ isOpen, onClose, onSave, isSaving }: ModalVisit
 
             <FormField control={form.control} name="tipo_visitante" render={({ field }) => (
               <FormItem>
-                <FormLabel className="font-semibold text-gray-700">Tipo de visitante / Vehículo:</FormLabel>
+                <FormLabel className="font-semibold text-gray-700">Tipo de visitante:</FormLabel>
                 <FormControl>
                   <Input placeholder="ej. Familiar, Proveedor en camioneta..." className="bg-white border-gray-200 focus-visible:ring-amber-500" {...field} />
                 </FormControl>

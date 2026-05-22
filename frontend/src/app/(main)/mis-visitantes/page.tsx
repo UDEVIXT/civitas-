@@ -12,7 +12,7 @@ import { EmptyStateVisitantes } from "@/features/mis-visitantes/components/empty
 import type { VisitanteFormValues } from "@/features/mis-visitantes/schemas/visitante.schema";
 import type { Visitante } from "@/features/mis-visitantes/types";
 
-// Importamos la API que acabamos de crear
+// Importamos la API 
 import { crearVisitante } from "@/features/mis-visitantes/api/visitante.api";
 
 export default function MisVisitantesPage() {
@@ -80,7 +80,7 @@ export default function MisVisitantesPage() {
         </Button>
       </div>
 
-      {/* Aquí entra la magia: Si es 0 muestra tu Empty State, si no, pinta la tabla */}
+      {/* Si es 0 muestra  Empty State, si no, dibuja la tabla */}
       {visitantes.length === 0 ? (
         <EmptyStateVisitantes />
       ) : (

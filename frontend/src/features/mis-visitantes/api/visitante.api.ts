@@ -8,7 +8,7 @@ export const crearVisitante = async (data: VisitanteFormValues) => {
 
   // 2. Calculamos la fecha_fin dándole 4 horas de margen a la visita (para el QR)
   const fechaFin = new Date(fechaInicio);
-  fechaFin.setHours(fechaFin.getHours() + 4);
+  fechaFin.setHours(fechaFin.getHours() + 10);
   const fechaFinISO = fechaFin.toISOString();
 
   const formDataToSend = new FormData();
@@ -18,9 +18,9 @@ export const crearVisitante = async (data: VisitanteFormValues) => {
     nombre: data.nombre_completo,
     fecha_inicio: fechaInicioISO,
     fecha_fin: fechaFinISO,
-    tipo_visitante: data.motivo_visita,   // Usamos tu campo motivo
+    tipo_visitante: data.motivo_visita,   // Usamos campo motivo
     telefono: data.telefono,
-    tipo_vehiculo: data.tipo_visitante,   // Usamos tu campo donde dice ej. Camioneta
+    tipo_vehiculo: data.tipo_visitante,   // Usamos campo donde dice ej. Camioneta
     es_frecuente: data.es_frecuente
   };
 
