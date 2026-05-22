@@ -2,13 +2,10 @@
 
 import * as React from "react";
 import {
-  Filter,
   Plus,
   Search,
   SlidersHorizontal,
   Upload,
-  Users,
-  UserCheck,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -32,6 +29,17 @@ import { ModalBajaEmpleado } from "./ModalBajaEmpleado";
 import { ModalAgregarEmpleado } from "./ModalAgregarEmpleado";
 import { ModalConfirmarVinculacion } from "./ModalConfirmarVinculacion"; // <-- Importamos el nuevo modal
 
+type NuevoEmpleadoFormValues = Parameters<
+  NonNullable<React.ComponentProps<typeof ModalAgregarEmpleado>["onSave"]>
+>[0];
+
+type HorarioFormulario = {
+  dia: string;
+  activo: boolean;
+  hora_entrada: string;
+  hora_salida: string;
+};
+
 export default function MisEmpleadosPage() {
   const { user } = useAuth();
   const idUsuarioActivo = user?.id ? String(user.id) : "";
@@ -39,11 +47,11 @@ export default function MisEmpleadosPage() {
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [statusFilter, setStatusFilter] = React.useState<"all" | "active">("all");
   const [page, setPage] = React.useState(1);
-  
+
   // Estado para controlar el nuevo modal de confirmación (409)
   const [confirmModal, setConfirmModal] = React.useState<{
     isOpen: boolean;
-    values: any;
+    values: NuevoEmpleadoFormValues | null;
     isSaving: boolean;
   }>({ isOpen: false, values: null, isSaving: false });
 
@@ -52,7 +60,7 @@ export default function MisEmpleadosPage() {
 
   const guardarEmpleado = React.useCallback(
     async (
-      values: Parameters<NonNullable<React.ComponentProps<typeof ModalAgregarEmpleado>["onSave"]>>[0],
+      values: NuevoEmpleadoFormValues,
       confirmarReusoRFC = false,
     ) => {
       const mapDia = (d: string): CrearEmpleadoDomesticoRequest["horarios"][number]["dia_semana"] => {
@@ -69,8 +77,8 @@ export default function MisEmpleadosPage() {
       };
 
       const horariosActivos = (values.horarios || [])
-        .filter((h: any) => h.activo)
-        .map((h: any) => ({
+        .filter((h: HorarioFormulario) => h.activo)
+        .map((h: HorarioFormulario) => ({
           dia_semana: mapDia(h.dia),
           hora_inicio: h.hora_entrada,
           hora_fin: h.hora_salida,
@@ -85,10 +93,9 @@ export default function MisEmpleadosPage() {
         rfc: values.rfc.trim().toUpperCase(),
         id_tipo_servicio: values.id_tipo_servicio,
         confirmar_reuso_rfc: confirmarReusoRFC,
-        cargo: values.cargo?.trim() || undefined,
         telefono: values.telefono?.trim() || undefined,
         url_imagen: values.foto || undefined,
-        horarios: horariosActivos.map((h: any) => ({
+        horarios: horariosActivos.map((h) => ({
           dia_semana: h.dia_semana,
           hora_inicio: h.hora_inicio,
           hora_fin: h.hora_fin,
@@ -128,17 +135,17 @@ export default function MisEmpleadosPage() {
   // Función para manejar la confirmación de la vinculación (Reintento de guardado)
   const handleConfirmarVinculacion = async () => {
     if (!confirmModal.values) return;
-    
+
     setConfirmModal((prev) => ({ ...prev, isSaving: true }));
-    
+
     try {
       await guardarEmpleado(confirmModal.values, true);
       queryClient.invalidateQueries({ queryKey: ["residente-empleados"] });
-      
+
       // Cerramos ambos modales
       setConfirmModal({ isOpen: false, values: null, isSaving: false });
       setIsAddModalOpen(false);
-      
+
       toast({
         title: "Empleado vinculado",
         description: "Se reutilizó el RFC y se registró exitosamente para tu vivienda.",
@@ -302,9 +309,20 @@ export default function MisEmpleadosPage() {
             });
           } catch (err: unknown) {
             const status = (err as { response?: { status?: number } })?.response?.status;
-            
+            const serverMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+            const normalizedMessage = typeof serverMessage === "string" ? serverMessage.toLowerCase() : "";
+
             // Si hay conflicto (409), abrimos el modal personalizado
             if (status === 409) {
+              if (normalizedMessage.includes("baja global") || normalizedMessage.includes("globalmente")) {
+                toast({
+                  title: "Empleado no disponible",
+                  description: serverMessage || "El empleado fue bloqueado globalmente por administración.",
+                  variant: "destructive",
+                });
+                return;
+              }
+
               setConfirmModal({
                 isOpen: true,
                 values: values,
@@ -313,7 +331,6 @@ export default function MisEmpleadosPage() {
               return;
             }
 
-            const serverMessage = (err as any)?.response?.data?.message;
             const message = serverMessage || (err instanceof Error ? err.message : "No se pudo guardar en servidor");
             toast({
               title: "Error al guardar",

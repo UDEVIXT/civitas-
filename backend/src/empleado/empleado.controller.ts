@@ -74,6 +74,14 @@ async findAll(
   findOne(@Param('id') id: string) {
     return { message: `Empleado ${id}` };
   }
+
+  // Debug endpoint: listar servicios por RFC (solo Admin)
+  @Get('debug/rfc/:rfc')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Administrador')
+  async debugPorRFC(@Param('rfc') rfc: string) {
+    return this.empleadoService.buscarServiciosPorRFC(rfc);
+  }
   @Post('empleado-domestico')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Residente')

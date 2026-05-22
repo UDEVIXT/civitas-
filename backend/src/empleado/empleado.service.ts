@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+
 import {
   Injectable,
   NotFoundException,
@@ -15,39 +16,39 @@ export class EmpleadoService {
   constructor(private prisma: PrismaService) {}
 
   //HU-1.5.6: Administrador puede ver empleados domesticos dentro del residencial
-async obtenerEmpleados(filters: {
-  search?: string;
-  page: number;
-  limit?: number;
-  isActive?: boolean | undefined;
-  byResidenteId?: string;
-  byViviendaId?: string;
-  idUsuarioActivo?: string; // <-- Agrega esto a la interfaz
-}) {
-  const { search, page, limit, isActive, byResidenteId, byViviendaId, idUsuarioActivo } = filters;
-
-  const where: any = {
-    servicio: {
-      tipo_servicio: {
-        // Asegúrate de que la categoría coincida con la que asignaste en la BD (como hablamos antes)
-        categoria: 'Empleado', 
-      },
+  async obtenerEmpleados(
+    filters: {
+      search?: string;
+      page: number;
+      limit?: number;
+      isActive?: boolean | undefined;
+      byResidenteId?: string;
+      byViviendaId?: string;
+      idUsuarioActivo?: string;
     },
-  };
+  ) {
+    const { search, page, limit, isActive, byResidenteId, byViviendaId, idUsuarioActivo } = filters;
 
-  // Si nos mandan el id de usuario del residente, buscamos su registro primero
-  if (idUsuarioActivo) {
-    const residente = await this.prisma.residente.findFirst({
-      where: { id_usuario: idUsuarioActivo },
-      select: { id_residente: true },
-    });
-    
-    if (residente) {
-      where.id_residente = residente.id_residente;
+    // Filtro principal: solo servicios cuya categoría sea 'Empleado'
+    const where: any = {
+      servicio: {
+        tipo_servicio: {
+          categoria: 'Empleado',
+        },
+      },
+    };
+
+    // Si el caller es un residente, resolvemos su id_residente
+    if (idUsuarioActivo) {
+      const residente = await this.prisma.residente.findFirst({
+        where: { id_usuario: idUsuarioActivo },
+        select: { id_residente: true },
+      });
+
+      if (residente) where.id_residente = residente.id_residente;
+    } else if (byResidenteId) {
+      where.id_residente = byResidenteId;
     }
-  } else if (byResidenteId) {
-    where.id_residente = byResidenteId;
-  }
 
     if (search) {
       where.nombre = {
@@ -56,18 +57,14 @@ async obtenerEmpleados(filters: {
       };
     }
 
-    if (byResidenteId) {
-      where.id_residente = byResidenteId;
-    }
+    if (byResidenteId) where.id_residente = byResidenteId;
 
     if (byViviendaId) {
-      where.residente = {
-        id_vivienda: byViviendaId,
-      };
+      where.residente = { id_vivienda: byViviendaId };
     }
 
-    if (isActive != undefined) {
-      where.servicio.activo = isActive;
+    if (isActive !== undefined) {
+      where.servicio = { ...(where.servicio || {}), activo: isActive };
     }
 
     const [data, total] = await Promise.all([
@@ -83,31 +80,14 @@ async obtenerEmpleados(filters: {
               activo: true,
               fecha_registro: true,
               horarios: {
-                where: {
-                  activo: true,
-                },
-                select: {
-                  dia_semana: true,
-                  hora_inicio: true,
-                  hora_fin: true,
-                },
+                where: { activo: true },
+                select: { dia_semana: true, hora_inicio: true, hora_fin: true },
               },
-              tipo_servicio: {
-                select: {
-                  nombre: true,
-                  categoria: true,
-                },
-              },
+              tipo_servicio: { select: { nombre: true, categoria: true } },
             },
           },
           residente: {
-            select: {
-              vivienda: {
-                select: {
-                  numero_vivienda: true,
-                },
-              },
-            },
+            select: { vivienda: { select: { numero_vivienda: true } } },
           },
         },
         skip: (page - 1) * (limit ?? 10),
@@ -118,6 +98,7 @@ async obtenerEmpleados(filters: {
 
     return {
       success: true,
+      message: 'Empleados obtenidos correctamente',
       meta: {
         total,
         page,
@@ -161,6 +142,7 @@ async obtenerEmpleados(filters: {
       },
       select: {
         id_servicio: true,
+        rfc: true,
       },
     });
 
@@ -172,8 +154,31 @@ async obtenerEmpleados(filters: {
 
     return {
       id_servicio: servicio.id_servicio,
+      rfc: servicio.rfc,
       id_visitante: visitante.id_visitante,
       nombre: visitante.nombre,
+    };
+  }
+
+  // Debug helper: listar todos los servicios + visitantes para un RFC (solo admin)
+  async buscarServiciosPorRFC(rfc: string) {
+    if (!rfc) {
+      throw new BadRequestException('RFC requerido');
+    }
+
+    const servicios = await this.prisma.servicio.findMany({
+      where: { rfc },
+      include: {
+        horarios: true,
+        visitante: true,
+      },
+      orderBy: { fecha_registro: 'desc' },
+    });
+
+    return {
+      success: true,
+      message: 'Servicios encontrados por RFC',
+      data: servicios,
     };
   }
 /*
@@ -324,11 +329,16 @@ async obtenerEmpleados(filters: {
     try {
       const servicio = await this.obtenerServicio(id);
 
+      const where = servicio.rfc
+        ? { rfc: servicio.rfc }
+        : { id_servicio: servicio.id_servicio };
+
       // Borrado lógico
-      await this.prisma.servicio.update({
-        where: { id_servicio: servicio.id_servicio },
+      await this.prisma.servicio.updateMany({
+        where,
         data: {
           activo: false,
+          bloqueo_global: true,
         },
       });
 
@@ -364,10 +374,15 @@ async obtenerEmpleados(filters: {
     try {
       const servicio = await this.obtenerServicio(id);
 
-      await this.prisma.servicio.update({
-        where: { id_servicio: servicio.id_servicio },
+      const where = servicio.rfc
+        ? { rfc: servicio.rfc }
+        : { id_servicio: servicio.id_servicio };
+
+      await this.prisma.servicio.updateMany({
+        where,
         data: {
           activo: true,
+          bloqueo_global: false,
         },
       });
 
@@ -393,6 +408,43 @@ async obtenerEmpleados(filters: {
   ) {
     const rfc = dto.rfc.trim().toUpperCase();
     const telefono = dto.telefono?.trim() || undefined;
+
+    const tipoServicio = await this.prisma.tipoServicio.findUnique({
+      where: {
+        id_tipo_servicio: dto.id_tipo_servicio,
+      },
+      select: {
+        id_tipo_servicio: true,
+        nombre: true,
+        categoria: true,
+      },
+    });
+
+    if (!tipoServicio) {
+      throw new BadRequestException('El tipo de servicio seleccionado no existe.');
+    }
+
+    if (tipoServicio.categoria !== 'Empleado') {
+      throw new BadRequestException(
+        'Solo puedes registrar empleados con tipos de servicio de categoría Empleado.',
+      );
+    }
+
+    const bloqueoGlobal = await this.prisma.servicio.findFirst({
+      where: {
+        rfc,
+        bloqueo_global: true,
+      },
+      select: {
+        id_servicio: true,
+      },
+    });
+
+    if (bloqueoGlobal) {
+      throw new ConflictException(
+        'El empleado fue dado de baja globalmente por el administrador y no puede registrarse nuevamente.',
+      );
+    }
 
     const empleadoExistente = telefono
       ? await this.prisma.visitante.findFirst({
@@ -464,7 +516,7 @@ async obtenerEmpleados(filters: {
         data: {
           nombre_servicio: `${residente.vivienda.numero_vivienda}`,
 
-          cargo: dto.cargo,
+          cargo: tipoServicio.nombre,
 
           id_tipo_servicio: dto.id_tipo_servicio,
 

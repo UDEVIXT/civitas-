@@ -41,10 +41,6 @@ export class CreateEmpleadoDomesticoDto {
   confirmar_reuso_rfc?: boolean;
 
   @IsOptional()
-  @IsString()
-  cargo?: string;
-
-  @IsOptional()
   @IsPhoneNumber('MX')
   telefono?: string;
 

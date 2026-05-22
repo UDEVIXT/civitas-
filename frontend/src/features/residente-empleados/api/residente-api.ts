@@ -108,7 +108,6 @@ export interface CrearEmpleadoDomesticoRequest {
   rfc: string;
   id_tipo_servicio: string;
   confirmar_reuso_rfc?: boolean;
-  cargo?: string;
   telefono?: string;
   url_imagen?: string;
   horarios: HorarioEmpleadoDomestico[];

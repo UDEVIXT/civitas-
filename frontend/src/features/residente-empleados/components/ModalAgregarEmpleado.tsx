@@ -43,11 +43,6 @@ const formSchema = z.object({
         .refine(val => !val || val.length === 10, "El teléfono debe tener exactamente 10 dígitos")
         .refine(val => !val || /^\d+$/.test(val), "Solo se permiten números"),
 
-    cargo: z.string()
-        .trim()
-        .min(1, "Campo obligatorio")
-        .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, "Solo se permiten letras"),
-
     tipo_servicio_sugerido: z.string().min(1, "Selecciona un tipo de servicio"),
 
     notas: z.string().optional(),
@@ -96,7 +91,7 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
     }));
 
     const fileInputRef = React.useRef<HTMLInputElement>(null);
-    const [tipos, setTipos] = React.useState<Array<{ id_tipo_servicio: string; nombre: string }>>([]);
+    const [tipos, setTipos] = React.useState<Array<{ id_tipo_servicio: string; nombre: string; categoria: string }>>([]);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -104,7 +99,6 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
             nombre: "",
                 rfc: "",
             telefono: "",
-            cargo: "",
             tipo_servicio_sugerido: "",
             notas: "",
             foto: "",
@@ -119,7 +113,6 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
                 nombre: "",
                 rfc: "",
                 telefono: "",
-                cargo: "",
                 tipo_servicio_sugerido: "",
                 notas: "",
                 foto: "",
@@ -133,7 +126,9 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
         let mounted = true;
         (async () => {
             try {
-                const res = await apiClient.get('/tipo-servicio');
+                const res = await apiClient.get('/tipo-servicio', {
+                    params: { categoria: 'Empleado' },
+                });
                 if (mounted) setTipos(res.data || []);
             } catch (e) {
                 console.error('No se pudieron cargar tipos de servicio', e);
@@ -161,11 +156,7 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
     };
 
     const onSubmit = (values: FormValues) => {
-        const tipoOtro = tipos.find((tipo) => tipo.nombre.toLowerCase() === 'otro');
-        const id_tipo_servicio =
-            values.tipo_servicio_sugerido && values.tipo_servicio_sugerido !== 'OTRO'
-                ? values.tipo_servicio_sugerido
-                : tipoOtro?.id_tipo_servicio ?? '';
+        const id_tipo_servicio = values.tipo_servicio_sugerido;
 
         onSave({
             ...values,
@@ -178,27 +169,9 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
             shouldDirty: true,
             shouldValidate: true,
         });
-
-        if (!valor || valor === "OTRO") {
-            form.setValue("cargo", "", {
-                shouldDirty: true,
-                shouldValidate: true,
-            });
-            return;
-        }
-
-        const tipoSeleccionado = tipos.find((tipo) => tipo.id_tipo_servicio === valor);
-        if (tipoSeleccionado) {
-            form.setValue("cargo", tipoSeleccionado.nombre, {
-                shouldDirty: true,
-                shouldValidate: true,
-            });
-        }
     };
 
     const tipoSeleccionado = form.watch("tipo_servicio_sugerido");
-    const esOtro = tipoSeleccionado === "OTRO";
-
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="w-[95vw] sm:max-w-137.5 p-4 sm:p-6 max-h-[95vh] overflow-y-auto overflow-x-hidden rounded-2xl">
@@ -311,45 +284,24 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
                                 </FormItem>
                             )} />
 
-                            <FormField control={form.control} name="cargo" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="font-bold">Tipo de Empleado / Cargo *</FormLabel>
-                                    <FormControl>
-                                        <select
-                                            className="w-full h-10 rounded-md border px-2 mb-2"
-                                            value={tipoSeleccionado || ""}
-                                            onChange={(e) => seleccionarTipoServicio(e.target.value)}
-                                        >
-                                            <option value="">Selecciona un tipo sugerido...</option>
-                                            {tipos.map((tipo) => (
-                                                <option key={tipo.id_tipo_servicio} value={tipo.id_tipo_servicio}>
-                                                    {tipo.nombre}
-                                                </option>
-                                            ))}
-                                            <option value="OTRO">Otro</option>
-                                        </select>
-                                    </FormControl>
+                            <FormItem>
+                                <FormLabel className="font-bold">Tipo de Empleado *</FormLabel>
+                                <FormControl>
+                                    <select
+                                        className="w-full h-10 rounded-md border px-2"
+                                        value={tipoSeleccionado || ""}
+                                        onChange={(e) => seleccionarTipoServicio(e.target.value)}
+                                    >
+                                        <option value="">Selecciona un tipo de empleado...</option>
+                                        {tipos.map((tipo) => (
+                                            <option key={tipo.id_tipo_servicio} value={tipo.id_tipo_servicio}>
+                                                {tipo.nombre}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </FormControl>
 
-                                    {esOtro ? (
-                                        <FormControl>
-                                            <Input
-                                                placeholder="Escribe el tipo de servicio o cargo"
-                                                {...field}
-                                                onChange={(e) => {
-                                                    const valorLimpio = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
-                                                    field.onChange(valorLimpio);
-                                                }}
-                                            />
-                                        </FormControl>
-                                    ) : null}
-
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-
-                            <p className="text-xs text-muted-foreground">
-                                El tipo sugerido sólo ayuda a capturar el dato más rápido; si no existe, usa "Otro" y escribe el cargo exacto.
-                            </p>
+                            </FormItem>
                         </div>
 
                         {/* Tabla de Horarios */}

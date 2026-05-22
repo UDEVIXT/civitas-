@@ -5,7 +5,10 @@ import { PrismaService } from '../prisma/prisma.service';
 export class TipoServicioService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll() {
-    return this.prisma.tipoServicio.findMany({ orderBy: { nombre: 'asc' } });
+  async findAll(categoria?: string) {
+    return this.prisma.tipoServicio.findMany({
+      where: categoria ? { categoria } : undefined,
+      orderBy: { nombre: 'asc' },
+    });
   }
 }

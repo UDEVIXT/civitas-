@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { useDebounce } from "@/hooks/use-debounce";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
   obtenerEmpleadosDomesticos,
   activarEmpleadoDomestico,
@@ -18,6 +19,7 @@ import {
 export function useEmpleadoDomesticos() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const currentUser = useAuth((state) => state.user);
 
   // Filtros locales
   const [search, setSearch] = useState<string>("");
@@ -47,6 +49,8 @@ export function useEmpleadoDomesticos() {
   } = useQuery<EmpleadoDomesticoResponse>({
     queryKey: [
       "empleados-domesticos",
+      currentUser?.id ?? "anonymous",
+      currentUser?.rol ?? "unknown",
       debouncedSearch,
       statusFilter,
       residenciaFilter,
@@ -63,6 +67,8 @@ export function useEmpleadoDomesticos() {
 
       return obtenerEmpleadosDomesticos(filtros, debouncedSearch, page);
     },
+    staleTime: 0,
+    refetchOnMount: "always",
     placeholderData: (prev) => prev,
   });
 

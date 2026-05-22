@@ -162,6 +162,7 @@ model Servicio {
   placas           String?                  @unique
   rfc              String?
   activo           Boolean                  @default(true)
+  bloqueo_global   Boolean                  @default(false)
   id_tipo_servicio String?
   id_residente     String
   id_vivienda      String
