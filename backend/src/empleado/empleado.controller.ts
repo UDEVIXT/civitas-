@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Query,
   Controller,
@@ -13,6 +12,11 @@ import {
   ValidationPipe,
   UseGuards,
   Req,
+  UseInterceptors,
+  UploadedFile,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
 } from '@nestjs/common';
 
 import { AuthGuard } from '@nestjs/passport/dist/auth.guard';
@@ -25,6 +29,8 @@ import { EmpleadoService } from './empleado.service';
 //DTOs
 import { UpdateEmpleadoDto } from './dto/update-empleado.dto';
 import { CreateEmpleadoDomesticoDto } from './dto/create-empleado-domestico.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { AuthenticatedRequest } from 'src/request/AuthenticatedRequest';
 
 //types
 import { EmpleadoEditRequest } from './types';
@@ -35,8 +41,9 @@ export class EmpleadoController {
 
   @Get()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Administrador')
+  @Roles('Administrador', 'Residente')
   async findAll(
+    @Req() req: AuthenticatedRequest,
     @Query('search') search?: string,
     @Query('page') page = '1',
     @Query('limit') limit = '7',
@@ -51,16 +58,17 @@ export class EmpleadoController {
         : isActiveValue === 'false'
           ? false
           : undefined;
-    const byResidenteIdValue = byResidenteId || undefined;
-    const byViviendaIdValue = byViviendaId || undefined;
+
+    const esResidente = req.user?.role === 'Residente';
 
     return this.empleadoService.obtenerEmpleados({
       search,
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
       isActive: isActiveBool,
-      byResidenteId: byResidenteIdValue,
-      byViviendaId: byViviendaIdValue,
+      byResidenteId: esResidente ? undefined : byResidenteId || undefined,
+      byViviendaId: byViviendaId || undefined,
+      idUsuarioActivo: esResidente ? req.user.userId : undefined,
     });
   }
   @Get(':id')
@@ -69,19 +77,41 @@ export class EmpleadoController {
   findOne(@Param('id') id: string) {
     return { message: `Empleado ${id}` };
   }
+
   @Post('empleado-domestico')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Residente')
-  @UsePipes(new ValidationPipe())
+  @UsePipes(new ValidationPipe({ transform: true }))
+  @UseInterceptors(FileInterceptor('foto_empleado'))
   async createEmpleadoDomestico(
     @Body() body: CreateEmpleadoDomesticoDto,
-    @Req() req,
+    @Req() req: AuthenticatedRequest,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 10 * 1024 * 1024 }),
+          new FileTypeValidator({ fileType: '.(png|jpeg|jpg)' }),
+        ],
+        fileIsRequired: false,
+      }),
+    )
+      file?: Express.Multer.File,
   ) {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      throw new BadRequestException(
+        'No se pudo identificar al usuario en la sesión actual.',
+      );
+    }
+
     return this.empleadoService.crearEmpleadoDomestico(
       body,
-      req.user.id_usuario,
+      String(userId),
+      file,
     );
   }
+
   @Put(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Administrador')

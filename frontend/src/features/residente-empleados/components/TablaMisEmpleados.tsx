@@ -1,6 +1,7 @@
 "use client";
 
 import { Pencil, Clock, UserMinus, UserCheck } from "lucide-react";
+import Image from 'next/image';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +34,66 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
+function formatHorario(empleado: EmpleadoDomestico) {
+  const horarios = empleado.servicio?.horarios ?? [];
+  if (!horarios.length) return "Sin horario";
+
+  const dayLabel: Record<string, string> = {
+    LUNES: "Lun",
+    MARTES: "Mar",
+    MIERCOLES: "Mié",
+    JUEVES: "Jue",
+    VIERNES: "Vie",
+    SABADO: "Sáb",
+    DOMINGO: "Dom",
+  };
+
+  const first = horarios[0];
+  const last = horarios[horarios.length - 1];
+  const firstLabel = dayLabel[first.dia_semana] ?? first.dia_semana.slice(0, 3);
+  const lastLabel = dayLabel[last.dia_semana] ?? last.dia_semana.slice(0, 3);
+
+  const formatTime = (value?: string | Date) => {
+    if (value === undefined || value === null || value === "") return "";
+
+    // Normalize value to a Date when possible
+    let date: Date | null = null;
+    if (value instanceof Date) {
+      date = value;
+    } else if (typeof value === "string") {
+      // Try ISO/date string first
+      const parsed = new Date(value);
+      if (!isNaN(parsed.getTime())) {
+        date = parsed;
+      } else {
+        // Fallback: accept plain "HH:MM" strings
+        const m = value.match(/^(\d{1,2}):(\d{2})/);
+        if (m) {
+          const hours = parseInt(m[1], 10);
+          const minutes = parseInt(m[2], 10);
+          const suffix = hours >= 12 ? "pm" : "am";
+          const normalizedHours = hours % 12 || 12;
+          return `${normalizedHours}:${String(minutes).padStart(2, "0")}${suffix}`;
+        }
+      }
+    } else {
+      // attempt to coerce numbers or other values
+      const coerced = new Date(String(value));
+      if (!isNaN(coerced.getTime())) date = coerced;
+    }
+
+    if (!date) return String(value);
+
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const suffix = hours >= 12 ? "pm" : "am";
+    const normalizedHours = hours % 12 || 12;
+    return `${normalizedHours}:${String(minutes).padStart(2, "0")}${suffix}`;
+  };
+
+  return `${firstLabel}-${lastLabel}: ${formatTime(first.hora_inicio)}-${formatTime(last.hora_fin)}`;
+}
+
 // 1. Modificamos el tipo de las Props para recibir la función onBaja
 type MisEmpleadosTableProps = {
   items: EmpleadoDomestico[];
@@ -54,24 +115,22 @@ export function TablaMisEmpleados({
 }: MisEmpleadosTableProps) {
   if (isLoading) {
     return (
-      <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed">
-        <p className="text-sm text-muted-foreground italic">
-          Cargando tus empleados...
-        </p>
+      <div className="flex h-40 items-center justify-center">
+        <p className="text-sm text-zinc-500 italic">Cargando tus empleados...</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-white shadow-sm overflow-x-auto">
-      <div className="min-w-[600px]"> 
+    <div className="overflow-x-auto">
+      <div className="min-w-275">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/30">
-              <TableHead className="w-90">Nombre</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Horario Autorizado</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
+            <TableRow className="border-zinc-200 bg-zinc-50/80 text-[11px] uppercase tracking-wide text-zinc-500">
+              <TableHead className="w-90 pl-5 font-medium text-zinc-500">Nombre</TableHead>
+              <TableHead className="w-62.5 font-medium text-zinc-500">Horario Autorizado</TableHead>
+              <TableHead className="w-37.5 font-medium text-zinc-500">Estado</TableHead>
+              <TableHead className="text-right font-medium text-zinc-500">Acción de entrada</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -79,7 +138,7 @@ export function TablaMisEmpleados({
               <TableRow>
                 <TableCell
                   colSpan={4}
-                  className="py-10 text-center text-sm text-muted-foreground"
+                  className="py-10 text-center text-sm text-zinc-500"
                 >
                   No tienes empleados domésticos registrados.
                 </TableCell>
@@ -87,62 +146,68 @@ export function TablaMisEmpleados({
             ) : (
               items.map((empleado, index) => {
                 const isActive = empleado.servicio?.activo;
+                const isGloballyBlocked = Boolean(empleado.servicio?.bloqueo_global);
+                const canReactivate = !isActive && !isGloballyBlocked;
                 return (
                   <TableRow
                     key={empleado.id_visitante}
-                    className="hover:bg-muted/10 transition-colors"
+                    className="border-zinc-200 transition-colors hover:bg-zinc-50/70"
                   >
-                    <TableCell>
+                    <TableCell className="pl-5">
                       <div className="flex items-center gap-3">
-                        <div
-                          className={cn(
-                            "flex size-10 items-center justify-center rounded-full text-sm font-semibold",
-                            avatarPalette[index % avatarPalette.length],
+                        <div className={cn("flex size-11 items-center justify-center overflow-hidden rounded-full border border-zinc-200", avatarPalette[index % avatarPalette.length])}>
+                          {empleado.url_imagen ? (
+                            <Image src={empleado.url_imagen} alt={empleado.nombre} width={44} height={44} className="object-cover" unoptimized />
+                          ) : (
+                            <span className="text-sm font-semibold">{getInitials(empleado.nombre)}</span>
                           )}
-                        >
-                          {getInitials(empleado.nombre)}
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">
-                            {empleado.nombre}
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-zinc-900">
+                            {empleado.nombre} - {empleado.servicio?.tipo_servicio?.nombre || "Empleado"}
                           </p>
-                          <p className="text-xs text-muted-foreground">
-                            {empleado.telefono || "Sin teléfono"}
+                          <p className="truncate text-xs text-zinc-500">
+                            {empleado.residente?.vivienda?.numero_vivienda
+                              ? `Vivienda ${empleado.residente.vivienda.numero_vivienda}`
+                              : empleado.telefono || "Sin teléfono"}
                           </p>
                         </div>
                       </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-zinc-600">
+                      {formatHorario(empleado)}
                     </TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
                         className={cn(
-                          "rounded-full px-2 py-0 border",
+                          "rounded-full border px-3 py-0.5 text-xs font-medium",
                           isActive
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                            : "border-zinc-200 bg-zinc-50 text-zinc-500",
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-600"
+                            : "border-zinc-200 bg-zinc-100 text-zinc-500",
                         )}
                       >
-                        {isActive ? "Activo" : "Suspendido"}
+                        {isActive ? "Activo" : "Inactivo"}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onVerHorario(empleado)}
-                      >
-                        <Clock className="size-4" />
-                        <span className="ml-2">Ver horario</span>
-                      </Button>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onVerHorario(empleado)}
+                          className="rounded-full hover:bg-zinc-100 hover:text-zinc-900"
+                          title="Ver horario"
+                        >
+                          <Clock className="size-4" />
+                        </Button>
+
                         {/* Botón de Editar */}
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => onEdit(empleado)}
-                          className="rounded-full hover:bg-amber-50 hover:text-amber-600"
+                          className="rounded-full hover:bg-zinc-100 hover:text-zinc-900"
                           title="Editar empleado"
                         >
                           <Pencil className="size-4" />
@@ -152,15 +217,24 @@ export function TablaMisEmpleados({
                         <Button
                           variant="ghost"
                           size="icon"
+                          disabled={!isActive && isGloballyBlocked}
                           onClick={() =>
                             onBaja(empleado, isActive ? "deactivate" : "reactivate")}
                           className={cn(
                             "rounded-full",
                             isActive
                               ? "hover:bg-red-50 hover:text-red-600"
-                              : "hover:bg-emerald-50 hover:text-emerald-600"
+                              : canReactivate
+                                ? "hover:bg-emerald-50 hover:text-emerald-600"
+                                : "cursor-not-allowed opacity-50"
                           )}
-                          title={isActive ? "Suspender acceso" : "Reactivar acceso"}
+                          title={
+                            isActive
+                              ? "Suspender acceso"
+                              : isGloballyBlocked
+                                ? "Solo el administrador puede reincorporarlo"
+                                : "Reactivar acceso"
+                          }
                         >
                           {isActive ? (
                             <UserMinus className="size-4" />

@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2, Camera, X } from "lucide-react";
+import apiClient from "@/api/axios";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -29,6 +30,12 @@ const formSchema = z.object({
         .min(1, "Campo obligatorio")
         .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, "Solo se permiten letras"),
 
+    rfc: z.string()
+        .trim()
+        .min(12, "RFC obligatorio")
+        .max(13, "RFC inválido")
+        .regex(/^[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}$/i, "RFC inválido"),
+
     // El teléfono es opcional, pero si se escribe, debe cumplir la validación de 10 dígitos.
     telefono: z.string()
         .trim()
@@ -36,10 +43,7 @@ const formSchema = z.object({
         .refine(val => !val || val.length === 10, "El teléfono debe tener exactamente 10 dígitos")
         .refine(val => !val || /^\d+$/.test(val), "Solo se permiten números"),
 
-    cargo: z.string()
-        .trim()
-        .min(1, "Campo obligatorio")
-        .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, "Solo se permiten letras"),
+    tipo_servicio_sugerido: z.string().min(1, "Selecciona un tipo de servicio"),
 
     notas: z.string().optional(),
     foto: z.string().optional(),
@@ -74,7 +78,7 @@ type FormValues = z.infer<typeof formSchema>;
 interface ModalAgregarEmpleadoProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (values: FormValues) => void;
+    onSave: (values: FormValues & { id_tipo_servicio: string; fotoArchivo?: File | null }) => void;
     isSaving?: boolean;
 }
 
@@ -87,13 +91,25 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
     }));
 
     const fileInputRef = React.useRef<HTMLInputElement>(null);
+    const [tipos, setTipos] = React.useState<Array<{ id_tipo_servicio: string; nombre: string; categoria: string }>>([]);
+    const [fotoArchivo, setFotoArchivo] = React.useState<File | null>(null);
+    const [fotoPreview, setFotoPreview] = React.useState<string>("");
+
+    React.useEffect(() => {
+        return () => {
+            if (fotoPreview.startsWith("blob:")) {
+                URL.revokeObjectURL(fotoPreview);
+            }
+        };
+    }, [fotoPreview]);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             nombre: "",
+                rfc: "",
             telefono: "",
-            cargo: "",
+            tipo_servicio_sugerido: "",
             notas: "",
             foto: "",
             horarios: horariosPorDefecto,
@@ -105,40 +121,81 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
         if (isOpen) {
             form.reset({
                 nombre: "",
+                rfc: "",
                 telefono: "",
-                cargo: "",
+                tipo_servicio_sugerido: "",
                 notas: "",
                 foto: "",
                 horarios: horariosPorDefecto,
             });
+            setFotoArchivo(null);
+            setFotoPreview("");
         }
     }, [isOpen, form]);
+
+    // Cargar tipos de servicio
+    React.useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                const res = await apiClient.get('/tipo-servicio', {
+                    params: { categoria: 'Empleado' },
+                });
+                if (mounted) setTipos(res.data || []);
+            } catch (e) {
+                console.error('No se pudieron cargar tipos de servicio', e);
+            }
+        })();
+        return () => { mounted = false; };
+    }, []);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                // Guardamos el resultado en base64 en el formulario
-                form.setValue("foto", reader.result as string, { shouldValidate: true, shouldDirty: true });
-            };
-            reader.readAsDataURL(file);
+            if (fotoPreview.startsWith("blob:")) {
+                URL.revokeObjectURL(fotoPreview);
+            }
+
+            const previewUrl = URL.createObjectURL(file);
+            setFotoArchivo(file);
+            setFotoPreview(previewUrl);
+            form.setValue("foto", previewUrl, { shouldValidate: true, shouldDirty: true });
         }
     };
 
     const handleRemovePhoto = () => {
+        if (fotoPreview.startsWith("blob:")) {
+            URL.revokeObjectURL(fotoPreview);
+        }
+
+        setFotoArchivo(null);
+        setFotoPreview("");
         form.setValue("foto", "");
         // Limpiamos el input de archivo para poder volver a seleccionar la misma imagen si el usuario lo desea
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
     const onSubmit = (values: FormValues) => {
-        onSave(values);
+        const id_tipo_servicio = values.tipo_servicio_sugerido;
+
+        onSave({
+            ...values,
+            id_tipo_servicio,
+            fotoArchivo,
+        });
     };
 
+    const seleccionarTipoServicio = (valor: string) => {
+        form.setValue("tipo_servicio_sugerido", valor, {
+            shouldDirty: true,
+            shouldValidate: true,
+        });
+    };
+
+    const tipoSeleccionado = form.watch("tipo_servicio_sugerido");
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="w-[95vw] sm:max-w-[550px] p-4 sm:p-6 max-h-[95vh] overflow-y-auto overflow-x-hidden rounded-2xl">
+            <DialogContent className="w-[95vw] sm:max-w-137.5 p-4 sm:p-6 max-h-[95vh] overflow-y-auto overflow-x-hidden rounded-2xl">
                 <DialogHeader className="border-b pb-4 mb-4">
                     <DialogTitle className="text-xl font-bold text-center text-gray-800">
                         Registrar Nuevo Empleado
@@ -150,10 +207,10 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
 
                         {/* Header con Foto */}
                         <div className="flex flex-col items-center justify-center gap-3 bg-gray-50 p-4 rounded-xl text-center">
-                            
+
                             <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                                 <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-4 border-white shadow-md">
-                                    <AvatarImage src={form.watch("foto") || undefined} className="object-cover" />
+                                    <AvatarImage src={fotoPreview || undefined} className="object-cover" />
                                     <AvatarFallback className="bg-emerald-100 text-emerald-700 font-bold text-2xl">
                                         {form.watch("nombre")?.charAt(0)?.toUpperCase() || "+"}
                                     </AvatarFallback>
@@ -163,12 +220,12 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
                                 </div>
                             </div>
 
-                            <input 
-                                type="file" 
-                                accept="image/*" 
-                                className="hidden" 
-                                ref={fileInputRef} 
-                                onChange={handleFileChange} 
+                            <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                ref={fileInputRef}
+                                onChange={handleFileChange}
                             />
 
                             <div className="flex flex-col gap-0.5">
@@ -181,15 +238,15 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
                             <div className="flex items-center gap-2">
                                 <Button type="button" variant="outline" size="sm" className="text-xs h-8" onClick={() => fileInputRef.current?.click()}>
                                     <Camera className="h-3 w-3 mr-2" />
-                                    {form.watch("foto") ? "Cambiar foto" : "Subir foto"}
+                                    {fotoArchivo ? "Cambiar foto" : "Subir foto"}
                                 </Button>
-                                {form.watch("foto") && (
+                                {fotoArchivo && (
                                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleRemovePhoto} title="Quitar foto">
                                         <X className="h-4 w-4" />
                                     </Button>
                                 )}
                             </div>
-                            
+
                         </div>
 
                         {/* Datos Personales */}
@@ -203,6 +260,24 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
                                             {...field}
                                             onChange={(e) => {
                                                 const valorLimpio = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
+                                                field.onChange(valorLimpio);
+                                            }}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+
+                            <FormField control={form.control} name="rfc" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="font-bold">RFC *</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="Ej. GODE561231GR8"
+                                            maxLength={13}
+                                            {...field}
+                                            onChange={(e) => {
+                                                const valorLimpio = e.target.value.toUpperCase().replace(/[^A-Z0-9&Ñ]/g, "");
                                                 field.onChange(valorLimpio);
                                             }}
                                         />
@@ -230,22 +305,24 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
                                 </FormItem>
                             )} />
 
-                            <FormField control={form.control} name="cargo" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="font-bold">Tipo de Empleado / Cargo *</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            placeholder="Ej. Chofer, Limpieza, Cuidador..."
-                                            {...field}
-                                            onChange={(e) => {
-                                                const valorLimpio = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
-                                                field.onChange(valorLimpio);
-                                            }}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
+                            <FormItem>
+                                <FormLabel className="font-bold">Tipo de Empleado *</FormLabel>
+                                <FormControl>
+                                    <select
+                                        className="w-full h-10 rounded-md border px-2"
+                                        value={tipoSeleccionado || ""}
+                                        onChange={(e) => seleccionarTipoServicio(e.target.value)}
+                                    >
+                                        <option value="">Selecciona un tipo de empleado...</option>
+                                        {tipos.map((tipo) => (
+                                            <option key={tipo.id_tipo_servicio} value={tipo.id_tipo_servicio}>
+                                                {tipo.nombre}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </FormControl>
+
+                            </FormItem>
                         </div>
 
                         {/* Tabla de Horarios */}

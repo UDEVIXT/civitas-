@@ -2,17 +2,15 @@ import {
   IsArray,
   IsNotEmpty,
   IsOptional,
-  IsPhoneNumber,
   IsString,
   ValidateNested,
-  IsUUID,
   IsEnum,
 } from 'class-validator';
 
-import { Type } from 'class-transformer';
+import { Transform, Type, plainToInstance } from 'class-transformer';
 import { DiaSemana } from '@prisma/client';
 
-class HorarioDto {
+export class HorarioDto {
   @IsEnum(DiaSemana)
   dia_semana: DiaSemana;
 
@@ -28,17 +26,27 @@ export class CreateEmpleadoDomesticoDto {
   @IsNotEmpty()
   nombre_completo: string;
 
-  @IsUUID()
-  id_tipo_servicio: string;
+  @IsString()
+  @IsNotEmpty()
+  rfc: string;
 
   @IsString()
   @IsNotEmpty()
-  cargo: string;
+  id_tipo_servicio: string;
 
   @IsOptional()
-  @IsPhoneNumber('MX')
+  @IsString()
   telefono?: string;
 
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  confirmar_reuso_rfc?: boolean;
+
+  // 1. Añadimos el campo de la foto para que el validador no lo rechace si llega en el body
+  @IsOptional()
+  foto_empleado?: any;
+
+  // 2. Mantenemos el campo url_imagen para cuando asignamos la ruta de R2
   @IsOptional()
   @IsString()
   url_imagen?: string;
@@ -46,5 +54,17 @@ export class CreateEmpleadoDomesticoDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => HorarioDto)
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        // CRÍTICO: Convertir los objetos planos a instancias de la clase HorarioDto
+        return plainToInstance(HorarioDto, parsed);
+      } catch {
+        return [];
+      }
+    }
+    return value;
+  })
   horarios: HorarioDto[];
 }
