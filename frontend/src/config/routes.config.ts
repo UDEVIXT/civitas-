@@ -1,4 +1,4 @@
-import { ROLES, type RoleType } from "@/types/roles";
+import type { RoleType } from "@/types/roles";
 import { routes } from "@/features/home/data/routes";
 
 /**
