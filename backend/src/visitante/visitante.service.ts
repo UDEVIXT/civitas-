@@ -80,7 +80,7 @@ export class VisitanteService {
               create: {
                 id_usuario: id_usuario,
                 estatus: 'Activo',
-                codigo_qr: null,
+                codigo_qr: this.generarTokenQr(),
                 fecha_creacion: dataVisitante.fecha_inicio,
                 fecha_expiracion: fechaExpiracion,
               },
@@ -134,7 +134,8 @@ export class VisitanteService {
     const camposFaltantes: string[] = [];
     if (!acceso.visitante.nombre) camposFaltantes.push('nombre');
     if (!acceso.fecha_creacion) camposFaltantes.push('fecha de visita');
-    if (!acceso.fecha_expiracion) camposFaltantes.push('fecha/hora de expiracion');
+    if (!acceso.fecha_expiracion)
+      camposFaltantes.push('fecha/hora de expiracion');
     if (!acceso.visitante.motivo) camposFaltantes.push('tipo de visitante');
 
     if (camposFaltantes.length > 0) {
