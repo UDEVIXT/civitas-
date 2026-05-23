@@ -240,7 +240,7 @@ export class BitacoraService {
         fecha_entrada: item.fecha_hora_entrada,
         fecha_salida: item.fecha_hora_salida,
         metodo_acceso: metodoAccesoCalculado,
-        guardia_registro: item.guardia.nombre,
+        guardia_registro: item.guardia?.nombre ?? 'N/A',
         guardia_salida: item.guardia_salida?.nombre ?? 'Pendiente',
         estado:
           item.fecha_hora_salida === null
@@ -519,10 +519,12 @@ export class BitacoraService {
             : bitacora.acceso.codigo_qr
               ? 'QR'
               : 'manual',
-          guardia: {
-            id_guardia: bitacora.guardia.id_guardia,
-            nombre: bitacora.guardia.nombre,
-          },
+          guardia: bitacora.guardia
+            ? {
+                id_guardia: bitacora.guardia.id_guardia,
+                nombre: bitacora.guardia.nombre,
+              }
+            : null,
           es_frecuente: visitante.es_frecuente,
         };
       })

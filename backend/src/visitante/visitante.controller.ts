@@ -42,7 +42,7 @@ export class VisitanteController {
           new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 10 }), // 10MB
           new FileTypeValidator({ fileType: '.(png|jpeg|jpg)' }),
         ],
-        fileIsRequired: true,
+        fileIsRequired: false,
       }),
     )
     file?: Express.Multer.File,
@@ -54,9 +54,58 @@ export class VisitanteController {
     );
   }
 
+  @Post('accesos/:idAcceso/generar-qr')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Residente')
+  generarQr(
+    @Param('idAcceso') idAcceso: string,
+    @Req() req: AuthenticatedRequest,
+    @Body() body: { fecha_inicio?: string; fecha_fin?: string },
+  ) {
+    return this.visitanteService.generarQrParaVisita(
+      idAcceso,
+      req.user.userId,
+      body,
+    );
+  }
+
+  @Post(':idVisitante/generar-qr')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Residente')
+  generarQrParaVisitante(
+    @Param('idVisitante') idVisitante: string,
+    @Req() req: AuthenticatedRequest,
+    @Body() body: { fecha_inicio?: string; fecha_fin?: string },
+  ) {
+    return this.visitanteService.generarQrParaVisitante(
+      idVisitante,
+      req.user.userId,
+      body,
+    );
+  }
+
+  @Get('accesos/:idAcceso')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Residente', 'Guardia', 'Administrador')
+  obtenerDetalleVisita(
+    @Param('idAcceso') idAcceso: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.visitanteService.obtenerDetalleVisita(idAcceso, req.user);
+  }
+
+  @Get('qr/:codigoQr')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Guardia', 'Administrador')
+  consultarQr(@Param('codigoQr') codigoQr: string) {
+    return this.visitanteService.consultarQr(codigoQr);
+  }
+
   @Get()
-  findAll() {
-    return this.visitanteService.findAll();
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Residente')
+  findAll(@Req() req: AuthenticatedRequest) {
+    return this.visitanteService.findAllByResidente(req.user.userId);
   }
 
   @Get(':id')

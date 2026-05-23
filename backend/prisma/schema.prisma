@@ -142,14 +142,14 @@ model Acceso {
 model Bitacora {
   id_bitacora        String    @id @default(uuid())
   id_acceso          String
-  id_guardia         String
+  id_guardia         String?
   id_guardia_salida  String?
   fecha_hora_entrada DateTime  @default(now())
   fecha_hora_salida  DateTime?
   comentario         String?
   comentario_salida  String?
   acceso             Acceso    @relation(fields: [id_acceso], references: [id_acceso], onDelete: Cascade)
-  guardia Guardia @relation("GuardiaEntrada", fields: [id_guardia], references: [id_guardia])
+  guardia            Guardia?  @relation("GuardiaEntrada", fields: [id_guardia], references: [id_guardia])
   guardia_salida Guardia? @relation("GuardiaSalida", fields: [id_guardia_salida], references: [id_guardia])
 }
 
