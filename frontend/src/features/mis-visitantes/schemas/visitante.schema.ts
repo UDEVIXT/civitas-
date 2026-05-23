@@ -34,12 +34,7 @@ export const visitanteSchema = z.object({
   // Vehículo opcional
   vehiculo: z.string().trim().optional(),
 
-  foto: z
-    .any()
-    .refine(
-      (file) => file instanceof File,
-      "La foto del visitante es obligatoria",
-    ),
+  foto: z.any().optional(),
 
   es_frecuente: z.boolean(),
 });

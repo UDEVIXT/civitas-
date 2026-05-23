@@ -13,9 +13,13 @@ import type { Visitante } from "../types";
 
 interface TablaVisitantesProps {
   visitantes: Visitante[];
+  onCodigoAccesoClick?: (visitante: Visitante) => void;
 }
 
-export function TablaVisitantes({ visitantes }: TablaVisitantesProps) {
+export function TablaVisitantes({
+  visitantes,
+  onCodigoAccesoClick,
+}: TablaVisitantesProps) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <Table>
@@ -72,15 +76,41 @@ export function TablaVisitantes({ visitantes }: TablaVisitantesProps) {
               </TableCell>
 
               <TableCell className="text-center">
-                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600">
+                <button
+                  type="button"
+                  onClick={() => onCodigoAccesoClick?.(visitante)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 disabled:opacity-40"
+                  disabled={!visitante.codigo_acceso && !visitante.puede_generar_qr}
+                  title={
+                    visitante.estatus === "Activo"
+                      ? "Ver codigo QR"
+                      : "Generar nuevo codigo QR"
+                  }
+                >
                   <QrCode className="inline-block h-5 w-5" />
                 </button>
               </TableCell>
 
               <TableCell className="text-center">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
-                  <span className="h-1.5 w-1.5 bg-emerald-500 rounded-full"></span>
-                  Activo
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    visitante.estatus === "Activo"
+                      ? "bg-emerald-50 text-emerald-700"
+                      : visitante.estatus === "Expirado"
+                        ? "bg-amber-50 text-amber-700"
+                        : "bg-gray-100 text-gray-600"
+                  }`}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      visitante.estatus === "Activo"
+                        ? "bg-emerald-500"
+                        : visitante.estatus === "Expirado"
+                          ? "bg-amber-500"
+                          : "bg-gray-400"
+                    }`}
+                  ></span>
+                  {visitante.estatus}
                 </span>
               </TableCell>
 

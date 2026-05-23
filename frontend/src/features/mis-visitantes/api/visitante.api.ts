@@ -50,3 +50,15 @@ export const getVisitantes = async () => {
   const response = await apiClient.get("/visitante");
   return response.data;
 };
+
+export const generarQrVisitante = async (
+  idVisitante: string,
+  fechas?: { fecha_inicio?: string; fecha_fin?: string },
+) => {
+  const response = await apiClient.post(
+    `/visitante/${idVisitante}/generar-qr`,
+    fechas ?? {},
+  );
+
+  return response.data;
+};
