@@ -1,4 +1,4 @@
-import apiClient from "@/api/axios";  
+import apiClient from "@/api/axios";
 import type { VisitanteFormValues } from "../schemas/visitante.schema";
 
 export const crearVisitante = async (data: VisitanteFormValues) => {
@@ -18,10 +18,11 @@ export const crearVisitante = async (data: VisitanteFormValues) => {
     nombre: data.nombre_completo,
     fecha_inicio: fechaInicioISO,
     fecha_fin: fechaFinISO,
-    tipo_visitante: data.motivo_visita,   // Usamos campo motivo
+    tipo_visitante: data.tipo_visitante,
     telefono: data.telefono,
-    tipo_vehiculo: data.tipo_visitante,   // Usamos campo donde dice ej. Camioneta
-    es_frecuente: data.es_frecuente
+    tipo_vehiculo: data.vehiculo || "Particular",
+    motivo: data.motivo_visita,
+    es_frecuente: data.es_frecuente,
   };
 
   // Agregamos cada campo del payload a FormData
@@ -38,9 +39,9 @@ export const crearVisitante = async (data: VisitanteFormValues) => {
 
   const response = await apiClient.post("/visitante", formDataToSend, {
     headers: {
-      'Content-Type': undefined,
+      "Content-Type": undefined,
     },
   });
-  
+
   return response.data;
 };

@@ -8,39 +8,40 @@ import * as z from "zod";
 const hoy = new Date().toISOString().split("T")[0];
 
 export const visitanteSchema = z.object({
-  nombre_completo: z.string()
+  nombre_completo: z
+    .string()
     .trim()
     .min(1, "El nombre completo es obligatorio")
     .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, "Solo se permiten letras en el nombre"),
 
-  telefono: z.string().trim()
-    .min(10, "El teléfono debe tener 10 dígitos"),
+  telefono: z.string().trim().min(10, "El teléfono debe tener 10 dígitos"),
 
-  tipo_visitante: z.string()
-    .min(1, "Selecciona el tipo de visitante"),
+  tipo_visitante: z.string().min(1, "Selecciona el tipo de visitante"),
 
-  motivo_visita: z.string()
-    .trim()
-    .min(1, "Especifica el motivo de la visita"),
+  motivo_visita: z.string().trim().min(1, "Especifica el motivo de la visita"),
 
-  fecha_visita: z.string()
+  fecha_visita: z
+    .string()
     .min(1, "La fecha de visita es obligatoria")
     .refine((fecha) => fecha >= hoy, {
       message: "No puedes agendar una visita para un día que ya pasó",
     }),
 
-  hora_estimada: z.string()
-    .min(1, "La hora de llegada es obligatoria"),
-  
-  hora_salida: z.string()
-    .min(1, "La hora de salida es obligatoria"),
+  hora_estimada: z.string().min(1, "La hora de llegada es obligatoria"),
+
+  hora_salida: z.string().optional(),
 
   // Vehículo opcional
   vehiculo: z.string().trim().optional(),
 
-  foto: z.any().optional(),
+  foto: z
+    .any()
+    .refine(
+      (file) => file instanceof File,
+      "La foto del visitante es obligatoria",
+    ),
 
-  es_frecuente: z.boolean(), 
+  es_frecuente: z.boolean(),
 });
 
 export type VisitanteFormValues = z.infer<typeof visitanteSchema>;
