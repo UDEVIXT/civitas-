@@ -1,8 +1,9 @@
+import React, { ReactNode } from "react"
 import { RouteGuard } from "@/components/RouteGuard"
 import { ROLES } from "@/types/roles"
+import { useRoutes } from "@/hooks/useRoutes"
 
-
-export function BitacoraGuardiaLayoutExample({ children }) {
+export function BitacoraGuardiaLayoutExample({ children }: { children: ReactNode }) {
   return (
     <RouteGuard requiredRoles={[ROLES.GUARDIA]}>
       {children}
@@ -10,7 +11,7 @@ export function BitacoraGuardiaLayoutExample({ children }) {
   )
 }
 
-export function BitacoraAdministradorLayoutExample({ children }) {
+export function BitacoraAdministradorLayoutExample({ children }: { children: ReactNode }) {
   return (
     <RouteGuard requiredRoles={[ROLES.ADMINISTRADOR]}>
       {children}
@@ -18,15 +19,13 @@ export function BitacoraAdministradorLayoutExample({ children }) {
   )
 }
 
-export function EmpleadosDomesticosLayoutExample({ children }) {
+export function EmpleadosDomesticosLayoutExample({ children }: { children: ReactNode }) {
   return (
     <RouteGuard requiredRoles={[ROLES.GUARDIA, ROLES.ADMINISTRADOR]}>
       {children}
     </RouteGuard>
   )
 }
-
-import { useRoutes } from "@/hooks/useRoutes"
 
 export function ComponenteConAutorizacion() {
   const { canAccess, allowedRoutes } = useRoutes()
