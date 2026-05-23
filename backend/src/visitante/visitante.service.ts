@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Injectable,
   NotFoundException,
@@ -63,7 +62,7 @@ export class VisitanteService {
 
     // Registramos al visitante con sus datos. El QR se genera despues,
     // cuando el residente use la accion explicita "Generar QR".
-    return await this.prisma.$transaction(async (prisma) => {
+    const visitante = await this.prisma.$transaction(async (prisma) => {
       try {
         const visitante = await prisma.visitante.create({
           data: {
@@ -104,6 +103,18 @@ export class VisitanteService {
         throw new InternalServerErrorException('Failed to create visitante');
       }
     });
+
+    const accesoCreado = visitante.accesos[0];
+
+    const bitacoraAcceso = await this.prisma.bitacora.create({
+      data: {
+        id_acceso: accesoCreado.id_acceso,
+        fecha_hora_entrada: accesoCreado.fecha_creacion,
+        comentario: 'Registro de visitante inicial',
+      },
+    });
+
+    return visitante;
   }
 
   async generarQrParaVisita(idAcceso: string, idUsuario: string) {
@@ -194,6 +205,7 @@ export class VisitanteService {
             },
           };
         } catch (error: any) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           if (error?.code !== 'P2002') throw error;
         }
       }
