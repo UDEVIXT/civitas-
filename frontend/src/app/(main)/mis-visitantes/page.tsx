@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Search, UserPlus, Filter, Star } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Search, UserPlus, Filter, Star, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -14,14 +14,60 @@ import type { Visitante } from "@/features/mis-visitantes/types";
 import { toast } from "sonner";
 
 // Importamos la API
-import { crearVisitante } from "@/features/mis-visitantes/api/visitante.api";
+import {
+  crearVisitante,
+  getVisitantes,
+} from "@/features/mis-visitantes/api/visitante.api";
 
 export default function MisVisitantesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Empezamos sin visitantes para ver el Empty State de Figma
   const [visitantes, setVisitantes] = useState<Visitante[]>([]);
+
+  useEffect(() => {
+    const fetchVisitantes = async () => {
+      try {
+        const data = await getVisitantes();
+        // Mapeamos lo que llega del back al formato del front
+        const mappedData: Visitante[] = data.map((v: any) => {
+          const ultimoAcceso = v.accesos?.[0];
+          return {
+            id_visitante: v.id_visitante,
+            nombre_completo: v.nombre,
+            motivo_visita: v.motivo || "Visita",
+            tipo_visitante: v.motivo as any,
+            telefono: v.telefono || "",
+            fecha_visita: ultimoAcceso?.fecha_creacion
+              ? new Date(ultimoAcceso.fecha_creacion)
+                  .toISOString()
+                  .split("T")[0]
+              : "",
+            hora_estimada: ultimoAcceso?.fecha_creacion
+              ? new Date(ultimoAcceso.fecha_creacion).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                })
+              : "",
+            es_frecuente: v.es_frecuente,
+            estatus: ultimoAcceso?.estatus || "Activo",
+            url_foto: v.url_imagen,
+          };
+        });
+        setVisitantes(mappedData);
+      } catch (error) {
+        console.error("Error fetching visitantes:", error);
+        toast.error("No se pudieron cargar los visitantes");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchVisitantes();
+  }, []);
 
   const handleSaveVisitante = async (values: VisitanteFormValues) => {
     setIsSaving(true);
@@ -90,8 +136,12 @@ export default function MisVisitantesPage() {
         </Button>
       </div>
 
-      {/* Si es 0 muestra  Empty State, si no, dibuja la tabla */}
-      {visitantes.length === 0 ? (
+      {/* Si está cargando mostra un spinner, si es 0 muestra Empty State, si no, dibuja la tabla */}
+      {isLoading ? (
+        <div className="flex justify-center items-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+        </div>
+      ) : visitantes.length === 0 ? (
         <EmptyStateVisitantes />
       ) : (
         <TablaVisitantes visitantes={visitantes} />

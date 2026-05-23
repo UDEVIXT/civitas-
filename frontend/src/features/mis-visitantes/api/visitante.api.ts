@@ -45,3 +45,8 @@ export const crearVisitante = async (data: VisitanteFormValues) => {
 
   return response.data;
 };
+
+export const getVisitantes = async () => {
+  const response = await apiClient.get("/visitante");
+  return response.data;
+};
