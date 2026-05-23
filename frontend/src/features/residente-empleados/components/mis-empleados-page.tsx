@@ -58,60 +58,60 @@ export default function MisEmpleadosPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const guardarEmpleado = React.useCallback(
-    async (
-      values: NuevoEmpleadoFormValues,
-      confirmarReusoRFC = false,
-    ) => {
-      const mapDia = (d: string): CrearEmpleadoDomesticoRequest["horarios"][number]["dia_semana"] => {
-        const mapa: Record<string, CrearEmpleadoDomesticoRequest["horarios"][number]["dia_semana"]> = {
-          Lunes: "LUNES",
-          Martes: "MARTES",
-          Miércoles: "MIERCOLES",
-          Jueves: "JUEVES",
-          Viernes: "VIERNES",
-          Sábado: "SABADO",
-          Domingo: "DOMINGO",
-        };
-        return mapa[d] ?? d.toUpperCase();
+const guardarEmpleado = React.useCallback(
+  async (
+    values: NuevoEmpleadoFormValues,
+    confirmarReusoRFC = false,
+  ) => {
+    const mapDia = (d: string): CrearEmpleadoDomesticoRequest["horarios"][number]["dia_semana"] => {
+      const mapa: Record<string, CrearEmpleadoDomesticoRequest["horarios"][number]["dia_semana"]> = {
+        Lunes: "LUNES",
+        Martes: "MARTES",
+        Miércoles: "MIERCOLES",
+        Jueves: "JUEVES",
+        Viernes: "VIERNES",
+        Sábado: "SABADO",
+        Domingo: "DOMINGO",
       };
+      return mapa[d] ?? d.toUpperCase();
+    };
 
-      const horariosActivos = (values.horarios || [])
-        .filter((h: HorarioFormulario) => h.activo)
-        .map((h: HorarioFormulario) => ({
-          dia_semana: mapDia(h.dia),
-          hora_inicio: h.hora_entrada,
-          hora_fin: h.hora_salida,
-        }));
+    const horariosActivos = (values.horarios || [])
+      .filter((h: HorarioFormulario) => h.activo)
+      .map((h: HorarioFormulario) => ({
+        dia_semana: mapDia(h.dia),
+        hora_inicio: h.hora_entrada,
+        hora_fin: h.hora_salida,
+      }));
 
-      if (!values.id_tipo_servicio || values.id_tipo_servicio.trim() === "") {
-        throw new Error("Selecciona un tipo de servicio válido antes de guardar.");
-      }
+    if (!values.id_tipo_servicio || values.id_tipo_servicio.trim() === "") {
+      throw new Error("Selecciona un tipo de servicio válido antes de guardar.");
+    }
 
-      const formData = new FormData();
-      formData.append("nombre_completo", values.nombre);
-      formData.append("rfc", values.rfc.trim().toUpperCase());
-      formData.append("id_tipo_servicio", values.id_tipo_servicio);
-      formData.append("confirmar_reuso_rfc", String(confirmarReusoRFC));
+    // Instanciación del objeto FormData para habilitar multipart/form-data
+    const formData = new FormData();
+    
+    formData.append("nombre_completo", values.nombre);
+    formData.append("rfc", values.rfc.trim().toUpperCase());
+    formData.append("id_tipo_servicio", values.id_tipo_servicio);
+    formData.append("confirmar_reuso_rfc", String(confirmarReusoRFC));
 
-      if (values.telefono?.trim()) {
-        formData.append("telefono", values.telefono.trim());
-      }
+    if (values.telefono?.trim()) {
+      formData.append("telefono", values.telefono.trim());
+    }
 
-      formData.append("horarios", JSON.stringify(horariosActivos.map((h) => ({
-        dia_semana: h.dia_semana,
-        hora_inicio: h.hora_inicio,
-        hora_fin: h.hora_fin,
-      }))));
+    // Serialización estricta para compatibilidad con class-transformer en NestJS
+    formData.append("horarios", JSON.stringify(horariosActivos));
 
-      if (values.fotoArchivo) {
-        formData.append("foto_empleado", values.fotoArchivo);
-      }
+    // Inyección del archivo binario. La clave debe coincidir exactamente con FileInterceptor
+    if (values.fotoArchivo) {
+      formData.append("foto_empleado", values.fotoArchivo);
+    }
 
-      return crearEmpleadoDomestico(formData);
-    },
-    [],
-  );
+    return crearEmpleadoDomestico(formData);
+  },
+  [],
+);
 
   const {
     empleados,

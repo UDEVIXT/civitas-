@@ -7,6 +7,7 @@ import {
   InternalServerErrorException,
   BadRequestException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmpleadoDomesticoDto } from './dto/create-empleado-domestico.dto';
@@ -14,6 +15,7 @@ import { ArchivosService } from '../r2-module/archivos.service';
 
 @Injectable()
 export class EmpleadoService {
+  private readonly logger = new Logger(EmpleadoService.name);
   constructor(
     private prisma: PrismaService,
     private readonly archivosService: ArchivosService,
@@ -389,6 +391,15 @@ export class EmpleadoService {
     idUsuario: string,
     file?: Express.Multer.File,
   ) {
+    this.logger.log('--- INICIO DEPURACIÓN: CREAR EMPLEADO DOMÉSTICO ---');
+    
+    // FASE 1: Verificación de entrada
+    if (file) {
+      this.logger.debug(`1. Archivo recibido: ${file.originalname} | Tamaño: ${file.size} bytes | Mimetype: ${file.mimetype}`);
+    } else {
+      this.logger.warn('1. ADVERTENCIA: El servicio no recibió ningún archivo (file es undefined).');
+    }
+
     const rfc = dto.rfc.trim().toUpperCase();
     const telefono = dto.telefono?.trim() || undefined;
 
@@ -433,42 +444,20 @@ export class EmpleadoService {
       ? await this.prisma.visitante.findFirst({
           where: {
             telefono,
-            servicio: {
-              rfc,
-            },
+            servicio: { rfc },
           },
           select: {
             id_visitante: true,
-            nombre: true,
-            telefono: true,
-            servicio: {
-              select: {
-                id_servicio: true,
-                nombre_servicio: true,
-                id_residente: true,
-                id_vivienda: true,
-              },
-            },
+            url_imagen: true, 
           },
         })
       : await this.prisma.visitante.findFirst({
           where: {
-            servicio: {
-              rfc,
-            },
+            servicio: { rfc },
           },
           select: {
             id_visitante: true,
-            nombre: true,
-            telefono: true,
-            servicio: {
-              select: {
-                id_servicio: true,
-                nombre_servicio: true,
-                id_residente: true,
-                id_vivienda: true,
-              },
-            },
+            url_imagen: true, 
           },
         });
 
@@ -484,7 +473,6 @@ export class EmpleadoService {
       where: {
         id_usuario: idUsuario,
       },
-
       include: {
         vivienda: true,
       },
@@ -494,28 +482,48 @@ export class EmpleadoService {
       throw new BadRequestException('Residente no encontrado');
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const urlImagen = file
-        ? await this.archivosService.subirImagen(file, '/empleados/')
-        : dto.url_imagen;
+    // FASE 2: Transacción con Cloudflare R2
+    let urlImagen : string | null = null;
+    try {
+      if (file) {
+        this.logger.debug('2. Intentando subir archivo a R2...');
+        urlImagen = await this.archivosService.subirImagen(file, '/empleados');
+        this.logger.log(`-> ÉXITO R2: URL obtenida = ${urlImagen}`);
+      } else {
+        urlImagen = dto.url_imagen || empleadoExistente?.url_imagen || null; 
+        this.logger.debug(`-> No hay archivo nuevo. URL asignada = ${urlImagen}`);
+      }
+    } catch (error: any) {
+      this.logger.error(`-> FALLO R2: Ocurrió un error al intentar subir la imagen: ${error.message}`);
+      this.logger.error(error.stack);
+    }
 
+    // FASE 3: Preparación del Payload
+    const payloadVisitante = {
+      nombre: dto.nombre_completo,
+      telefono,
+      url_imagen: urlImagen,
+      es_frecuente: true,
+      id_residente: residente.id_residente,
+    };
+    
+    this.logger.debug('3. Payload preparado para Prisma (Visitante):');
+    this.logger.debug(JSON.stringify(payloadVisitante, null, 2));
+
+    // FASE 4: Persistencia de Datos
+    return this.prisma.$transaction(async (tx) => {
+      this.logger.debug('4. Iniciando transacción de base de datos...');
       const servicio = await tx.servicio.create({
         data: {
           nombre_servicio: `${residente.vivienda.numero_vivienda}`,
-
           cargo: tipoServicio.nombre,
-
           id_tipo_servicio: dto.id_tipo_servicio,
-
           rfc,
-
           id_residente: residente.id_residente,
           id_vivienda: residente.id_vivienda,
-
           horarios: {
             create: dto.horarios.map((horario) => ({
               dia_semana: horario.dia_semana,
-              // En crearEmpleadoDomestico (aprox línea 312)
               hora_inicio: new Date(`1970-01-01T${horario.hora_inicio}:00.000Z`),
               hora_fin: new Date(`1970-01-01T${horario.hora_fin}:00.000Z`),
             })),
@@ -525,19 +533,14 @@ export class EmpleadoService {
 
       const visitante = await tx.visitante.create({
         data: {
-          nombre: dto.nombre_completo,
-
-          telefono,
-
-          url_imagen: urlImagen,
-
-          es_frecuente: true,
-
-          id_residente: residente.id_residente,
-
+          ...payloadVisitante,
           id_servicio: servicio.id_servicio,
         },
       });
+
+      this.logger.debug('5. Respuesta final de la base de datos (Visitante guardado):');
+      this.logger.debug(JSON.stringify(visitante, null, 2));
+      this.logger.log('--- FIN DEPURACIÓN ---');
 
       return {
         message: 'Empleado doméstico registrado correctamente',

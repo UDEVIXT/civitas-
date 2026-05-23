@@ -116,6 +116,11 @@ export interface CrearEmpleadoDomesticoRequest {
 export const crearEmpleadoDomestico = async (
   data: CrearEmpleadoDomesticoRequest | FormData,
 ) => {
-  const response = await apiClient.post("/empleado/empleado-domestico", data);
+  const response = await apiClient.post("/empleado/empleado-domestico", data,{
+    // Se fuerza la cabecera para que Axios y el backend entiendan que viaja un archivo
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
   return response.data;
 };

@@ -81,7 +81,7 @@ export class EmpleadoController {
   @Post('empleado-domestico')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Residente')
-  @UsePipes(new ValidationPipe())
+  @UsePipes(new ValidationPipe({ transform: true }))
   @UseInterceptors(FileInterceptor('foto_empleado'))
   async createEmpleadoDomestico(
     @Body() body: CreateEmpleadoDomesticoDto,
