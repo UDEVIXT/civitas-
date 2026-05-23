@@ -24,6 +24,44 @@ export class VisitanteService {
     return `qr_${randomBytes(32).toString('base64url')}`;
   }
 
+  private async generarCodigoQrUnico(prisma: any = this.prisma) {
+    for (let intento = 0; intento < 5; intento += 1) {
+      const codigoQr = this.generarTokenQr();
+      const existe = await prisma.acceso.findUnique({
+        where: { codigo_qr: codigoQr },
+        select: { id_acceso: true },
+      });
+
+      if (!existe) return codigoQr;
+    }
+
+    throw new InternalServerErrorException(
+      'No fue posible generar un QR unico.',
+    );
+  }
+
+  private obtenerFechasAcceso(
+    fechaInicio?: string | Date,
+    fechaFin?: string | Date,
+  ) {
+    const inicio = fechaInicio ? new Date(fechaInicio) : new Date();
+    const fin = fechaFin
+      ? new Date(fechaFin)
+      : new Date(inicio.getTime() + 24 * 60 * 60 * 1000);
+
+    if (Number.isNaN(inicio.getTime()) || Number.isNaN(fin.getTime())) {
+      throw new BadRequestException('Las fechas del acceso no son validas.');
+    }
+
+    if (fin <= inicio) {
+      throw new BadRequestException(
+        'La fecha de expiracion debe ser posterior a la fecha de inicio.',
+      );
+    }
+
+    return { inicio, fin };
+  }
+
   private calcularEstadoQr(acceso: {
     codigo_qr: string | null;
     fecha_expiracion: Date;
@@ -60,10 +98,10 @@ export class VisitanteService {
       ? await this.archivosService.subirImagen(file, 'visitantes')
       : null;
 
-    // Registramos al visitante con sus datos. El QR se genera despues,
-    // cuando el residente use la accion explicita "Generar QR".
+    // Registramos al visitante con su primer acceso QR para mostrarlo en el modal de exito.
     const visitante = await this.prisma.$transaction(async (prisma) => {
       try {
+        const codigoQr = await this.generarCodigoQrUnico(prisma);
         const visitante = await prisma.visitante.create({
           data: {
             nombre: dataVisitante.nombre,
@@ -79,7 +117,7 @@ export class VisitanteService {
               create: {
                 id_usuario: id_usuario,
                 estatus: 'Activo',
-                codigo_qr: this.generarTokenQr(),
+                codigo_qr: codigoQr,
                 fecha_creacion: dataVisitante.fecha_inicio,
                 fecha_expiracion: fechaExpiracion,
               },
@@ -117,7 +155,11 @@ export class VisitanteService {
     return visitante;
   }
 
-  async generarQrParaVisita(idAcceso: string, idUsuario: string) {
+  async generarQrParaVisita(
+    idAcceso: string,
+    idUsuario: string,
+    fechas?: { fecha_inicio?: string; fecha_fin?: string },
+  ) {
     const acceso = await this.prisma.acceso.findUnique({
       where: { id_acceso: idAcceso },
       include: {
@@ -138,16 +180,45 @@ export class VisitanteService {
       throw new NotFoundException('Visita no encontrada.');
     }
 
-    if (acceso.visitante.residente.id_usuario !== idUsuario) {
+    return this.generarQrParaVisitante(
+      acceso.visitante.id_visitante,
+      idUsuario,
+      fechas,
+    );
+  }
+
+  async generarQrParaVisitante(
+    idVisitante: string,
+    idUsuario: string,
+    fechas?: { fecha_inicio?: string; fecha_fin?: string },
+  ) {
+    const visitante = await this.prisma.visitante.findUnique({
+      where: { id_visitante: idVisitante },
+      include: {
+        residente: {
+          select: {
+            id_usuario: true,
+            vivienda: { select: { numero_vivienda: true } },
+          },
+        },
+        accesos: {
+          orderBy: { fecha_creacion: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!visitante) {
+      throw new NotFoundException('Visitante no encontrado.');
+    }
+
+    if (visitante.residente.id_usuario !== idUsuario) {
       throw new ForbiddenException('No tienes permiso para generar este QR.');
     }
 
     const camposFaltantes: string[] = [];
-    if (!acceso.visitante.nombre) camposFaltantes.push('nombre');
-    if (!acceso.fecha_creacion) camposFaltantes.push('fecha de visita');
-    if (!acceso.fecha_expiracion)
-      camposFaltantes.push('fecha/hora de expiracion');
-    if (!acceso.visitante.motivo) camposFaltantes.push('tipo de visitante');
+    if (!visitante.nombre) camposFaltantes.push('nombre');
+    if (!visitante.motivo) camposFaltantes.push('tipo de visitante');
 
     if (camposFaltantes.length > 0) {
       throw new BadRequestException({
@@ -156,65 +227,77 @@ export class VisitanteService {
       });
     }
 
-    if (new Date(acceso.fecha_expiracion) < new Date()) {
-      await this.prisma.acceso.update({
-        where: { id_acceso: idAcceso },
-        data: { estatus: 'Inactivo' },
-      });
-      throw new BadRequestException('La visita ya expiro; el QR no es valido.');
-    }
+    const ultimoAcceso = visitante.accesos[0];
+    const estadoUltimoQr = ultimoAcceso
+      ? this.calcularEstadoQr(ultimoAcceso)
+      : 'PENDIENTE_GENERACION';
 
-    if (acceso.codigo_qr) {
+    if (ultimoAcceso && estadoUltimoQr === 'ACTIVO') {
       return {
         success: true,
-        message: 'El QR ya habia sido generado para esta visita.',
+        message: 'El visitante ya tiene un QR activo.',
         data: {
-          id_acceso: acceso.id_acceso,
-          id_visitante: acceso.id_visitante,
-          codigo_qr: acceso.codigo_qr,
-          estado_qr: this.calcularEstadoQr(acceso),
-          fecha_visita: acceso.fecha_creacion,
-          fecha_expiracion: acceso.fecha_expiracion,
+          id_acceso: ultimoAcceso.id_acceso,
+          id_visitante: visitante.id_visitante,
+          codigo_qr: ultimoAcceso.codigo_qr,
+          estado_qr: estadoUltimoQr,
+          fecha_visita: ultimoAcceso.fecha_creacion,
+          fecha_expiracion: ultimoAcceso.fecha_expiracion,
         },
       };
     }
 
     try {
-      for (let intento = 0; intento < 5; intento += 1) {
-        try {
-          const codigoQr = this.generarTokenQr();
-          const actualizado = await this.prisma.acceso.update({
-            where: { id_acceso: idAcceso },
-            data: { codigo_qr: codigoQr },
-            select: {
-              id_acceso: true,
-              id_visitante: true,
-              codigo_qr: true,
-              fecha_creacion: true,
-              fecha_expiracion: true,
-              estatus: true,
-            },
+      return await this.prisma.$transaction(async (prisma) => {
+        if (ultimoAcceso && estadoUltimoQr === 'EXPIRADO') {
+          await prisma.acceso.update({
+            where: { id_acceso: ultimoAcceso.id_acceso },
+            data: { estatus: 'Inactivo' },
           });
-
-          return {
-            success: true,
-            message: 'QR generado correctamente.',
-            data: {
-              ...actualizado,
-              estado_qr: this.calcularEstadoQr(actualizado),
-            },
-          };
-        } catch (error: any) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-          if (error?.code !== 'P2002') throw error;
         }
-      }
 
-      throw new InternalServerErrorException(
-        'No fue posible generar un QR unico.',
-      );
+        const { inicio, fin } = this.obtenerFechasAcceso(
+          fechas?.fecha_inicio,
+          fechas?.fecha_fin,
+        );
+        const codigoQr = await this.generarCodigoQrUnico(prisma);
+        const nuevoAcceso = await prisma.acceso.create({
+          data: {
+            id_usuario: idUsuario,
+            id_visitante: visitante.id_visitante,
+            codigo_qr: codigoQr,
+            fecha_creacion: inicio,
+            fecha_expiracion: fin,
+            estatus: 'Activo',
+          },
+          select: {
+            id_acceso: true,
+            id_visitante: true,
+            codigo_qr: true,
+            fecha_creacion: true,
+            fecha_expiracion: true,
+            estatus: true,
+          },
+        });
+
+        return {
+          success: true,
+          message: 'QR generado correctamente.',
+          data: {
+            ...nuevoAcceso,
+            estado_qr: this.calcularEstadoQr(nuevoAcceso),
+          },
+        };
+      });
     } catch (error) {
       if (error instanceof InternalServerErrorException) throw error;
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
       throw new InternalServerErrorException('Error tecnico al generar el QR.');
     }
   }
@@ -337,7 +420,7 @@ export class VisitanteService {
       throw new NotFoundException('Residente not found for the given user ID');
     }
 
-    return await this.prisma.visitante.findMany({
+    const visitantes = await this.prisma.visitante.findMany({
       where: { id_residente: residente.id_residente },
       include: {
         accesos: {
@@ -353,6 +436,19 @@ export class VisitanteService {
         },
       },
       orderBy: { id_visitante: 'desc' },
+    });
+
+    return visitantes.map((visitante) => {
+      const ultimoAcceso = visitante.accesos[0];
+      const estado_qr = ultimoAcceso
+        ? this.calcularEstadoQr(ultimoAcceso)
+        : 'PENDIENTE_GENERACION';
+
+      return {
+        ...visitante,
+        estado_qr,
+        puede_generar_qr: estado_qr !== 'ACTIVO',
+      };
     });
   }
 
