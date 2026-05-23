@@ -3,8 +3,8 @@
 import { ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/features/auth/hooks/useAuth"
-import { canAccessRoute, type RoleType } from "@/config/routes.config"
-import { ROLES } from "@/types/roles"
+import { canAccessRoute } from "@/config/routes.config"
+import type { RoleType } from "@/types/roles"
 
 interface RouteGuardProps {
   children: ReactNode
