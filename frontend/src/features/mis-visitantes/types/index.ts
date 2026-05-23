@@ -12,6 +12,7 @@ export interface Visitante {
   nombre_completo: string;
   motivo_visita: string; 
   tipo_visitante: TipoVisitante;
+  telefono: string;
   fecha_visita: string;   // Formato YYYY-MM-DD
   hora_estimada: string;  // Formato HH:MM
   es_frecuente: boolean;  // Para la estrellita de favoritos

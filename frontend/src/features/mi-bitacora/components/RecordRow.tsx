@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Badge } from "@/components/ui/badge";
-import { Search, QrCode } from "lucide-react";
+import { Search, QrCode, ListCheck, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import type { MiBitacoraItem } from "../types";
@@ -54,10 +54,7 @@ function formatDateTime(value: string | null) {
 export default function RecordRow({ record, groupBy, personTypeStyles, personTypeLabels, onSelectRecord }: Props) {
   return (
     <tr key={record.id_bitacora} className="bg-white text-[#303030] hover:bg-[#fafafa]">
-      <td className="px-2 py-3 text-center align-middle">
-        <input type="checkbox" className="h-4 w-4 rounded border-[#c7c7c7]" />
-      </td>
-      <td className="px-3 py-3 align-middle">
+      <td className="px-5 py-3 align-middle">
         <div className="flex items-center gap-2.5">
           <div className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold", getAvatarColor(record.nombre_persona))}>
             {getInitials(record.nombre_persona)}
@@ -65,24 +62,38 @@ export default function RecordRow({ record, groupBy, personTypeStyles, personTyp
           <span className="truncate text-sm font-medium">{record.nombre_persona}</span>
         </div>
       </td>
-      <td className="px-3 py-3 align-middle text-sm text-[#555555]">
+      <td className="px-5 py-3 align-middle text-sm text-[#555555]">
         <Badge className={cn("rounded-full border px-2 py-0.5 text-[11px] font-semibold", personTypeStyles[record.tipo_persona])}>
           {personTypeLabels[record.tipo_persona]}
         </Badge>
       </td>
-      <td className="px-3 py-3 align-middle text-sm text-[#444444]">{formatDateTime(record.fecha_hora_entrada)}</td>
-      <td className="px-3 py-3 align-middle text-sm text-[#444444]">{record.fecha_hora_salida ? formatDateTime(record.fecha_hora_salida) : "-"}</td>
-      <td className="px-3 py-3 align-middle text-sm text-[#444444]">
+      <td className="px-5 py-3 align-middle text-sm text-[#444444]">{formatDateTime(record.fecha_hora_entrada)}</td>
+      <td className="px-5 py-3 align-middle text-sm text-[#444444]">{record.fecha_hora_salida ? formatDateTime(record.fecha_hora_salida) : "-"}</td>
+      <td className="px-5 py-3 align-middle text-sm text-[#444444]">
         <span className="inline-flex items-center gap-1.5">
-          <QrCode className={cn(
-            "size-4",
-            groupBy === 'metodo' ? (record.metodo_acceso === "QR" ? "text-[#2f2f2f]" : "text-[#c2c2c2]") : "text-[#6b6b6b]",
-          )} />
+          {record.metodo_acceso === 'QR' ? (
+            <QrCode className={cn(
+              "size-4",
+              groupBy === 'metodo' ? (record.metodo_acceso === "QR" ? "text-[#2f2f2f]" : "text-[#c2c2c2]") : "text-[#6b6b6b]",
+            )} />
+          ) : record.metodo_acceso === 'lista' ? (
+            <ListCheck className={cn(
+              "size-4",
+              groupBy === 'metodo' ? (record.metodo_acceso === "lista" ? "text-[#2f2f2f]" : "text-[#c2c2c2]") : "text-[#6b6b6b]",
+            )} />
+          ) : (
+            <QrCode className={cn("size-4", "text-[#6b6b6b]")} />
+          )}
           {record.metodo_acceso}
         </span>
       </td>
-      <td className="px-3 py-3 align-middle text-sm text-[#444444]">{record.guardia?.nombre ?? record.guardia?.id_guardia ?? "-"}</td>
-      <td className="px-3 py-3 align-middle">
+      <td className="px-5 py-3 align-middle text-sm text-[#444444]">
+        <span className="inline-flex items-center gap-2">
+          <Shield className="size-4 text-[#6b6b6b]" />
+          <span className="truncate">{record.guardia?.nombre ?? record.guardia?.id_guardia ?? "-"}</span>
+        </span>
+      </td>
+      <td className="px-5 py-3 align-middle">
         <div className="flex items-center justify-end gap-1">
           <button
             type="button"

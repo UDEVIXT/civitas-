@@ -4,10 +4,24 @@ on:
       - main
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+
   deploy:
+    needs: changes
     name: Civitas Deployment / Udev-it
     runs-on: ubuntu-latest
-    if: "contains(github.event.head_commit.message, 'deploy:')"
+    if: needs.changes.outputs.backend == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

@@ -13,6 +13,9 @@ export const visitanteSchema = z.object({
     .min(1, "El nombre completo es obligatorio")
     .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, "Solo se permiten letras en el nombre"),
 
+  telefono: z.string().trim()
+    .min(10, "El teléfono debe tener 10 dígitos"),
+
   tipo_visitante: z.string()
     .min(1, "Selecciona el tipo de visitante"),
 
@@ -28,6 +31,8 @@ export const visitanteSchema = z.object({
 
   hora_estimada: z.string()
     .min(1, "La hora de llegada es obligatoria"),
+  
+  foto: z.any().optional(), // Ahora acepta el archivo físico
 
   es_frecuente: z.boolean(), 
 });

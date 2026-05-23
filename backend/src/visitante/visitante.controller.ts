@@ -54,6 +54,36 @@ export class VisitanteController {
     );
   }
 
+  @Post('accesos/:idAcceso/generar-qr')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Residente')
+  generarQr(
+    @Param('idAcceso') idAcceso: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.visitanteService.generarQrParaVisita(
+      idAcceso,
+      req.user.userId,
+    );
+  }
+
+  @Get('accesos/:idAcceso')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Residente', 'Guardia', 'Administrador')
+  obtenerDetalleVisita(
+    @Param('idAcceso') idAcceso: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.visitanteService.obtenerDetalleVisita(idAcceso, req.user);
+  }
+
+  @Get('qr/:codigoQr')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Guardia', 'Administrador')
+  consultarQr(@Param('codigoQr') codigoQr: string) {
+    return this.visitanteService.consultarQr(codigoQr);
+  }
+
   @Get()
   findAll() {
     return this.visitanteService.findAll();

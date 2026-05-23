@@ -31,8 +31,15 @@ export const useAuth = create<AuthState>((set) => ({
 
   checkAuth: async () => {
     try {
-      await refreshRequest();
       const storedUser = localStorage.getItem("user");
+
+      if (!storedUser) {
+        set({ user: null, isAuthenticated: false, loading: false });
+        return;
+      }
+
+      await refreshRequest();
+
       if (storedUser) {
         set({ user: JSON.parse(storedUser) as User, isAuthenticated: true, loading: false });
       } else {

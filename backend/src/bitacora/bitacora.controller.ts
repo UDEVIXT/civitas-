@@ -27,6 +27,8 @@ interface AuthenticatedRequest extends Request {
     username: string;
     role: 'Administrador' | 'Guardia' | 'Residente';
   };
+  // Nest's underlying request may expose the response on `req.res` for SSE cleanup
+  res?: Response;
 }
 
 interface BitacoraSseEvent {
@@ -69,7 +71,7 @@ export class BitacoraController {
     }
 
     // Cleanup cuando el cliente cierra la conexión
-    const res = req.res as Response | undefined;
+    const res = req.res;
     if (res && typeof res.on === 'function') {
       res.on('close', () => {
         subj?.complete();
@@ -267,8 +269,8 @@ export class BitacoraController {
 
     return {
       success: true,
-      message: 'Operación realizada con éxito',
-      ...resultado,
+      message: 'Salida registrada correctamente',
+      data: resultado,
     };
   }
 }
