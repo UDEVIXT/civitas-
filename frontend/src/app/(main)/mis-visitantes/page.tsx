@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 
 // Componentes
 import { ModalVisitante } from "@/features/mis-visitantes/components/modal-visitante";
+import { ModalQR } from "@/features/mis-visitantes/components/modal-qr/modalQR";
 import { TablaVisitantes } from "@/features/mis-visitantes/components/tabla-visitantes";
 import { EmptyStateVisitantes } from "@/features/mis-visitantes/components/empty-state-visitantes";
 import type { VisitanteFormValues } from "@/features/mis-visitantes/schemas/visitante.schema";
@@ -16,11 +17,63 @@ import { toast } from "sonner";
 // Importamos la API
 import {
   crearVisitante,
+  generarQrVisitante,
   getVisitantes,
 } from "@/features/mis-visitantes/api/visitante.api";
 
+function getEstatusVisitante(ultimoAcceso: any, estadoQr?: string) {
+  if (!ultimoAcceso) return "Inactivo" as const;
+
+  const expiraEn = ultimoAcceso.fecha_expiracion
+    ? new Date(ultimoAcceso.fecha_expiracion)
+    : null;
+
+  if (estadoQr === "EXPIRADO" || (expiraEn && expiraEn <= new Date())) {
+    return "Expirado" as const;
+  }
+
+  if (estadoQr === "INACTIVO" || ultimoAcceso.estatus === "Inactivo") {
+    return "Inactivo" as const;
+  }
+
+  return "Activo" as const;
+}
+
+function mapVisitanteFromBackend(v: any): Visitante {
+  const ultimoAcceso = v.accesos?.[0];
+  const estatus = getEstatusVisitante(ultimoAcceso, v.estado_qr);
+
+  return {
+    id_visitante: v.id_visitante,
+    nombre_completo: v.nombre,
+    motivo_visita: v.motivo || "Visita",
+    tipo_visitante: v.motivo as any,
+    telefono: v.telefono || "",
+    fecha_visita: ultimoAcceso?.fecha_creacion
+      ? new Date(ultimoAcceso.fecha_creacion).toISOString().split("T")[0]
+      : "",
+    fecha_expiracion: ultimoAcceso?.fecha_expiracion,
+    hora_estimada: ultimoAcceso?.fecha_creacion
+      ? new Date(ultimoAcceso.fecha_creacion).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        })
+      : "",
+    es_frecuente: v.es_frecuente,
+    estatus,
+    id_acceso: ultimoAcceso?.id_acceso,
+    codigo_acceso: ultimoAcceso?.codigo_qr,
+    estado_qr: v.estado_qr,
+    puede_generar_qr: estatus !== "Activo",
+    url_foto: v.url_imagen,
+  };
+}
+
 export default function MisVisitantesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [qrValue, setQrValue] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -31,32 +84,7 @@ export default function MisVisitantesPage() {
     const fetchVisitantes = async () => {
       try {
         const data = await getVisitantes();
-        // Mapeamos lo que llega del back al formato del front
-        const mappedData: Visitante[] = data.map((v: any) => {
-          const ultimoAcceso = v.accesos?.[0];
-          return {
-            id_visitante: v.id_visitante,
-            nombre_completo: v.nombre,
-            motivo_visita: v.motivo || "Visita",
-            tipo_visitante: v.motivo as any,
-            telefono: v.telefono || "",
-            fecha_visita: ultimoAcceso?.fecha_creacion
-              ? new Date(ultimoAcceso.fecha_creacion)
-                  .toISOString()
-                  .split("T")[0]
-              : "",
-            hora_estimada: ultimoAcceso?.fecha_creacion
-              ? new Date(ultimoAcceso.fecha_creacion).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: false,
-                })
-              : "",
-            es_frecuente: v.es_frecuente,
-            estatus: ultimoAcceso?.estatus || "Activo",
-            url_foto: v.url_imagen,
-          };
-        });
+        const mappedData: Visitante[] = data.map(mapVisitanteFromBackend);
         setVisitantes(mappedData);
       } catch (error) {
         console.error("Error fetching visitantes:", error);
@@ -69,12 +97,39 @@ export default function MisVisitantesPage() {
     fetchVisitantes();
   }, []);
 
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setVisitantes((prev) =>
+        prev.map((visitante) => {
+          if (
+            visitante.estatus !== "Activo" ||
+            !visitante.fecha_expiracion ||
+            new Date(visitante.fecha_expiracion) > new Date()
+          ) {
+            return visitante;
+          }
+
+          return {
+            ...visitante,
+            estatus: "Expirado",
+            estado_qr: "EXPIRADO",
+            puede_generar_qr: true,
+          };
+        }),
+      );
+    }, 60_000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
   const handleSaveVisitante = async (values: VisitanteFormValues) => {
     setIsSaving(true);
     try {
       // 1. Mandamos el FormData al back
       const responseBackend = await crearVisitante(values);
       console.log("Respuesta del backend con foto:", responseBackend);
+      const ultimoAcceso = responseBackend?.accesos?.[0];
+      const codigoQr = ultimoAcceso?.codigo_qr || "";
 
       // 2. Armamos el visitante para la tabla, mapeando la URL de la imagen
       const nuevoVisitante: Visitante = {
@@ -84,20 +139,80 @@ export default function MisVisitantesPage() {
         tipo_visitante: values.tipo_visitante as any,
         fecha_visita: values.fecha_visita,
         hora_estimada: values.hora_estimada,
+        fecha_expiracion: ultimoAcceso?.fecha_expiracion,
         es_frecuente: values.es_frecuente,
         telefono: values.telefono,
         estatus: "Activo",
+        id_acceso: ultimoAcceso?.id_acceso,
+        codigo_acceso: codigoQr,
+        estado_qr: codigoQr ? "ACTIVO" : "PENDIENTE_GENERACION",
+        puede_generar_qr: !codigoQr,
         url_foto: responseBackend?.url_imagen,
       };
 
       setVisitantes([nuevoVisitante, ...visitantes]);
       setIsModalOpen(false);
+      if (codigoQr) {
+        setQrValue(codigoQr);
+        setIsQrModalOpen(true);
+      }
       toast.success("Visitante registrado correctamente");
     } catch (error) {
       console.error("Error al registrar en la API:", error);
       toast.error("Hubo un problema al guardar el visitante.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleCodigoAccesoClick = async (visitante: Visitante) => {
+    const qrExpirado =
+      visitante.fecha_expiracion &&
+      new Date(visitante.fecha_expiracion) <= new Date();
+
+    if (visitante.estatus === "Activo" && visitante.codigo_acceso && !qrExpirado) {
+      setQrValue(visitante.codigo_acceso);
+      setIsQrModalOpen(true);
+      return;
+    }
+
+    const confirmar = window.confirm(
+      "Este visitante no tiene un QR activo. Si continuas, se dara de alta un nuevo codigo de acceso para permitir su entrada nuevamente.",
+    );
+
+    if (!confirmar) return;
+
+    try {
+      const response = await generarQrVisitante(visitante.id_visitante);
+      const nuevoAcceso = response?.data;
+
+      if (!nuevoAcceso?.codigo_qr) {
+        toast.error("No se pudo generar el codigo QR.");
+        return;
+      }
+
+      setVisitantes((prev) =>
+        prev.map((item) =>
+          item.id_visitante === visitante.id_visitante
+            ? {
+                ...item,
+                id_acceso: nuevoAcceso.id_acceso,
+                codigo_acceso: nuevoAcceso.codigo_qr,
+                estado_qr: nuevoAcceso.estado_qr,
+                fecha_expiracion: nuevoAcceso.fecha_expiracion,
+                estatus: "Activo",
+                puede_generar_qr: false,
+              }
+            : item,
+        ),
+      );
+
+      setQrValue(nuevoAcceso.codigo_qr);
+      setIsQrModalOpen(true);
+      toast.success("Codigo QR generado correctamente");
+    } catch (error) {
+      console.error("Error al generar QR:", error);
+      toast.error("Hubo un problema al generar el QR.");
     }
   };
 
@@ -144,7 +259,10 @@ export default function MisVisitantesPage() {
       ) : visitantes.length === 0 ? (
         <EmptyStateVisitantes />
       ) : (
-        <TablaVisitantes visitantes={visitantes} />
+        <TablaVisitantes
+          visitantes={visitantes}
+          onCodigoAccesoClick={handleCodigoAccesoClick}
+        />
       )}
 
       {isModalOpen && (
@@ -155,6 +273,12 @@ export default function MisVisitantesPage() {
           isSaving={isSaving}
         />
       )}
+
+      <ModalQR
+        isOpen={isQrModalOpen}
+        onClose={() => setIsQrModalOpen(false)}
+        qrValue={qrValue}
+      />
     </div>
   );
 }
