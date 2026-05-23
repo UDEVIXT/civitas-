@@ -36,7 +36,7 @@ export async function seedReportes(prisma: PrismaClient) {
 
     await prisma.reporte.create({
       data: {
-        id_usuario: faker.string.uuid(),
+        id_usuario: usuarioAleatorio.id_usuario,
         motivo: faker.lorem.sentence().substring(0, 100),
         descripcion: faker.lorem.paragraphs(2),
         tipo: faker.helpers.arrayElement(Object.values(TipoReporte)),
