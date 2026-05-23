@@ -146,6 +146,8 @@ export function TablaMisEmpleados({
             ) : (
               items.map((empleado, index) => {
                 const isActive = empleado.servicio?.activo;
+                const isGloballyBlocked = Boolean(empleado.servicio?.bloqueo_global);
+                const canReactivate = !isActive && !isGloballyBlocked;
                 return (
                   <TableRow
                     key={empleado.id_visitante}
@@ -215,15 +217,24 @@ export function TablaMisEmpleados({
                         <Button
                           variant="ghost"
                           size="icon"
+                          disabled={!isActive && isGloballyBlocked}
                           onClick={() =>
                             onBaja(empleado, isActive ? "deactivate" : "reactivate")}
                           className={cn(
                             "rounded-full",
                             isActive
                               ? "hover:bg-red-50 hover:text-red-600"
-                              : "hover:bg-emerald-50 hover:text-emerald-600"
+                              : canReactivate
+                                ? "hover:bg-emerald-50 hover:text-emerald-600"
+                                : "cursor-not-allowed opacity-50"
                           )}
-                          title={isActive ? "Suspender acceso" : "Reactivar acceso"}
+                          title={
+                            isActive
+                              ? "Suspender acceso"
+                              : isGloballyBlocked
+                                ? "Solo el administrador puede reincorporarlo"
+                                : "Reactivar acceso"
+                          }
                         >
                           {isActive ? (
                             <UserMinus className="size-4" />
