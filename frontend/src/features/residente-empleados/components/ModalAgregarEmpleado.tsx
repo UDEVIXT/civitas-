@@ -78,7 +78,7 @@ type FormValues = z.infer<typeof formSchema>;
 interface ModalAgregarEmpleadoProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (values: FormValues & { id_tipo_servicio: string }) => void;
+    onSave: (values: FormValues & { id_tipo_servicio: string; fotoArchivo?: File | null }) => void;
     isSaving?: boolean;
 }
 
@@ -92,6 +92,16 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
 
     const fileInputRef = React.useRef<HTMLInputElement>(null);
     const [tipos, setTipos] = React.useState<Array<{ id_tipo_servicio: string; nombre: string; categoria: string }>>([]);
+    const [fotoArchivo, setFotoArchivo] = React.useState<File | null>(null);
+    const [fotoPreview, setFotoPreview] = React.useState<string>("");
+
+    React.useEffect(() => {
+        return () => {
+            if (fotoPreview.startsWith("blob:")) {
+                URL.revokeObjectURL(fotoPreview);
+            }
+        };
+    }, [fotoPreview]);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -118,6 +128,8 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
                 foto: "",
                 horarios: horariosPorDefecto,
             });
+            setFotoArchivo(null);
+            setFotoPreview("");
         }
     }, [isOpen, form]);
 
@@ -140,16 +152,24 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                // Guardamos el resultado en base64 en el formulario
-                form.setValue("foto", reader.result as string, { shouldValidate: true, shouldDirty: true });
-            };
-            reader.readAsDataURL(file);
+            if (fotoPreview.startsWith("blob:")) {
+                URL.revokeObjectURL(fotoPreview);
+            }
+
+            const previewUrl = URL.createObjectURL(file);
+            setFotoArchivo(file);
+            setFotoPreview(previewUrl);
+            form.setValue("foto", previewUrl, { shouldValidate: true, shouldDirty: true });
         }
     };
 
     const handleRemovePhoto = () => {
+        if (fotoPreview.startsWith("blob:")) {
+            URL.revokeObjectURL(fotoPreview);
+        }
+
+        setFotoArchivo(null);
+        setFotoPreview("");
         form.setValue("foto", "");
         // Limpiamos el input de archivo para poder volver a seleccionar la misma imagen si el usuario lo desea
         if (fileInputRef.current) fileInputRef.current.value = "";
@@ -161,6 +181,7 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
         onSave({
             ...values,
             id_tipo_servicio,
+            fotoArchivo,
         });
     };
 
@@ -189,7 +210,7 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
 
                             <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                                 <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-4 border-white shadow-md">
-                                    <AvatarImage src={form.watch("foto") || undefined} className="object-cover" />
+                                    <AvatarImage src={fotoPreview || undefined} className="object-cover" />
                                     <AvatarFallback className="bg-emerald-100 text-emerald-700 font-bold text-2xl">
                                         {form.watch("nombre")?.charAt(0)?.toUpperCase() || "+"}
                                     </AvatarFallback>
@@ -217,9 +238,9 @@ export function ModalAgregarEmpleado({ isOpen, onClose, onSave, isSaving }: Moda
                             <div className="flex items-center gap-2">
                                 <Button type="button" variant="outline" size="sm" className="text-xs h-8" onClick={() => fileInputRef.current?.click()}>
                                     <Camera className="h-3 w-3 mr-2" />
-                                    {form.watch("foto") ? "Cambiar foto" : "Subir foto"}
+                                    {fotoArchivo ? "Cambiar foto" : "Subir foto"}
                                 </Button>
-                                {form.watch("foto") && (
+                                {fotoArchivo && (
                                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleRemovePhoto} title="Quitar foto">
                                         <X className="h-4 w-4" />
                                     </Button>

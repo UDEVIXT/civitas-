@@ -88,21 +88,27 @@ export default function MisEmpleadosPage() {
         throw new Error("Selecciona un tipo de servicio válido antes de guardar.");
       }
 
-      const payload: CrearEmpleadoDomesticoRequest = {
-        nombre_completo: values.nombre,
-        rfc: values.rfc.trim().toUpperCase(),
-        id_tipo_servicio: values.id_tipo_servicio,
-        confirmar_reuso_rfc: confirmarReusoRFC,
-        telefono: values.telefono?.trim() || undefined,
-        url_imagen: values.foto || undefined,
-        horarios: horariosActivos.map((h) => ({
-          dia_semana: h.dia_semana,
-          hora_inicio: h.hora_inicio,
-          hora_fin: h.hora_fin,
-        })),
-      };
+      const formData = new FormData();
+      formData.append("nombre_completo", values.nombre);
+      formData.append("rfc", values.rfc.trim().toUpperCase());
+      formData.append("id_tipo_servicio", values.id_tipo_servicio);
+      formData.append("confirmar_reuso_rfc", String(confirmarReusoRFC));
 
-      return crearEmpleadoDomestico(payload);
+      if (values.telefono?.trim()) {
+        formData.append("telefono", values.telefono.trim());
+      }
+
+      formData.append("horarios", JSON.stringify(horariosActivos.map((h) => ({
+        dia_semana: h.dia_semana,
+        hora_inicio: h.hora_inicio,
+        hora_fin: h.hora_fin,
+      }))));
+
+      if (values.fotoArchivo) {
+        formData.append("foto_empleado", values.fotoArchivo);
+      }
+
+      return crearEmpleadoDomestico(formData);
     },
     [],
   );

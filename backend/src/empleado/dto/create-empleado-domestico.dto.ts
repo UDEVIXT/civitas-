@@ -10,7 +10,7 @@ import {
   IsBoolean,
 } from 'class-validator';
 
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { DiaSemana } from '@prisma/client';
 
 class HorarioDto {
@@ -38,6 +38,7 @@ export class CreateEmpleadoDomesticoDto {
 
   @IsOptional()
   @IsBoolean()
+  @Transform(({ value }) => value === true || value === 'true')
   confirmar_reuso_rfc?: boolean;
 
   @IsOptional()
@@ -51,5 +52,16 @@ export class CreateEmpleadoDomesticoDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => HorarioDto)
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
+    }
+
+    return value;
+  })
   horarios: HorarioDto[];
 }

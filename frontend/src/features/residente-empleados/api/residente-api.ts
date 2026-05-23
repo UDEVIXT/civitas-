@@ -114,7 +114,7 @@ export interface CrearEmpleadoDomesticoRequest {
 }
 
 export const crearEmpleadoDomestico = async (
-  data: CrearEmpleadoDomesticoRequest,
+  data: CrearEmpleadoDomesticoRequest | FormData,
 ) => {
   const response = await apiClient.post("/empleado/empleado-domestico", data);
   return response.data;

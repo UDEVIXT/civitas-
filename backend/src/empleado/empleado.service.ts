@@ -10,10 +10,14 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmpleadoDomesticoDto } from './dto/create-empleado-domestico.dto';
+import { ArchivosService } from '../r2-module/archivos.service';
 
 @Injectable()
 export class EmpleadoService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly archivosService: ArchivosService,
+  ) {}
 
   //HU-1.5.6: Administrador puede ver empleados domesticos dentro del residencial
   async obtenerEmpleados(
@@ -157,28 +161,6 @@ export class EmpleadoService {
       rfc: servicio.rfc,
       id_visitante: visitante.id_visitante,
       nombre: visitante.nombre,
-    };
-  }
-
-  // Debug helper: listar todos los servicios + visitantes para un RFC (solo admin)
-  async buscarServiciosPorRFC(rfc: string) {
-    if (!rfc) {
-      throw new BadRequestException('RFC requerido');
-    }
-
-    const servicios = await this.prisma.servicio.findMany({
-      where: { rfc },
-      include: {
-        horarios: true,
-        visitante: true,
-      },
-      orderBy: { fecha_registro: 'desc' },
-    });
-
-    return {
-      success: true,
-      message: 'Servicios encontrados por RFC',
-      data: servicios,
     };
   }
 /*
@@ -405,6 +387,7 @@ export class EmpleadoService {
   async crearEmpleadoDomestico(
     dto: CreateEmpleadoDomesticoDto,
     idUsuario: string,
+    file?: Express.Multer.File,
   ) {
     const rfc = dto.rfc.trim().toUpperCase();
     const telefono = dto.telefono?.trim() || undefined;
@@ -512,6 +495,10 @@ export class EmpleadoService {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      const urlImagen = file
+        ? await this.archivosService.subirImagen(file, '/empleados/')
+        : dto.url_imagen;
+
       const servicio = await tx.servicio.create({
         data: {
           nombre_servicio: `${residente.vivienda.numero_vivienda}`,
@@ -542,7 +529,7 @@ export class EmpleadoService {
 
           telefono,
 
-          url_imagen: dto.url_imagen,
+          url_imagen: urlImagen,
 
           es_frecuente: true,
 
