@@ -7,8 +7,7 @@ export const crearVisitante = async (data: VisitanteFormValues) => {
   const fechaInicioISO = fechaInicio.toISOString();
 
   // 2. Calculamos la fecha_fin dándole 4 horas de margen a la visita (para el QR)
-  const fechaFin = new Date(fechaInicio);
-  fechaFin.setHours(fechaFin.getHours() + 10);
+  const fechaFin = new Date(`${data.fecha_visita}T${data.hora_salida}:00`);
   const fechaFinISO = fechaFin.toISOString();
 
   const formDataToSend = new FormData();

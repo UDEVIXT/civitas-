@@ -51,6 +51,7 @@ export function ModalVisitante({
       motivo_visita: "",
       fecha_visita: "",
       hora_estimada: "",
+      hora_salida: "",
       foto: "" as any,
       es_frecuente: false,
     },
@@ -168,6 +169,29 @@ export function ModalVisitante({
                       {...field}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="hora_salida"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-semibold text-gray-700">
+                    Vigencia del QR hasta:
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="time"
+                      className="bg-white border-gray-200 focus-visible:ring-amber-500"
+                      {...field}
+                    />
+                  </FormControl>
+                  <p className="text-xs text-gray-500">
+                    A partir de esta hora el codigo qr quedara expirado.
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}

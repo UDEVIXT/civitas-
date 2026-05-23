@@ -29,7 +29,9 @@ export const visitanteSchema = z.object({
 
   hora_estimada: z.string().min(1, "La hora de llegada es obligatoria"),
 
-  hora_salida: z.string().optional(),
+  hora_salida: z
+    .string()
+    .min(1, "Indica hasta quÃ© hora serÃ¡ vÃ¡lido el QR"),
 
   // Vehículo opcional
   vehiculo: z.string().trim().optional(),
@@ -37,6 +39,19 @@ export const visitanteSchema = z.object({
   foto: z.any().optional(),
 
   es_frecuente: z.boolean(),
+}).superRefine((data, ctx) => {
+  if (
+    data.fecha_visita &&
+    data.hora_estimada &&
+    data.hora_salida &&
+    data.hora_salida <= data.hora_estimada
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["hora_salida"],
+      message: "La vigencia del QR debe terminar despuÃ©s de la hora de llegada",
+    });
+  }
 });
 
 export type VisitanteFormValues = z.infer<typeof visitanteSchema>;
