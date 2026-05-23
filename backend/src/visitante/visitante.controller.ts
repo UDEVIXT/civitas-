@@ -61,10 +61,7 @@ export class VisitanteController {
     @Param('idAcceso') idAcceso: string,
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.visitanteService.generarQrParaVisita(
-      idAcceso,
-      req.user.userId,
-    );
+    return this.visitanteService.generarQrParaVisita(idAcceso, req.user.userId);
   }
 
   @Get('accesos/:idAcceso')
@@ -85,8 +82,10 @@ export class VisitanteController {
   }
 
   @Get()
-  findAll() {
-    return this.visitanteService.findAll();
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Residente')
+  findAll(@Req() req: AuthenticatedRequest) {
+    return this.visitanteService.findAllByResidente(req.user.userId);
   }
 
   @Get(':id')

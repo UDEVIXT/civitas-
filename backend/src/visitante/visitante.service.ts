@@ -315,8 +315,33 @@ export class VisitanteService {
     };
   }
 
-  findAll() {
-    return `This action returns all visitante`;
+  async findAllByResidente(id_usuario: string) {
+    const residente = await this.prisma.residente.findFirst({
+      where: { id_usuario: id_usuario },
+      select: { id_residente: true },
+    });
+
+    if (!residente) {
+      throw new NotFoundException('Residente not found for the given user ID');
+    }
+
+    return await this.prisma.visitante.findMany({
+      where: { id_residente: residente.id_residente },
+      include: {
+        accesos: {
+          select: {
+            id_acceso: true,
+            codigo_qr: true,
+            fecha_creacion: true,
+            fecha_expiracion: true,
+            estatus: true,
+          },
+          orderBy: { fecha_creacion: 'desc' },
+          take: 1,
+        },
+      },
+      orderBy: { id_visitante: 'desc' },
+    });
   }
 
   findOne(id: number) {
