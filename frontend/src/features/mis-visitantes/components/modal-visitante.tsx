@@ -57,7 +57,6 @@ export function ModalVisitante({
   });
 
   const onSubmit = async (values: VisitanteFormValues) => {
-    console.log("Valores validados por Zod listos para enviar:", values);
     await onSave(values);
   };
 
