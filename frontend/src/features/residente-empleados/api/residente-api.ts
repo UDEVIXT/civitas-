@@ -105,16 +105,22 @@ export interface HorarioEmpleadoDomestico {
 
 export interface CrearEmpleadoDomesticoRequest {
   nombre_completo: string;
+  rfc: string;
   id_tipo_servicio: string;
-  cargo: string;
+  confirmar_reuso_rfc?: boolean;
   telefono?: string;
   url_imagen?: string;
   horarios: HorarioEmpleadoDomestico[];
 }
 
 export const crearEmpleadoDomestico = async (
-  data: CrearEmpleadoDomesticoRequest,
+  data: CrearEmpleadoDomesticoRequest | FormData,
 ) => {
-  const response = await apiClient.post("/empleado/empleado-domestico", data);
+  const response = await apiClient.post("/empleado/empleado-domestico", data,{
+    // Se fuerza la cabecera para que Axios y el backend entiendan que viaja un archivo
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
   return response.data;
 };

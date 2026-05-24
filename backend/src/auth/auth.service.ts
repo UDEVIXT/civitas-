@@ -51,6 +51,7 @@ export class AuthService {
     password: string,
     recordarme = false,
   ) {
+    console.log('[DEBUG] AuthService.login invoked for user:', nombre_usuario);
     try {
       const user = await this.prisma.usuario.findUnique({
         where: {

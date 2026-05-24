@@ -42,7 +42,7 @@ export class VisitanteController {
           new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 10 }), // 10MB
           new FileTypeValidator({ fileType: '.(png|jpeg|jpg)' }),
         ],
-        fileIsRequired: true,
+        fileIsRequired: false,
       }),
     )
     file?: Express.Multer.File,
@@ -60,10 +60,27 @@ export class VisitanteController {
   generarQr(
     @Param('idAcceso') idAcceso: string,
     @Req() req: AuthenticatedRequest,
+    @Body() body: { fecha_inicio?: string; fecha_fin?: string },
   ) {
     return this.visitanteService.generarQrParaVisita(
       idAcceso,
       req.user.userId,
+      body,
+    );
+  }
+
+  @Post(':idVisitante/generar-qr')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Residente')
+  generarQrParaVisitante(
+    @Param('idVisitante') idVisitante: string,
+    @Req() req: AuthenticatedRequest,
+    @Body() body: { fecha_inicio?: string; fecha_fin?: string },
+  ) {
+    return this.visitanteService.generarQrParaVisitante(
+      idVisitante,
+      req.user.userId,
+      body,
     );
   }
 
@@ -85,8 +102,10 @@ export class VisitanteController {
   }
 
   @Get()
-  findAll() {
-    return this.visitanteService.findAll();
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Residente')
+  findAll(@Req() req: AuthenticatedRequest) {
+    return this.visitanteService.findAllByResidente(req.user.userId);
   }
 
   @Get(':id')

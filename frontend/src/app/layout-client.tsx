@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as ToasterProvider } from "sonner";
@@ -18,10 +18,22 @@ const queryClient = new QueryClient({
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
   const checkAuth = useAuth((state) => state.checkAuth);
+  const user = useAuth((state) => state.user);
+  const previousUserKey = useRef<string | null>(null);
 
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+
+  useEffect(() => {
+    const nextUserKey = user ? `${user.id}:${user.rol}` : "anonymous";
+
+    if (previousUserKey.current !== null && previousUserKey.current !== nextUserKey) {
+      queryClient.clear();
+    }
+
+    previousUserKey.current = nextUserKey;
+  }, [user?.id, user?.rol]);
 
   return <>{children}</>;
 }

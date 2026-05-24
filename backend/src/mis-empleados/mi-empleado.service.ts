@@ -5,6 +5,7 @@ import {
   NotFoundException,
   InternalServerErrorException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -201,6 +202,7 @@ export class EmpleadoService {
               id_servicio: true,
               nombre_servicio: true,
               activo: true,
+              bloqueo_global: true,
               cargo: true,
               nombre_empresa: true,
               placas: true,
@@ -320,6 +322,7 @@ export class EmpleadoService {
 
       select: {
         id_servicio: true,
+        bloqueo_global: true,
       },
     });
 
@@ -331,6 +334,7 @@ export class EmpleadoService {
 
     return {
       id_servicio: servicio.id_servicio,
+      bloqueo_global: servicio.bloqueo_global,
       id_visitante: visitante.id_visitante,
       nombre: visitante.nombre,
     };
@@ -422,7 +426,7 @@ async actualizarEmpleado(id: string, data: any) {
 
         // 3. Si tiene un servicio, procesamos el cargo y construimos el array de horarios dinámicamente
         if (visitante.id_servicio) {
-          
+
           // Diccionario para traducir los días del checkbox al ENUM de Postgres
           const mapeoDias: Record<string, string> = {
             'Lunes': 'LUNES',
@@ -486,7 +490,7 @@ async actualizarEmpleado(id: string, data: any) {
     }
   }
 
-  
+
   async eliminarEmpleado(id: string, motivo?: string, id_residente?: string) {
     try {
       const servicio = await this.obtenerServicio(id);
@@ -546,6 +550,12 @@ async actualizarEmpleado(id: string, data: any) {
     try {
       const servicio = await this.obtenerServicio(id);
 
+      if (servicio.bloqueo_global) {
+        throw new ConflictException(
+          'El empleado fue dado de baja globalmente por el administrador y solo él puede reincorporarlo.',
+        );
+      }
+
       let nombreAutor = 'Residente';
       if (id_residente) {
         const residente = await this.prisma.residente.findUnique({
@@ -569,7 +579,7 @@ async actualizarEmpleado(id: string, data: any) {
 
       await this.prisma.acceso.updateMany({
         where: { id_visitante: servicio.id_visitante },
-        data: { 
+        data: {
           estatus: 'Activo',
           comentario_admin: comentarioEstructurado
         },
@@ -580,6 +590,10 @@ async actualizarEmpleado(id: string, data: any) {
         message: `El empleado ${servicio.nombre} ha sido reactivado exitosamente.`,
       };
     } catch (error) {
+      if (error instanceof ConflictException) {
+        throw error;
+      }
+
       console.error('Error en reactivarEmpleado:', error);
       throw new InternalServerErrorException(
         'Ocurrió un error inesperado al intentar reactivar al empleado. Por favor, inténtelo de nuevo más tarde.',

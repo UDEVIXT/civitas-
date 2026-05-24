@@ -18,6 +18,7 @@ export interface EmpleadoDomestico {
   url_imagen?: string;
   servicio: {
     activo: boolean;
+    bloqueo_global?: boolean;
     fecha_registro: Date;
     horarios: HorarioServicio[];
     tipo_servicio: {

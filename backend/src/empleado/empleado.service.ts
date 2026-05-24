@@ -1,30 +1,41 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+
 import {
   Injectable,
   NotFoundException,
   InternalServerErrorException,
   BadRequestException,
+  ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmpleadoDomesticoDto } from './dto/create-empleado-domestico.dto';
+import { ArchivosService } from '../r2-module/archivos.service';
 
 @Injectable()
 export class EmpleadoService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(EmpleadoService.name);
+  constructor(
+    private prisma: PrismaService,
+    private readonly archivosService: ArchivosService,
+  ) {}
 
   //HU-1.5.6: Administrador puede ver empleados domesticos dentro del residencial
-  async obtenerEmpleados(filters: {
-    search?: string;
-    page: number;
-    limit?: number;
-    isActive?: boolean | undefined;
-    byResidenteId?: string;
-    byViviendaId?: string;
-  }) {
-    const { search, page, limit, isActive, byResidenteId, byViviendaId } =
-      filters;
+  async obtenerEmpleados(
+    filters: {
+      search?: string;
+      page: number;
+      limit?: number;
+      isActive?: boolean | undefined;
+      byResidenteId?: string;
+      byViviendaId?: string;
+      idUsuarioActivo?: string;
+    },
+  ) {
+    const { search, page, limit, isActive, byResidenteId, byViviendaId, idUsuarioActivo } = filters;
 
+    // Filtro principal: solo servicios cuya categoría sea 'Empleado'
     const where: any = {
       servicio: {
         tipo_servicio: {
@@ -33,6 +44,18 @@ export class EmpleadoService {
       },
     };
 
+    // Si el caller es un residente, resolvemos su id_residente
+    if (idUsuarioActivo) {
+      const residente = await this.prisma.residente.findFirst({
+        where: { id_usuario: idUsuarioActivo },
+        select: { id_residente: true },
+      });
+
+      if (residente) where.id_residente = residente.id_residente;
+    } else if (byResidenteId) {
+      where.id_residente = byResidenteId;
+    }
+
     if (search) {
       where.nombre = {
         contains: search,
@@ -40,18 +63,14 @@ export class EmpleadoService {
       };
     }
 
-    if (byResidenteId) {
-      where.id_residente = byResidenteId;
-    }
+    if (byResidenteId) where.id_residente = byResidenteId;
 
     if (byViviendaId) {
-      where.residente = {
-        id_vivienda: byViviendaId,
-      };
+      where.residente = { id_vivienda: byViviendaId };
     }
 
-    if (isActive != undefined) {
-      where.servicio.activo = isActive;
+    if (isActive !== undefined) {
+      where.servicio = { ...(where.servicio || {}), activo: isActive };
     }
 
     const [data, total] = await Promise.all([
@@ -67,31 +86,14 @@ export class EmpleadoService {
               activo: true,
               fecha_registro: true,
               horarios: {
-                where: {
-                  activo: true,
-                },
-                select: {
-                  dia_semana: true,
-                  hora_inicio: true,
-                  hora_fin: true,
-                },
+                where: { activo: true },
+                select: { dia_semana: true, hora_inicio: true, hora_fin: true },
               },
-              tipo_servicio: {
-                select: {
-                  nombre: true,
-                  categoria: true,
-                },
-              },
+              tipo_servicio: { select: { nombre: true, categoria: true } },
             },
           },
           residente: {
-            select: {
-              vivienda: {
-                select: {
-                  numero_vivienda: true,
-                },
-              },
-            },
+            select: { vivienda: { select: { numero_vivienda: true } } },
           },
         },
         skip: (page - 1) * (limit ?? 10),
@@ -102,6 +104,7 @@ export class EmpleadoService {
 
     return {
       success: true,
+      message: 'Empleados obtenidos correctamente',
       meta: {
         total,
         page,
@@ -145,6 +148,7 @@ export class EmpleadoService {
       },
       select: {
         id_servicio: true,
+        rfc: true,
       },
     });
 
@@ -156,6 +160,7 @@ export class EmpleadoService {
 
     return {
       id_servicio: servicio.id_servicio,
+      rfc: servicio.rfc,
       id_visitante: visitante.id_visitante,
       nombre: visitante.nombre,
     };
@@ -238,14 +243,14 @@ export class EmpleadoService {
             nombre: data.nombre,
             telefono: data.telefono,
             // Soporta tanto 'url_imagen' como 'foto' que viene de tu modal
-            url_imagen: data.url_imagen || data.foto, 
+            url_imagen: data.url_imagen || data.foto,
             motivo: data.notas, // Si usas el campo motivo como notas/comentarios
           },
         });
 
         // 3. Si tiene un servicio asociado, actualizamos el Cargo y los Horarios Dinámicos
         if (visitante.id_servicio) {
-          
+
           // Mapeamos los días del modal al formato ENUM de tu schema.prisma
           const mapeoDias: Record<string, any> = {
             'Lunes': 'LUNES',
@@ -308,11 +313,16 @@ export class EmpleadoService {
     try {
       const servicio = await this.obtenerServicio(id);
 
+      const where = servicio.rfc
+        ? { rfc: servicio.rfc }
+        : { id_servicio: servicio.id_servicio };
+
       // Borrado lógico
-      await this.prisma.servicio.update({
-        where: { id_servicio: servicio.id_servicio },
+      await this.prisma.servicio.updateMany({
+        where,
         data: {
           activo: false,
+          bloqueo_global: true,
         },
       });
 
@@ -348,10 +358,15 @@ export class EmpleadoService {
     try {
       const servicio = await this.obtenerServicio(id);
 
-      await this.prisma.servicio.update({
-        where: { id_servicio: servicio.id_servicio },
+      const where = servicio.rfc
+        ? { rfc: servicio.rfc }
+        : { id_servicio: servicio.id_servicio };
+
+      await this.prisma.servicio.updateMany({
+        where,
         data: {
           activo: true,
+          bloqueo_global: false,
         },
       });
 
@@ -374,12 +389,90 @@ export class EmpleadoService {
   async crearEmpleadoDomestico(
     dto: CreateEmpleadoDomesticoDto,
     idUsuario: string,
+    file?: Express.Multer.File,
   ) {
+    this.logger.log('--- INICIO DEPURACIÓN: CREAR EMPLEADO DOMÉSTICO ---');
+    
+    // FASE 1: Verificación de entrada
+    if (file) {
+      this.logger.debug(`1. Archivo recibido: ${file.originalname} | Tamaño: ${file.size} bytes | Mimetype: ${file.mimetype}`);
+    } else {
+      this.logger.warn('1. ADVERTENCIA: El servicio no recibió ningún archivo (file es undefined).');
+    }
+
+    const rfc = dto.rfc.trim().toUpperCase();
+    const telefono = dto.telefono?.trim() || undefined;
+
+    const tipoServicio = await this.prisma.tipoServicio.findUnique({
+      where: {
+        id_tipo_servicio: dto.id_tipo_servicio,
+      },
+      select: {
+        id_tipo_servicio: true,
+        nombre: true,
+        categoria: true,
+      },
+    });
+
+    if (!tipoServicio) {
+      throw new BadRequestException('El tipo de servicio seleccionado no existe.');
+    }
+
+    if (tipoServicio.categoria !== 'Empleado') {
+      throw new BadRequestException(
+        'Solo puedes registrar empleados con tipos de servicio de categoría Empleado.',
+      );
+    }
+
+    const bloqueoGlobal = await this.prisma.servicio.findFirst({
+      where: {
+        rfc,
+        bloqueo_global: true,
+      },
+      select: {
+        id_servicio: true,
+      },
+    });
+
+    if (bloqueoGlobal) {
+      throw new ConflictException(
+        'El empleado fue dado de baja globalmente por el administrador y no puede registrarse nuevamente.',
+      );
+    }
+
+    const empleadoExistente = telefono
+      ? await this.prisma.visitante.findFirst({
+          where: {
+            telefono,
+            servicio: { rfc },
+          },
+          select: {
+            id_visitante: true,
+            url_imagen: true, 
+          },
+        })
+      : await this.prisma.visitante.findFirst({
+          where: {
+            servicio: { rfc },
+          },
+          select: {
+            id_visitante: true,
+            url_imagen: true, 
+          },
+        });
+
+    if (empleadoExistente && !dto.confirmar_reuso_rfc) {
+      throw new ConflictException(
+        telefono
+          ? 'Ya existe un empleado registrado con ese RFC y teléfono. Confirma si deseas vincularlo también a esta vivienda.'
+          : 'Ya existe un empleado registrado con ese RFC. Confirma si deseas vincularlo también a esta vivienda.',
+      );
+    }
+
     const residente = await this.prisma.residente.findFirst({
       where: {
         id_usuario: idUsuario,
       },
-
       include: {
         vivienda: true,
       },
@@ -389,24 +482,50 @@ export class EmpleadoService {
       throw new BadRequestException('Residente no encontrado');
     }
 
+    // FASE 2: Transacción con Cloudflare R2
+    let urlImagen : string | null = null;
+    try {
+      if (file) {
+        this.logger.debug('2. Intentando subir archivo a R2...');
+        urlImagen = await this.archivosService.subirImagen(file, '/empleados');
+        this.logger.log(`-> ÉXITO R2: URL obtenida = ${urlImagen}`);
+      } else {
+        urlImagen = dto.url_imagen || empleadoExistente?.url_imagen || null; 
+        this.logger.debug(`-> No hay archivo nuevo. URL asignada = ${urlImagen}`);
+      }
+    } catch (error: any) {
+      this.logger.error(`-> FALLO R2: Ocurrió un error al intentar subir la imagen: ${error.message}`);
+      this.logger.error(error.stack);
+    }
+
+    // FASE 3: Preparación del Payload
+    const payloadVisitante = {
+      nombre: dto.nombre_completo,
+      telefono,
+      url_imagen: urlImagen,
+      es_frecuente: true,
+      id_residente: residente.id_residente,
+    };
+    
+    this.logger.debug('3. Payload preparado para Prisma (Visitante):');
+    this.logger.debug(JSON.stringify(payloadVisitante, null, 2));
+
+    // FASE 4: Persistencia de Datos
     return this.prisma.$transaction(async (tx) => {
+      this.logger.debug('4. Iniciando transacción de base de datos...');
       const servicio = await tx.servicio.create({
         data: {
           nombre_servicio: `${residente.vivienda.numero_vivienda}`,
-
-          cargo: dto.cargo,
-
+          cargo: tipoServicio.nombre,
           id_tipo_servicio: dto.id_tipo_servicio,
-
+          rfc,
           id_residente: residente.id_residente,
           id_vivienda: residente.id_vivienda,
-
           horarios: {
             create: dto.horarios.map((horario) => ({
               dia_semana: horario.dia_semana,
-              hora_inicio: new Date(`1970-01-01T${horario.hora_inicio}`),
-
-              hora_fin: new Date(`1970-01-01T${horario.hora_fin}`),
+              hora_inicio: new Date(`1970-01-01T${horario.hora_inicio}:00.000Z`),
+              hora_fin: new Date(`1970-01-01T${horario.hora_fin}:00.000Z`),
             })),
           },
         },
@@ -414,19 +533,14 @@ export class EmpleadoService {
 
       const visitante = await tx.visitante.create({
         data: {
-          nombre: dto.nombre_completo,
-
-          telefono: dto.telefono,
-
-          url_imagen: dto.url_imagen,
-
-          es_frecuente: true,
-
-          id_residente: residente.id_residente,
-
+          ...payloadVisitante,
           id_servicio: servicio.id_servicio,
         },
       });
+
+      this.logger.debug('5. Respuesta final de la base de datos (Visitante guardado):');
+      this.logger.debug(JSON.stringify(visitante, null, 2));
+      this.logger.log('--- FIN DEPURACIÓN ---');
 
       return {
         message: 'Empleado doméstico registrado correctamente',

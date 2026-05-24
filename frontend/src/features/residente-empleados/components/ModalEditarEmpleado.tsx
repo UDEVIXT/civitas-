@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2 } from "lucide-react";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -187,6 +187,9 @@ React.useEffect(() => {
           <DialogTitle className="text-xl font-bold text-center text-gray-800">
             Editar Perfil y Accesos
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Modifica los datos y permisos de acceso del empleado.
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -194,12 +197,17 @@ React.useEffect(() => {
             
             {/* Header con Foto */}
             <div className="flex flex-col items-center justify-center gap-3 bg-gray-50 p-4 rounded-xl text-center">
-              <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-4 border-white shadow-md">
-                <AvatarImage src={form.watch("foto") || "/placeholder-user.jpg"} />
-                <AvatarFallback className="bg-amber-100 text-amber-700 font-bold text-2xl">
-                  {empleado?.nombre?.charAt(0) || "E"}
-                </AvatarFallback>
-              </Avatar>
+                <Avatar className="h-24 w-24 border-4 border-white shadow-md">
+                  {/* Asegúrate de leer 'url_imagen' y usar undefined si no existe, no un string estático */}
+                  <AvatarImage 
+                    src={empleado?.url_imagen || undefined} 
+                    className="object-cover" 
+                  />
+                  <AvatarFallback className="bg-emerald-100 text-emerald-700 font-bold text-2xl">
+                    {/* Muestra las iniciales si falla la carga o no hay imagen */}
+                    {empleado?.nombre?.charAt(0)?.toUpperCase() || "?"}
+                  </AvatarFallback>
+                </Avatar>
               <div className="flex flex-col gap-0.5">
                 <p className="text-base sm:text-lg font-extrabold text-gray-950 tracking-tight">
                   {form.watch("nombre") || "Sin nombre"}
