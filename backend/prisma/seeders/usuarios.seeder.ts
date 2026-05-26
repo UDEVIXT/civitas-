@@ -38,6 +38,24 @@ export async function seedUsuarios(prisma: PrismaClient) {
       genero: 'Femenino',
       rol: Rol.Residente,
     },
+    {
+      nombre: 'Jared',
+      apellido: 'Lopez',
+      nombre_usuario: 'jared.lopez',
+      correo: 'jared.lopez@test.com',
+      password: 'regaladoJaredPassword123',
+      genero: 'Masculino',
+      rol: Rol.Residente,
+    },
+    {
+      nombre: 'Denilson',
+      apellido: 'Rosado',
+      nombre_usuario: 'denilson.rosado',
+      correo: 'denilson.rosado@test.com',
+      password: 'eTsechDenisPassword123',
+      genero: 'Masculino',
+      rol: Rol.Residente,
+    },
   ];
 
   for (const perfil of perfilesFijos) {
