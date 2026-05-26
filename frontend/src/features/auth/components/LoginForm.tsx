@@ -157,7 +157,7 @@ export function LoginForm() {
           <div className="text-center text-sm">
             <p className="text-muted-foreground">
               ¿No tienes cuenta?{" "}
-              <a href="#" className="text-primary hover:underline font-medium">
+              <a href="../../registertypeuser" className="text-primary hover:underline font-medium">
                 Regístrate
               </a>
             </p>
