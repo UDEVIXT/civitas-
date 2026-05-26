@@ -49,11 +49,18 @@ export const routes: Route[] = [
     roles: [ROLES.ADMINISTRADOR],
   },
   {
-    path: "/incidencias",
+    path: "/incidencias/residente",
     label: "Incidencias",
     description: "Reporte y seguimiento de incidencias en la comunidad.",
     icon: AlertTriangle,
-    roles: [ROLES.RESIDENTE, ROLES.ADMINISTRADOR],
+    roles: [ROLES.RESIDENTE],
+  },
+  {
+    path: "/incidencias/admin",
+    label: "Incidencias",
+    description: "Gestión y seguimiento de incidencias reportadas.",
+    icon: AlertTriangle,
+    roles: [ROLES.ADMINISTRADOR],
   },
   {
     path: "/mi-bitacora-accesos",
