@@ -426,14 +426,17 @@ export class AuthService {
         },
       };
     } catch (error) {
-      console.error('Error en login:', error);
+      //console.error('Error en login:', error);
       if (error instanceof HttpException) {
         throw error;
       }
 
-      throw new InternalServerErrorException(
-        'Error técnico. Intente más tarde.',
-      );
+      throw new InternalServerErrorException({
+        statusCode: 500,
+        message:
+          'Error técnico de la plataforma. Por favor, intente más tarde.',
+        code: 'INTERNAL_TECHNICAL_ERROR',
+      });
     }
   }
 
