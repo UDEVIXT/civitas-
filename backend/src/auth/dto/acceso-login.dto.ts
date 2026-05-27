@@ -27,7 +27,7 @@ export class AccesoLoginDto {
     message: 'La contraseña debe ser texto',
   })
   @MinLength(8, {
-    message: 'La contraseña debe tener al menos 8 caracteres',
+    message: 'Credenciales incorrectas',
   })
   password?: string;
 

@@ -3,7 +3,8 @@ import {
   InternalServerErrorException,
   UnauthorizedException,
   HttpException,
-  NotFoundException,
+  BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -12,6 +13,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuthGateway } from '../notificacion/gateways/auth.gateway';
 import { Request } from 'express';
 import { MailerService } from '@nestjs-modules/mailer';
+import { RegisterDto } from './dto/register.dto';
+import { ValidarCredencialDto } from './dto/validar-credencial.dto';
+import { createWorker } from 'tesseract.js';
 function detectarDispositivo(userAgent?: string) {
   if (!userAgent) {
     return 'Desconocido';
@@ -44,6 +48,282 @@ export class AuthService {
     private readonly authGateway: AuthGateway,
     private readonly mailerService: MailerService,
   ) {}
+
+  async register(dto: RegisterDto) {
+    const {
+      nombre,
+      genero,
+      fecha_nacimiento,
+      telefono,
+      nombre_usuario,
+      correo,
+      password,
+      confirmPassword,
+      rol,
+      verificationAccessToken,
+    } = dto;
+
+    try {
+      const payload = await this.jwtService.verifyAsync(
+        verificationAccessToken,
+        {
+          secret: process.env.JWT_REGISTER_SECRET,
+        },
+      );
+
+      if (!payload.credencial_validada) {
+        throw new UnauthorizedException('La credencial no fue validada.');
+      }
+
+      if (payload.rol !== rol) {
+        throw new UnauthorizedException(
+          'El rol no coincide con la validación.',
+        );
+      }
+    } catch {
+      throw new UnauthorizedException(
+        'La validación de credencial expiró o es inválida.',
+      );
+    }
+    // VALIDAR PASSWORDS CA006 — Password y confirmación distintas
+    if (password !== confirmPassword) {
+      throw new BadRequestException('Las contraseñas no coinciden.');
+    }
+
+    // VALIDAR CORREO DUPLICADO CA004 — Correo duplicado
+    const correoExistente = await this.prisma.usuario.findUnique({
+      where: {
+        correo,
+      },
+    });
+
+    if (correoExistente) {
+      throw new ConflictException(
+        'El correo ya está registrado. Puedes iniciar sesión o recuperar tu contraseña.',
+      );
+    }
+
+    const usernameExistente = await this.prisma.usuario.findUnique({
+      where: {
+        nombre_usuario,
+      },
+    });
+
+    if (usernameExistente) {
+      throw new ConflictException(
+        'El nombre de usuario ya se encuentra en uso.',
+      );
+    }
+
+    try {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const verificationToken = crypto.randomUUID();
+      const usuarioCreado = await this.prisma.$transaction(async (tx) => {
+        const persona = await tx.persona.create({
+          data: {
+            nombre,
+            genero,
+            fecha_nacimiento: new Date(fecha_nacimiento),
+            telefono,
+          },
+        });
+
+        const usuario = await tx.usuario.create({
+          data: {
+            nombre_usuario,
+            correo,
+            password: hashedPassword,
+            rol,
+            id_persona: persona.id_persona,
+            token_verificacion: verificationToken,
+            correo_verificado: false,
+          },
+          include: {
+            persona: true,
+          },
+        });
+
+        if (rol === 'Guardia') {
+          await tx.guardia.create({
+            data: {
+              nombre,
+              id_usuario: usuario.id_usuario,
+            },
+          });
+        }
+
+        if (rol === 'Administrador') {
+          await tx.administrador.create({
+            data: {
+              nombre,
+              id_usuario: usuario.id_usuario,
+            },
+          });
+        }
+
+        return usuario;
+      });
+
+      // ENVIAR CORREO BIENVENIDA - CA001
+      try {
+        await this.mailerService.sendMail({
+          to: usuarioCreado.correo,
+          subject: 'Bienvenido a Civitas',
+          template: './bienvenida',
+          context: {
+            nombre: usuarioCreado.persona.nombre,
+            verificationToken,
+          },
+        });
+      } catch (mailError) {
+        console.error('Error enviando correo:', mailError);
+
+        // No bloqueamos el registro si falla el correo
+      }
+
+      // -------------------------------------------------
+      // RESPUESTA
+      // -------------------------------------------------
+      return {
+        id_usuario: usuarioCreado.id_usuario,
+        nombre: usuarioCreado.persona.nombre,
+        correo: usuarioCreado.correo,
+        rol: usuarioCreado.rol,
+        correo_verificado: usuarioCreado.correo_verificado,
+      };
+    } catch (error) {
+      console.error('ERROR REGISTER:', error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'Ocurrió un problema temporal al registrar la cuenta. Intenta nuevamente.',
+      );
+    }
+  }
+
+  async validarCredencial(
+    dto: ValidarCredencialDto,
+    archivos: {
+      frente?: Express.Multer.File[];
+      reverso?: Express.Multer.File[];
+    },
+  ) {
+    // ---------------------------------------------
+    // VALIDAR ARCHIVOS
+    // ---------------------------------------------
+    const frente = archivos.frente?.[0];
+    const reverso = archivos.reverso?.[0];
+
+    if (!frente || !reverso) {
+      throw new BadRequestException(
+        'Debes subir frente y reverso de la credencial.',
+      );
+    }
+
+    // ---------------------------------------------
+    // OCR
+    // ---------------------------------------------
+
+    const worker = await createWorker('spa');
+
+    const {
+      data: { text: textoFrente },
+    } = await worker.recognize(frente.buffer);
+
+    //console.log(textoFrente);
+
+    const {
+      data: { text: textoReverso },
+    } = await worker.recognize(reverso.buffer);
+
+    //console.log(textoReverso);
+
+    await worker.terminate();
+
+    // ---------------------------------------------
+    // TEXTO COMPLETO
+    // ---------------------------------------------
+    const textoDetectado = (
+      textoFrente +
+      ' ' +
+      textoReverso
+    ).toUpperCase();
+
+    // ---------------------------------------------
+    // PALABRAS CLAVE
+    // ---------------------------------------------
+    const palabrasClave = [
+      'INSTITUTO',
+      'ELECTORAL',
+      'CREDENCIAL',
+      'VOTAR',
+      'MEXICO',
+      'CURP',
+    ];
+
+    const coincidencias = palabrasClave.filter((palabra) =>
+      textoDetectado.includes(palabra),
+    );
+
+    //console.log('\n===== COINCIDENCIAS =====');
+    //console.log(coincidencias);
+
+    //console.log('TOTAL COINCIDENCIAS:', coincidencias.length);
+
+    // ---------------------------------------------
+    // VALIDAR INE
+    // ---------------------------------------------
+    if (coincidencias.length < 2) {
+      console.log('\nNO PASO VALIDACION INE');
+
+      throw new UnauthorizedException(
+        'La imagen no parece ser una credencial INE válida.',
+      );
+    }
+
+    console.log('\nVALIDACION INE EXITOSA');
+    //console.log('\nROL RECIBIDO:', dto.rol);
+
+    if (
+      dto.rol !== 'Administrador' &&
+      dto.rol !== 'Guardia'
+    ) {
+      //console.log('\nROL INVALIDO');
+
+      throw new UnauthorizedException(
+        'Rol no permitido para validación.',
+      );
+    }
+
+    //console.log('\n ROL VALIDO');
+
+    // ---------------------------------------------
+    // TOKEN TEMPORAL
+    // ---------------------------------------------
+
+    const payload = {
+      rol: dto.rol,
+      credencial_validada: true,
+      jti: crypto.randomUUID(),
+    };
+
+    //console.log('PAYLOAD JWT:', payload);
+
+    const verificationAccessToken = await this.jwtService.signAsync(payload, {
+      secret: process.env.JWT_REGISTER_SECRET,
+      expiresIn: '10m',
+    });
+
+    //console.log('\nTOKEN GENERADO');
+
+    return {
+      success: true,
+      verificationAccessToken,
+    };
+  }
 
   async login(
     req: Request,
@@ -146,14 +426,17 @@ export class AuthService {
         },
       };
     } catch (error) {
-      console.error('Error en login:', error);
+      //console.error('Error en login:', error);
       if (error instanceof HttpException) {
         throw error;
       }
 
-      throw new InternalServerErrorException(
-        'Error técnico. Intente más tarde.',
-      );
+      throw new InternalServerErrorException({
+        statusCode: 500,
+        message:
+          'Error técnico de la plataforma. Por favor, intente más tarde.',
+        code: 'INTERNAL_TECHNICAL_ERROR',
+      });
     }
   }
 
