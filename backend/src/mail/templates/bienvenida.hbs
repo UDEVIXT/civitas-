@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bienvenido a Civitas</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 0;
+            color: #333333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+        .header {
+            background-color: #1a365d; /* Azul institucional Civitas */
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            color: #ffffff;
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .content {
+            padding: 40px 30px;
+            line-height: 1.6;
+        }
+        .content h2 {
+            color: #1a365d;
+            margin-top: 0;
+        }
+        .btn-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .btn {
+            background-color: #3182ce; /* Azul brillante para el botón */
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            font-weight: bold;
+            display: inline-block;
+            transition: background-color 0.3s ease;
+        }
+        .footer {
+            background-color: #edf2f7;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #718096;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>¡Bienvenido a Civitas!</h1>
+        </div>
+
+        <div class="content">
+            <h2>¡Hola, {{nombre}}!</h2>
+            <p>Nos emociona muchísimo tenerte con nosotros. Tu cuenta ha sido creada con éxito y tu validación de INE fue completamente aprobada.</p>
+            <p>Para comenzar a explorar la plataforma y asegurarnos de que esta dirección de correo te pertenece, por favor confirma tu cuenta haciendo clic en el siguiente enlace:</p>
+            
+            <div class="btn-container">
+                <a href="http://localhost:3000/auth/verify?token={{verificationToken}}" class="btn">
+                    Verificar mi cuenta
+                </a>
+            </div>
+
+            <p>Si el botón no funciona, también puedes copiar y pegar este enlace en tu navegador:</p>
+            <p style="word-break: break-all; font-size: 13px; color: #3182ce;">
+                http://localhost:3000/auth/verify?token={{verificationToken}}
+            </p>
+            
+            <p>Si tú no solicitaste este registro, puedes ignorar este correo con total seguridad.</p>
+        </div>
+
+        <div class="footer">
+            <p>© 2026 Civitas. Todos los derechos reservados.</p>
+            <p>Este es un correo automático, por favor no lo respondas.</p>
+        </div>
+    </div>
+
+</body>
+</html>
