@@ -8,6 +8,7 @@ import {
   Req,
   UseInterceptors,
   UploadedFiles,
+  UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Response, Request } from 'express';
@@ -19,6 +20,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ValidarCredencialDto } from './dto/validar-credencial.dto';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { LoginThrottlerGuard } from './guards/login-throttler.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -62,7 +64,7 @@ export class AuthController {
     };
   }
 
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @UseGuards(LoginThrottlerGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
