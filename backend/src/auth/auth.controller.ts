@@ -6,6 +6,8 @@ import {
   Post,
   Res,
   Req,
+  UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Response, Request } from 'express';
@@ -14,10 +16,51 @@ import { AccesoLoginDto } from './dto/acceso-login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { VerifyCodeDto } from './dto/verify-code.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { RegisterDto } from './dto/register.dto';
+import { ValidarCredencialDto } from './dto/validar-credencial.dto';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Post('validar-credencial')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'frente', maxCount: 1 },
+      { name: 'reverso', maxCount: 1 },
+    ]),
+  )
+  async validarCredencial(
+    @Body() dto: ValidarCredencialDto,
+
+    @UploadedFiles()
+    archivos: {
+      frente?: Express.Multer.File[];
+      reverso?: Express.Multer.File[];
+    },
+  ) {
+    const result = await this.authService.validarCredencial(dto, archivos);
+
+    return {
+      success: true,
+      message: 'Credencial validada correctamente.',
+      data: result,
+    };
+  }
+
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  async register(@Body() dto: RegisterDto) {
+    const result = await this.authService.register(dto);
+
+    return {
+      success: true,
+      message: 'Cuenta creada correctamente. Revisa tu correo electrónico.',
+      data: result,
+    };
+  }
 
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('login')
