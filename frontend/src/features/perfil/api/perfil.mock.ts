@@ -14,6 +14,8 @@ let mockUser: PerfilData = {
   correo: "juan.perez@example.com",
   rol: "residente",
   fechaRegistro: "2023-01-15T10:00:00Z",
+  nombreUsuario: "juan_perez",
+  urlImagen: null,
 };
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
