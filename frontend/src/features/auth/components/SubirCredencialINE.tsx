@@ -156,7 +156,7 @@ function StepCredencial() {
                                     />
                                     <button
                                         onClick={() => removeImage(i)}
-                                        className="absolute top-2 right-2 bg-white rounded-full p-0.5 shadow hover:bg-gray-100 transition"
+                                        className="cursor-pointer absolute top-2 right-2 bg-white rounded-full p-0.5 shadow hover:bg-gray-100 transition"
                                     >
                                         <X className="w-4 h-4 text-gray-600" />
                                     </button>
@@ -171,7 +171,7 @@ function StepCredencial() {
                                     key={i}
                                     onClick={() => setActiveSlide(i)}
                                     className={cn(
-                                        "w-2 h-2 rounded-full transition-colors",
+                                        "cursor-pointer w-2 h-2 rounded-full transition-colors",
                                         i === activeSlide ? "bg-gray-700" : "bg-gray-300"
                                     )}
                                 />
@@ -183,13 +183,13 @@ function StepCredencial() {
 
             {/* Acciones */}
             <div className="flex gap-3 pt-2">
-                <Button variant="outline" className="flex-1">
+                <Button variant="outline" className="cursor-pointer flex-1">
                     Cancelar
                 </Button>
                 <Button
                     disabled={images.length === 0}
                     onClick={() => stepper.navigation.next()}
-                    className="flex-1 bg-amber-400 hover:bg-amber-500 text-white font-semibold disabled:opacity-50"
+                    className="cursor-pointer flex-1 bg-amber-400 hover:bg-amber-500 text-white font-semibold disabled:opacity-50"
                 >
                     Siguiente
                 </Button>
@@ -271,13 +271,13 @@ function StepDatos({
             </div>
 
             <div className="flex gap-3 pt-2">
-                <Button variant="outline" className="flex-1" onClick={() => stepper.navigation.prev()}>
+                <Button variant="outline" className="cursor-pointer flex-1" onClick={() => stepper.navigation.prev()}>
                     Atrás
                 </Button>
                 <Button
                     disabled={!isValid}
                     onClick={() => stepper.navigation.next()}
-                    className="flex-1 bg-amber-400 hover:bg-amber-500 text-white font-semibold disabled:opacity-50"
+                    className="cursor-pointer flex-1 bg-amber-400 hover:bg-amber-500 text-white font-semibold disabled:opacity-50"
                 >
                     Siguiente
                 </Button>
@@ -336,12 +336,12 @@ function StepRegistro({ form }: { form: FormData }) {
             </p>
 
             <div className="flex gap-3 pt-2">
-                <Button variant="outline" className="flex-1" onClick={() => stepper.navigation.prev()}>
+                <Button variant="outline" className="cursor-pointer flex-1" onClick={() => stepper.navigation.prev()}>
                     Atrás
                 </Button>
                 <Button
                     onClick={() => setEnviado(true)}
-                    className="flex-1 bg-amber-400 hover:bg-amber-500 text-white font-semibold"
+                    className="cursor-pointer flex-1 bg-amber-400 hover:bg-amber-500 text-white font-semibold"
                 >
                     Finalizar
                 </Button>
