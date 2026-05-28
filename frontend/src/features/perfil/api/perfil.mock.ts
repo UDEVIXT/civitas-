@@ -8,7 +8,7 @@ import {
 // Mock user data
 let mockUser: PerfilData = {
   id: "user-123",
-  nombre: "Juan",
+  nombre: "JuanPablo",
   apellidos: "Pérez",
   telefono: "5512345678",
   correo: "juan.perez@example.com",
