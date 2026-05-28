@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Req, Query } from '@nestjs/common';
 import { AccesosServiciosService } from './accesos-servicios.service';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
@@ -19,11 +19,25 @@ interface AuthenticatedRequest extends Request {
 export class AccesosServiciosController {
   constructor(private readonly accesosServiciosService: AccesosServiciosService) {}
 
-  @Get('actividad-reciente')
-  async obtenerActividadReciente() {
+  @Get()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Guardia')
+  async obtenerActividadReciente(
+    @Req() req: AuthenticatedRequest,
+    @Query('limit') limit = '5',
+  ) {
+    const id_user = req.user.userId;
+    //console.log("ID del usuario autenticado:", id_user);
+    return await this.accesosServiciosService.obtenerActividadReciente(Number(limit));
+  }
+
+  @Get('escanear/:codigoQr')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Guardia')
+  async escanearQr(@Param('codigoQr') codigoQr: string) {
     return {
       success: true,
-      data: await this.accesosServiciosService.obtenerActividadReciente(),
+      data: await this.accesosServiciosService.obtenerDatosPorQr(codigoQr),
     };
   }
 
@@ -35,21 +49,41 @@ export class AccesosServiciosController {
     };
   }
 
-  @Post(':id/validar')
-  async validarAcceso(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+  @Get('validar/:codigoQr')
+  async validarAcceso(
+    @Param('codigoQr') codigoQr: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     const idGuardia = req.user.userId;
+
     return {
       success: true,
-      data: await this.accesosServiciosService.validarAcceso(id, idGuardia),
+      data: await this.accesosServiciosService.validarAcceso(
+        codigoQr,
+        idGuardia,
+      ),
     };
   }
 
-  @Post(':id/denegar')
-  async denegarAcceso(@Param('id') id: string, @Body() body: { motivo: string }, @Req() req: AuthenticatedRequest) {
-    const idGuardia = req.user.userId;
+  @Post('denegar/:codigoQr')
+  async denegarAcceso(
+    @Param('codigoQr') codigoQr: string,
+    @Body() body: { motivo: string },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const idGuardia =
+      req.user.userId;
+
     return {
       success: true,
-      data: await this.accesosServiciosService.denegarAcceso(id, idGuardia, body.motivo),
+
+      data:
+        await this.accesosServiciosService
+          .denegarAcceso(
+            codigoQr,
+            idGuardia,
+            body.motivo,
+          ),
     };
   }
 }
