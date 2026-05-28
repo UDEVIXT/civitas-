@@ -39,8 +39,6 @@ export function LoginForm() {
 
     if (!password.trim()) {
       newErrors.password = "Debe introducir una contraseña";
-    } else if (password.trim().length < 8) {
-      newErrors.password = "La contraseña debe tener al menos 8 caracteres";
     }
 
     setErrors(newErrors);
@@ -58,12 +56,15 @@ export function LoginForm() {
       const axiosError = error as {
         response?: { status?: number; data?: { message?: string } };
       };
-      if (axiosError.response?.status === 401) {
+      const status = axiosError.response?.status;
+      if (!status || status >= 500) {
         toast.error(
-          axiosError.response.data?.message || "Error al iniciar sesión",
+          "Error técnico de la plataforma. Por favor, intente más tarde.",
         );
       } else {
-        toast.error("Error al iniciar sesión");
+        toast.error(
+          axiosError.response?.data?.message || "Error al iniciar sesión",
+        );
       }
     }
     setIsLoading(false);
