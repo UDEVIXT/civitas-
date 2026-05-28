@@ -5,7 +5,7 @@ export interface ActividadReciente {
   nombre_repartidor: string;
   residente_vinculado: string;
   tiempo_transcurrido: string;
-  estado: "AUTORIZADO" | "RECHAZADO";
+  estado: "ENTRADA" | "SALIDA";
 }
 
 export interface DetalleServicio {
@@ -20,20 +20,22 @@ export interface DetalleServicio {
 
 export const accesosServiciosApi = {
   obtenerActividadReciente: async (): Promise<ActividadReciente[]> => {
-    const { data } = await api.get("/accesos-servicios/actividad-reciente");
-    return data.data;
+    const { data } = await api.get("/accesos-servicios");
+    return data;
   },
 
   obtenerDetalleServicio: async (id: string): Promise<DetalleServicio> => {
-    const { data } = await api.get(`/accesos-servicios/${id}`);
+    const { data } = await api.get("accesos-servicios/escanear/qr_Q3QfP--1jUIjQN7C1Bi8PC834rE0rUFIfCjsXJQ6JSM");
     return data.data;
   },
 
-  validarAcceso: async (id: string): Promise<void> => {
-    await api.post(`/accesos-servicios/${id}/validar`);
+  validarAcceso: async (codigoQr: string): Promise<void> => {
+    await api.get("/accesos-servicios/validar/qr_Q3QfP--1jUIjQN7C1Bi8PC834rE0rUFIfCjsXJQ6JSM");
   },
 
-  denegarAcceso: async (id: string, motivo: string): Promise<void> => {
-    await api.post(`/accesos-servicios/${id}/denegar`, { motivo });
+  denegarAcceso: async (codigoQr: string, motivo: string): Promise<void> => {
+    await api.post("/accesos-servicios/denegar/qr_Q3QfP--1jUIjQN7C1Bi8PC834rE0rUFIfCjsXJQ6JSM",
+      { motivo }
+    );
   }
 };

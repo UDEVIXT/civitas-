@@ -20,11 +20,19 @@ export const PerfilLayout = () => {
       <div className="flex flex-col md:flex-row gap-8">
         <div className="md:w-1/4">
           <div className="bg-muted/50 rounded-lg p-6 text-center space-y-4">
-            <div className="mx-auto w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center">
-              <UserCircle className="w-16 h-16 text-primary" />
-            </div>
+        <div className="mx-auto w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center overflow-hidden">
+          {perfil?.urlImagen ? (
+            <img
+              src={perfil.urlImagen}
+              alt="Foto de perfil"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <UserCircle className="w-16 h-16 text-primary" />
+          )}
+        </div>
             <div>
-              <h2 className="font-semibold text-lg">{perfil?.nombre || "Cargando..."}</h2>
+              <h2 className="font-semibold text-lg">{perfil?.nombreUsuario || "Cargando..."}</h2>
               <p className="text-sm text-muted-foreground capitalize">{perfil?.rol || ""}</p>
             </div>
           </div>

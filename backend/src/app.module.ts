@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -20,6 +20,9 @@ import { MailModule } from './mail/mail.module';
 import { MisServiciosModule } from './mis-servicios/mis-servicios.module';
 import { AccesosServiciosModule } from './accesos-servicios/accesos-servicios.module';
 import { VisitanteModule } from './visitante/visitante.module';
+import { LoginThrottlerGuard } from './auth/guards/login-throttler.guard';
+import { PerfilModule } from './perfil/perfil.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -39,6 +42,7 @@ import { VisitanteModule } from './visitante/visitante.module';
     MisServiciosModule,
     TipoServicioModule,
     AccesosServiciosModule,
+    PerfilModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
@@ -54,7 +58,7 @@ import { VisitanteModule } from './visitante/visitante.module';
 
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: LoginThrottlerGuard,
     },
   ],
 })

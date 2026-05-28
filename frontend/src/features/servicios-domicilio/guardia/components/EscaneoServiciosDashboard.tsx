@@ -98,7 +98,7 @@ export function EscaneoServiciosDashboard() {
                         </p>
                       </div>
                       <div className="shrink-0">
-                        {act.estado === "AUTORIZADO" ? (
+                        {act.estado === "ENTRADA" ? (
                           <Badge className="bg-emerald-100 hover:bg-emerald-100 text-emerald-700 border-none px-2 py-0.5 rounded-full text-[11px] font-bold">
                             AUTORIZADO
                           </Badge>

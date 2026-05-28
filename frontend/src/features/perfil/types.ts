@@ -6,6 +6,8 @@ export interface PerfilData {
   correo: string;
   rol: string;
   fechaRegistro: string;
+  nombreUsuario: string;
+  urlImagen: string | null;
 }
 
 export interface UpdatePerfilPayload {
