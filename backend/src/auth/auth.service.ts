@@ -16,6 +16,7 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { RegisterDto } from './dto/register.dto';
 import { ValidarCredencialDto } from './dto/validar-credencial.dto';
 import { createWorker } from 'tesseract.js';
+import { NotFoundException } from '@nestjs/common';
 function detectarDispositivo(userAgent?: string) {
   if (!userAgent) {
     return 'Desconocido';
@@ -506,8 +507,8 @@ export class AuthService {
     });
 
     if (!user) {
-      // Retornamos éxito simulado para evitar fugas de información (User Enumeration)
-      return { message: 'Si el dato existe, se ha enviado un código de verificación.' };
+      // Lanza un error 404 directo al frontend
+      throw new NotFoundException('El usuario asociado a este correo no existe.');
     }
 
       // Generar un código numérico seguro de 6 dígitos
