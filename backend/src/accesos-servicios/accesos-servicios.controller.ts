@@ -4,6 +4,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
 import { Roles } from 'src/auth/decorators/roles/roles.decorator';
 import { Request } from 'express';
+import { RegistroManualDto } from './dto/registro-manual.dto';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -84,6 +85,24 @@ export class AccesosServiciosController {
             idGuardia,
             body.motivo,
           ),
+    };
+  }
+
+  @Post('registro-manual')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Guardia')
+  async registrarIngresoManual(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: RegistroManualDto,
+  ) {
+    const idGuardia = req.user.userId;
+    
+    return {
+      success: true,
+      data: await this.accesosServiciosService.registrarIngresoManual(
+        body,
+        idGuardia,
+      ),
     };
   }
 }

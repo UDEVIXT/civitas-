@@ -24,18 +24,20 @@ export const accesosServiciosApi = {
     return data;
   },
 
-  obtenerDetalleServicio: async (id: string): Promise<DetalleServicio> => {
-    const { data } = await api.get("accesos-servicios/escanear/qr_Q3QfP--1jUIjQN7C1Bi8PC834rE0rUFIfCjsXJQ6JSM");
+  obtenerDetalleServicio: async (codigoQr: string): Promise<DetalleServicio> => {
+    const { data } = await api.get(`/accesos-servicios/escanear/${codigoQr}`);
     return data.data;
   },
 
   validarAcceso: async (codigoQr: string): Promise<void> => {
-    await api.get("/accesos-servicios/validar/qr_Q3QfP--1jUIjQN7C1Bi8PC834rE0rUFIfCjsXJQ6JSM");
+    await api.get(`/accesos-servicios/validar/${codigoQr}`);
   },
 
   denegarAcceso: async (codigoQr: string, motivo: string): Promise<void> => {
-    await api.post("/accesos-servicios/denegar/qr_Q3QfP--1jUIjQN7C1Bi8PC834rE0rUFIfCjsXJQ6JSM",
-      { motivo }
-    );
+    await api.post(`/accesos-servicios/denegar/${codigoQr}`, { motivo });
+  },
+
+  registrarIngresoManual: async (datosManuales: { nombre: string; empresa: string; motivo: string; vivienda: string }): Promise<void> => {
+    await api.post("/accesos-servicios/registro-manual", datosManuales);
   }
 };

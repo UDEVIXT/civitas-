@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BadRequestException } from '@nestjs/common/exceptions';
+import { RegistroManualDto } from './dto/registro-manual.dto';
 
 @Injectable()
 export class AccesosServiciosService {
@@ -511,6 +512,68 @@ export class AccesosServiciosService {
 
       message:
         'Acceso denegado e incidencia registrada correctamente.',
+    };
+  }
+
+  async registrarIngresoManual(datos: RegistroManualDto, idUsuarioGuardia: string) {
+    const guardia = await this.prisma.guardia.findFirst({
+      where: { id_usuario: idUsuarioGuardia },
+    });
+
+    if (!guardia) {
+      throw new NotFoundException('Guardia no encontrado.');
+    }
+
+    // 1. Buscar vivienda y extraer al primer residente
+    const vivienda = await this.prisma.vivienda.findFirst({
+      where: { numero_vivienda: { contains: datos.vivienda, mode: 'insensitive' } },
+      include: { residentes: true },
+    });
+
+    if (!vivienda || vivienda.residentes.length === 0) {
+      throw new NotFoundException(`No se encontró la vivienda o no tiene residentes asociados (${datos.vivienda}).`);
+    }
+
+    const residente = vivienda.residentes[0];
+
+    // 2. Crear un Visitante exprés
+    const visitante = await this.prisma.visitante.create({
+      data: {
+        nombre: datos.nombre,
+        motivo: datos.motivo ? `Ingreso manual (${datos.empresa}): ${datos.motivo}` : `Ingreso manual (${datos.empresa})`,
+        es_frecuente: false,
+        id_residente: residente.id_residente,
+      }
+    });
+
+    // 3. Crear un Acceso temporal (expira al final del día)
+    const hoy = new Date();
+    const expiracion = new Date(hoy);
+    expiracion.setHours(23, 59, 59, 999);
+
+    const acceso = await this.prisma.acceso.create({
+      data: {
+        id_usuario: residente.id_usuario,
+        id_visitante: visitante.id_visitante,
+        fecha_expiracion: expiracion,
+        estatus: 'Activo',
+        comentario_admin: 'Creado por ingreso manual en caseta',
+      }
+    });
+
+    // 4. Registrar en Bitácora
+    await this.prisma.bitacora.create({
+      data: {
+        id_acceso: acceso.id_acceso,
+        id_guardia: guardia.id_guardia,
+        fecha_hora_entrada: new Date(),
+        comentario: `Ingreso manual: ${datos.empresa}. ${datos.motivo || ''}`.trim(),
+      }
+    });
+
+    return {
+      success: true,
+      message: 'Ingreso manual registrado correctamente.',
     };
   }
 }
