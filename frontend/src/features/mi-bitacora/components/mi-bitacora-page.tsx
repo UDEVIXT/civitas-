@@ -47,6 +47,8 @@ const personTypeStyles: Record<PersonaBitacora, string> = {
   proveedor: "border-[#f5dcc2] bg-[#fdf4ea] text-[#b46a2c]",
 };
 
+const focusRingClass = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white";
+
 function getInitials(nombre?: string | null): string {
   const value = (nombre || "").trim();
   if (!value) return "--";
@@ -124,7 +126,6 @@ export function MiBitacoraPage() {
     sortedRecords,
     groupedAll,
     totalPages,
-    paginatedFlattened,
     groupedRecords,
     visiblePages,
     toggleSort,
@@ -146,6 +147,15 @@ export function MiBitacoraPage() {
 
   const residentTag = residentUserId.trim() || "Residente";
   const [showFilters, setShowFilters] = React.useState(false);
+  const qrUtilizado = selectedDetail?.detalle.qr_utilizado?.trim() ?? "";
+  const shouldShowQrBlock = selectedDetail?.metodo_acceso === "QR" && qrUtilizado.length > 0;
+  const hasActiveFilters =
+    searchInput.trim().length > 0 ||
+    personType !== "all" ||
+    dateFrom.length > 0 ||
+    dateTo.length > 0;
+  const noMatchingRecords = !loading && !error && sortedRecords.length === 0 && hasActiveFilters;
+  const emptyBitacora = !loading && !error && sortedRecords.length === 0 && !hasActiveFilters;
 
   return (
     <div className="min-h-screen bg-[#ececec] p-2 sm:p-4">
@@ -160,13 +170,13 @@ export function MiBitacoraPage() {
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
                   placeholder="Search"
-                  className="h-10 rounded-md border-[#d2d2d2] bg-white pl-9 text-sm"
+                  className={cn("h-10 rounded-md border-[#d2d2d2] bg-white pl-9 text-sm", focusRingClass)}
                 />
               </div>
             </div>
 
             <div className="mb-4 flex flex-wrap items-center gap-2">
-              <button type="button" className="flex h-8 items-center gap-2 rounded-md border border-[#d2d2d2] bg-white px-3 text-xs font-medium text-[#2c2c2c]" disabled>
+              <button type="button" className={cn("flex h-8 items-center gap-2 rounded-md border border-[#d2d2d2] bg-white px-3 text-xs font-medium text-[#2c2c2c]", focusRingClass)} disabled>
                 {residentTag} <X className="size-3" />
               </button>
 
@@ -176,7 +186,7 @@ export function MiBitacoraPage() {
                   setPersonType(event.target.value as "all" | PersonaBitacora);
                   setPage(1);
                 }}
-                className="h-8 rounded-md border border-[#d2d2d2] bg-white px-2 text-xs text-[#2c2c2c]"
+                className={cn("h-8 rounded-md border border-[#d2d2d2] bg-white px-2 text-xs text-[#2c2c2c]", focusRingClass)}
               >
                 {personTypeOptions.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
@@ -189,7 +199,7 @@ export function MiBitacoraPage() {
                   setSort(event.target.value as SortDirection);
                   setPage(1);
                 }}
-                className="h-8 rounded-md border border-[#d2d2d2] bg-white px-2 text-xs text-[#2c2c2c]"
+                className={cn("h-8 rounded-md border border-[#d2d2d2] bg-white px-2 text-xs text-[#2c2c2c]", focusRingClass)}
               >
                 {sortOptions.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
@@ -203,7 +213,7 @@ export function MiBitacoraPage() {
                   setDateFrom(event.target.value);
                   setPage(1);
                 }}
-                className="h-8 w-35 rounded-md border-[#d2d2d2] bg-white px-2 text-xs"
+                className={cn("h-8 w-35 rounded-md border-[#d2d2d2] bg-white px-2 text-xs", focusRingClass)}
                 title="Desde"
               />
 
@@ -214,7 +224,7 @@ export function MiBitacoraPage() {
                   setDateTo(event.target.value);
                   setPage(1);
                 }}
-                className="h-8 w-35 rounded-md border-[#d2d2d2] bg-white px-2 text-xs"
+                className={cn("h-8 w-35 rounded-md border-[#d2d2d2] bg-white px-2 text-xs", focusRingClass)}
                 title="Hasta"
               />
 
@@ -222,7 +232,7 @@ export function MiBitacoraPage() {
                 <button
                   type="button"
                   onClick={() => setShowFilters((s) => !s)}
-                  className="ml-2 inline-flex h-8 items-center gap-2 rounded-md border border-[#d2d2d2] bg-white px-3 text-xs font-medium text-[#2c2c2c]"
+                  className={cn("ml-2 inline-flex h-8 items-center gap-2 rounded-md border border-[#d2d2d2] bg-white px-3 text-xs font-medium text-[#2c2c2c]", focusRingClass)}
                   aria-label="Mostrar filtros"
                 >
                   <Filter className="size-3 text-[#6b6b6b]" />
@@ -280,7 +290,6 @@ export function MiBitacoraPage() {
                   <p className="mb-4 text-sm text-slate-600">No pudimos cargar tu bitácora en este momento. Ya lo estamos arreglando — intenta de nuevo en unos minutos.</p>
                   <div className="flex items-center justify-center gap-3">
                     <Button onClick={() => void fetchList(false)} className="bg-[#7559e8] text-white">Reintentar</Button>
-                    <Button variant="outline" onClick={() => { setSearch(""); setPage(1); void fetchList(false); }}>Recargar</Button>
                   </div>
                 </div>
               </div>
@@ -296,7 +305,17 @@ export function MiBitacoraPage() {
 
                 {loading && sortedRecords.length === 0 ? (
                   <div className="flex min-h-45 items-center justify-center px-4 py-10 text-sm text-slate-500">Cargando registros...</div>
-                ) : paginatedFlattened.length === 0 ? (
+                ) : noMatchingRecords ? (
+                  <div className="flex min-h-57.5 items-center justify-center px-4 py-10">
+                    <div className="mx-auto flex max-w-sm flex-col items-center gap-2 text-center">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#fff6dd] shadow-[0_0_0_8px_rgba(251,191,36,0.12)]">
+                        <AlertCircle className="size-5 text-[#e2aa00]" />
+                      </div>
+                      <p className="text-sm font-semibold text-[#353535]">No se encontraron registros coincidentes con los filtros</p>
+                      <p className="max-w-88 text-xs leading-5 text-[#747474]">Intenta ajustar el nombre, los caracteres ingresados o limpiar los filtros para ver resultados.</p>
+                    </div>
+                  </div>
+                ) : emptyBitacora ? (
                   <div className="flex min-h-57.5 items-center justify-center px-4 py-10">
                     <div className="mx-auto flex max-w-sm flex-col items-center gap-2 text-center">
                       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#fff6dd] shadow-[0_0_0_8px_rgba(251,191,36,0.12)]">
@@ -363,21 +382,25 @@ export function MiBitacoraPage() {
                       </button>
 
                       <div className="flex items-center gap-1">
-                        {visiblePages.map((pageNumber) => (
-                          <button
-                            key={pageNumber}
-                            type="button"
-                            onClick={() => setPage(pageNumber)}
-                            className={cn(
-                              "h-6 min-w-6 rounded px-2 text-xs",
-                              pageNumber === page
-                                ? "bg-[#f2e9ff] font-semibold text-[#7c5dd8]"
-                                : "text-[#666666] hover:bg-[#f6f6f6]",
-                            )}
-                          >
-                            {pageNumber}
-                          </button>
-                        ))}
+                        {visiblePages.map((item, index) =>
+                          item === "ellipsis" ? (
+                            <span key={`ellipsis-${index}`} className="px-1 text-[#9a9a9a]">...</span>
+                          ) : (
+                            <button
+                              key={item}
+                              type="button"
+                              onClick={() => setPage(item)}
+                              className={cn(
+                                "h-6 min-w-6 rounded px-2 text-xs",
+                                item === page
+                                    ? "bg-amber-100 font-semibold text-amber-700"
+                                  : "text-[#666666] hover:bg-[#f6f6f6]",
+                              )}
+                            >
+                              {item}
+                            </button>
+                          ),
+                        )}
                       </div>
 
                       <button
@@ -408,7 +431,7 @@ export function MiBitacoraPage() {
                     <button
                       type="button"
                       onClick={() => setSelected(null)}
-                      className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                      className={cn("rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900", focusRingClass)}
                     >
                       <X className="size-6" />
                     </button>
@@ -487,8 +510,8 @@ export function MiBitacoraPage() {
                               </div>
                             </div>
 
-                            {selectedDetail.detalle.qr_utilizado ? (
-                              <QRCodeBlock qr={selectedDetail.detalle.qr_utilizado} />
+                            {shouldShowQrBlock ? (
+                              <QRCodeBlock qr={qrUtilizado} />
                             ) : null}
 
                             <div className="space-y-3">
@@ -567,7 +590,7 @@ function QRCodeBlock({ qr }: { qr: string }) {
             type="button"
             onClick={handleCopy}
             title="Copiar QR"
-            className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            className={cn("rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50", focusRingClass)}
           >
             Copiar
           </button>
