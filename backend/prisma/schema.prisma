@@ -192,7 +192,7 @@ model Guardia {
   id_guardia String     @id @default(uuid())
   id_usuario String     @unique
   nombre     String     @db.VarChar(128)
-  turno      String
+  turno      String?
   bitacoras         Bitacora[] @relation("GuardiaEntrada")
   bitacoras_salida  Bitacora[] @relation("GuardiaSalida")
   usuario    Usuario    @relation(fields: [id_usuario], references: [id_usuario])
@@ -210,8 +210,8 @@ model Administrador {
   id_administrador String  @id @default(uuid())
   id_usuario       String  @unique
   nombre           String  @db.VarChar(128)
-  apellidos        String  @db.VarChar(128)
-  cargo            Cargo
+  apellidos        String?  @db.VarChar(128)
+  cargo            Cargo?
   usuario          Usuario @relation(fields: [id_usuario], references: [id_usuario])
 }
 
