@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 import { Home, ClipboardCheck, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +31,7 @@ const roles = [
 
 export function SignInTypeUser() {
     const [selected, setSelected] = useState<UserType>("administrador");
+    const router = useRouter();
 
     return (
         <div className="min-h-screen flex items-center justify-center px-16">
@@ -58,7 +60,14 @@ export function SignInTypeUser() {
                             <p className="text-muted-foreground text-xs text-center leading-relaxed flex-1">
                                 {description}
                             </p>
-                            <Button className="w-full bg-amber-400 hover:bg-amber-500  cursor-pointer text-amber-950 font-semibold">
+                            <Button 
+                                className="w-full bg-amber-400 hover:bg-amber-500 cursor-pointer text-amber-950 font-semibold"
+                                onClick={(e) => {
+                                    e.stopPropagation(); // Evitamos que haga conflicto con el onClick del div padre
+                                    setSelected(id);
+                                    router.push(`/signIn/subircredencial?tipo=${id}`);
+                                }}
+                            >
                                 Registrarme
                             </Button>
                         </div>
