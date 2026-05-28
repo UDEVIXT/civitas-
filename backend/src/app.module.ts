@@ -21,6 +21,8 @@ import { MisServiciosModule } from './mis-servicios/mis-servicios.module';
 import { AccesosServiciosModule } from './accesos-servicios/accesos-servicios.module';
 import { VisitanteModule } from './visitante/visitante.module';
 import { LoginThrottlerGuard } from './auth/guards/login-throttler.guard';
+import { PerfilModule } from './perfil/perfil.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -40,6 +42,7 @@ import { LoginThrottlerGuard } from './auth/guards/login-throttler.guard';
     MisServiciosModule,
     TipoServicioModule,
     AccesosServiciosModule,
+    PerfilModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
