@@ -126,7 +126,6 @@ export function FiltersPanel({
             void Promise.resolve().then(() => fetchList(true));
             onClose();
           }}
-          className="rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs text-red-700"
           className={`rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs text-red-700 ${focusRingClass}`}
         >
           Limpiar filtros
