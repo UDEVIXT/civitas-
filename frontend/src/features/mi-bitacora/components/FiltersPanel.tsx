@@ -7,6 +7,8 @@ import type { PersonaBitacora } from "../types";
 
 type SortDirection = "asc" | "desc";
 
+const focusRingClass = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white";
+
 const personTypeOptions: Array<{ label: string; value: "all" | PersonaBitacora }> = [
   { label: "Todos", value: "all" },
   { label: "Visitantes", value: "visitante" },
@@ -62,7 +64,7 @@ export function FiltersPanel({
     <div className="absolute right-0 top-9 z-20 w-72 rounded border border-[#e6e6e6] bg-white p-3 shadow-lg">
       <div className="mb-2 flex items-center justify-between">
         <p className="text-sm font-medium">Filtros</p>
-        <button type="button" onClick={onClose} className="text-sm text-[#666666]">Cerrar</button>
+        <button type="button" onClick={onClose} className={`text-sm text-[#666666] ${focusRingClass}`}>Cerrar</button>
       </div>
 
       <div className="mb-2">
@@ -72,7 +74,7 @@ export function FiltersPanel({
             type="checkbox"
             checked={groupBy === 'metodo'}
             onChange={() => setGroupBy(groupBy === 'metodo' ? null : 'metodo')}
-            className="h-4 w-4 rounded border-[#c7c7c7]"
+            className={`h-4 w-4 rounded border-[#c7c7c7] ${focusRingClass}`}
           />
         </label>
 
@@ -80,7 +82,7 @@ export function FiltersPanel({
         <select
           value={personType}
           onChange={(e) => setPersonType(e.target.value as "all" | PersonaBitacora)}
-          className="w-full rounded border px-2 py-1 text-sm"
+          className={`w-full rounded border px-2 py-1 text-sm ${focusRingClass}`}
         >
           {personTypeOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -90,7 +92,7 @@ export function FiltersPanel({
 
       <div className="mb-2">
         <label className="mb-1 block text-xs text-[#666666]">Orden</label>
-        <select value={sort} onChange={(e) => setSort(e.target.value as SortDirection)} className="w-full rounded border px-2 py-1 text-sm">
+        <select value={sort} onChange={(e) => setSort(e.target.value as SortDirection)} className={`w-full rounded border px-2 py-1 text-sm ${focusRingClass}`}>
           {sortOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
@@ -100,11 +102,11 @@ export function FiltersPanel({
       <div className="mb-2 grid grid-cols-2 gap-2">
         <div>
           <label className="mb-1 block text-xs text-[#666666]">Desde</label>
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full" />
+          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={`w-full ${focusRingClass}`} />
         </div>
         <div>
           <label className="mb-1 block text-xs text-[#666666]">Hasta</label>
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full" />
+          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={`w-full ${focusRingClass}`} />
         </div>
       </div>
 
@@ -125,6 +127,7 @@ export function FiltersPanel({
             onClose();
           }}
           className="rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs text-red-700"
+          className={`rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs text-red-700 ${focusRingClass}`}
         >
           Limpiar filtros
         </button>
@@ -137,6 +140,7 @@ export function FiltersPanel({
             void Promise.resolve().then(() => fetchList(true));
             onClose();
           }}
+          className={focusRingClass}
         >
           Aplicar
         </Button>
