@@ -1,9 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { getMiPerfil } from "../api/perfil";
+import { getMiPerfil, updateDatosPersonales } from "../api/perfil";
 
 import {
-  updateDatosPersonales,
   changePassword,
   requestEmailChange,
 } from "../api/perfil.mock";
@@ -26,13 +25,15 @@ export const useUpdatePerfil = () => {
   return useMutation({
     mutationFn: (data: UpdatePerfilPayload) => updateDatosPersonales(data),
     onSuccess: (data) => {
-      // CA001: el sistema actualiza el perfil y muestra un mensaje de confirmación
       toast.success("Perfil actualizado correctamente");
       queryClient.setQueryData(["perfil"], data);
     },
     onError: (error: any) => {
-      // CA012: el sistema muestra un mensaje de error claro
-      toast.error(error.message || "Ocurrió un error al actualizar el perfil.");
+      toast.error(
+        error.response?.data?.message ||
+          error.message ||
+          "Ocurrió un error al actualizar el perfil."
+      );
     },
   });
 };
