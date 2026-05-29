@@ -197,47 +197,50 @@ React.useEffect(() => {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             
-            {/* Header con Foto */}
-            <div className="flex flex-col items-center justify-center gap-3 bg-gray-50 p-4 rounded-xl text-center">
-                <Avatar className="h-24 w-24 border-4 border-white shadow-md">
-                  {/* Asegúrate de leer 'url_imagen' y usar undefined si no existe, no un string estático */}
+            {/* Header con Foto (Estilo Superpuesto) */}
+            <div className="flex flex-col items-center justify-center gap-3 bg-gray-50 p-6 rounded-xl text-center">
+              
+              {/* Contenedor relativo para posicionar el botón encima de la foto */}
+              <div className="relative inline-block">
+                <Avatar className="h-28 w-28 border-4 border-white shadow-md">
                   <AvatarImage 
                     src={imagenPreview || empleado?.url_imagen || undefined} 
                     className="object-cover" 
                   />
-                  <AvatarFallback className="bg-emerald-100 text-emerald-700 font-bold text-2xl">
-                    {/* Muestra las iniciales si falla la carga o no hay imagen */}
+                  <AvatarFallback className="bg-emerald-100 text-emerald-700 font-bold text-3xl">
                     {empleado?.nombre?.charAt(0)?.toUpperCase() || "?"}
                   </AvatarFallback>
                 </Avatar>
 
+                {/* Botón flotante superpuesto en la esquina inferior derecha */}
                 <FormField control={form.control} name="foto" render={({ field: { value, onChange, ...fieldProps } }) => (
-                <FormItem className="space-y-0">
-                  <FormLabel className="cursor-pointer bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-sm flex items-center gap-1.5 mt-1">
-                    <Upload className="h-3.5 w-3.5" />
-                    Cambiar Foto
-                  </FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="file" 
-                      accept="image/*" 
-                      className="hidden" 
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          onChange(file); // Setea el archivo físico real en el formulario
-                          setImagenPreview(URL.createObjectURL(file)); // Genera la URL temporal de visualización
-                        }
-                      }}
-                      {...fieldProps}
-                    />
-                  </FormControl>
-                  <FormMessage className="text-[11px] mt-1" />
-                </FormItem>
-              )} />
-              
-              <div className="flex flex-col gap-0.5">
-                <p className="text-base sm:text-lg font-extrabold text-gray-950 tracking-tight">
+                  <FormItem className="space-y-0 absolute bottom-0 right-0">
+                    <FormLabel className="cursor-pointer bg-white border border-gray-200 hover:bg-gray-100 text-gray-700 rounded-full h-8 w-8 flex items-center justify-center shadow-sm transition-colors">
+                      <Upload className="h-4 w-4" />
+                      {/* Ocultamos el texto visualmente para que solo quede el icono redondo, como en la referencia */}
+                      <span className="sr-only">Editar Foto</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            onChange(file);
+                            setImagenPreview(URL.createObjectURL(file));
+                          }
+                        }}
+                        {...fieldProps}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )} />
+              </div>
+
+              <div className="flex flex-col gap-0.5 mt-1">
+                <p className="text-xl sm:text-2xl font-extrabold text-gray-950 tracking-tight">
                   {form.watch("nombre") || "Sin nombre"}
                 </p>
               </div>
