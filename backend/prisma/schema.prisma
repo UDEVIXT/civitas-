@@ -148,6 +148,7 @@ model Bitacora {
   fecha_hora_salida  DateTime?
   comentario         String?
   comentario_salida  String?
+  estado             Boolean   @default(true)
   acceso             Acceso    @relation(fields: [id_acceso], references: [id_acceso], onDelete: Cascade)
   guardia            Guardia?  @relation("GuardiaEntrada", fields: [id_guardia], references: [id_guardia])
   guardia_salida Guardia? @relation("GuardiaSalida", fields: [id_guardia_salida], references: [id_guardia])
