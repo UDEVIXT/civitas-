@@ -6,9 +6,12 @@ import {
   Post,
   Res,
   Req,
+  Get,
   UseInterceptors,
   UploadedFiles,
   UseGuards,
+  Query,
+  BadRequestException,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Response, Request } from 'express';
@@ -51,6 +54,14 @@ export class AuthController {
       data: result,
     };
   }
+
+  @Get('verify-email')
+async verifyEmail(@Query('token') token: string) {
+  if (!token) {
+    throw new BadRequestException('Se requiere un token de verificación.');
+  }
+  return await this.authService.verifyEmail(token);
+}
 
   @Post('register')
   @HttpCode(HttpStatus.CREATED)

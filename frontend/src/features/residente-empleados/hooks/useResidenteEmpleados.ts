@@ -26,7 +26,7 @@ type UpdateEmpleadoValues = {
   nombre: string;
   telefono?: string;
   cargo?: string;
-  foto?: string;
+  foto?: any;
   notas?: string;
   horarios?: HorarioForm[];
 };
@@ -114,9 +114,7 @@ export function useResidenteEmpleados(idResidente: string) {
   const updateMutation = useMutation({
     mutationFn: (values: UpdateEmpleadoValues) => {
       if (!selectedEmpleado) {
-        return Promise.reject(
-          "No hay empleado seleccionado",
-        );
+        return Promise.reject("No hay empleado seleccionado");
       }
 
       // Días activos
@@ -137,28 +135,30 @@ export function useResidenteEmpleados(idResidente: string) {
       const salidaLimpia =
         primerDiaActivo?.hora_salida || "16:00";
 
-      // Payload backend
-      const payloadBackend = {
-        nombre: values.nombre,
-        telefono: values.telefono,
-        cargo: values.cargo,
-        foto: values.foto || "",
-        notas: values.notas || "",
+      const formData = new FormData();
 
-        dias_autorizados: diasAutorizados,
+      formData.append("accion", "actualizacion_residente");
 
-        hora_entrada: entradaLimpia,
-        hora_salida: salidaLimpia,
-      };
+      // Mapeamos las propiedades simulando la estructura del objeto "data" que espera el DTO
+      formData.append("data[nombre]", values.nombre);
+      formData.append("data[telefono]", values.telefono || "");
+      formData.append("data[cargo]", values.cargo || "");
+      formData.append("data[notas]", values.notas || "");
+      formData.append("data[hora_entrada]", entradaLimpia);
+      formData.append("data[hora_salida]", salidaLimpia);
 
-      console.log(
-        "🚀 [HOOK] Payload plano adaptado enviado al servicio:",
-        payloadBackend,
-      );
+      formData.append("data[dias_autorizados]", JSON.stringify(diasAutorizados));
 
-      return actualizarEmpleadoResidente(
+      if (values.foto instanceof File) {
+        //La clave 'foto_empleado' debe coincidir exactamente con el nombre de @UploadedFile() del backend.
+        formData.append("foto_empleado", values.foto);
+      }
+
+      console.log(" [HOOK] FormData mapeado correctamente con payload multipart.");
+      
+    return actualizarEmpleadoResidente(
         selectedEmpleado.id_visitante,
-        payloadBackend,
+        formData
       );
     },
 

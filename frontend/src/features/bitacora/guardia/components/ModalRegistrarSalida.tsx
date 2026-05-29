@@ -33,6 +33,9 @@ export function ModalRegistrarSalida({
         setIsLoading(true);
         try {
             await bitacoraService.registrarSalida(registro.id.toString(), comentario);
+            toast.success("Salida registrada", {
+                description: `Se registró correctamente la salida de ${registro.nombre}.`
+            });
             onSuccess();
         } catch (error) {
             toast.error("Error al registrar la salida", {
