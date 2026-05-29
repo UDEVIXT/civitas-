@@ -81,6 +81,8 @@ export function useResidenteEmpleados(idResidente: string) {
     data,
     isLoading,
     error,
+    isError, 
+    refetch,
   } = useQuery({
     queryKey: [
       "residente-empleados",
@@ -312,6 +314,8 @@ export function useResidenteEmpleados(idResidente: string) {
   return {
     empleados: data?.data || [],
     isLoading,
+    isError,
+    refetch, 
     search,
     setSearch,
     modalEdit: {
