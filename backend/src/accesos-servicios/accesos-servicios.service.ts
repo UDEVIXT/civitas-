@@ -153,7 +153,6 @@ export class AccesosServiciosService {
           },
 
           guardia: true,
-          guardia_salida: true,
         },
       });
 
@@ -214,10 +213,6 @@ export class AccesosServiciosService {
         residente?.vivienda
           ?.numero_vivienda ?? 'N/A';
 
-      const esSalida =
-        bitacora.fecha_hora_salida !==
-        null;
-
       return {
         id: bitacora.id_bitacora,
 
@@ -229,18 +224,15 @@ export class AccesosServiciosService {
 
         tiempo_transcurrido:
           haceCuanto(
-            esSalida
-              ? bitacora.fecha_hora_salida!
-              : bitacora.fecha_hora_entrada,
+            bitacora.fecha_hora_entrada,
           ),
 
-        estado: esSalida
-          ? 'SALIDA'
-          : 'ENTRADA',
+        estado: bitacora.estado
+          ? 'AUTORIZADO'
+          : 'RECHAZADO',
 
-        comentario: esSalida
-          ? bitacora.comentario_salida
-          : bitacora.comentario,
+        comentario:
+          bitacora.comentario,
       };
     });
   }
@@ -331,73 +323,75 @@ export class AccesosServiciosService {
   }
 
   async validarAcceso(
-  codigoQr: string,
-  idUsuarioGuardia: string,
-) {
-  const guardia =
-    await this.prisma.guardia.findFirst({
-      where: {
-        id_usuario: idUsuarioGuardia,
-      },
-    });
-
-  if (!guardia) {
-    throw new NotFoundException(
-      'Guardia no encontrado.',
-    );
-  }
-
-  const acceso =
-    await this.prisma.acceso.findUnique({
-      where: {
-        codigo_qr: codigoQr,
-      },
-    });
-
-  if (!acceso) {
-    throw new NotFoundException(
-      'Código QR no válido.',
-    );
-  }
-
-  // Validar expiración
-  if (
-    new Date(acceso.fecha_expiracion) <
-    new Date()
+    codigoQr: string,
+    idUsuarioGuardia: string,
   ) {
-    throw new BadRequestException(
-      'El código QR ha expirado.',
-    );
+    const guardia =
+      await this.prisma.guardia.findFirst({
+        where: {
+          id_usuario: idUsuarioGuardia,
+        },
+      });
+
+    if (!guardia) {
+      throw new NotFoundException(
+        'Guardia no encontrado.',
+      );
+    }
+
+    const acceso =
+      await this.prisma.acceso.findUnique({
+        where: {
+          codigo_qr: codigoQr,
+        },
+      });
+
+    if (!acceso) {
+      throw new NotFoundException(
+        'Código QR no válido.',
+      );
+    }
+
+    // Validar expiración
+    if (
+      new Date(acceso.fecha_expiracion) <
+      new Date()
+    ) {
+      throw new BadRequestException(
+        'El código QR ha expirado.',
+      );
+    }
+
+    // Validar estatus
+    if (acceso.estatus === 'Inactivo') {
+      throw new BadRequestException(
+        'El acceso está inactivo.',
+      );
+    }
+
+    // Registrar validación en bitácora
+    await this.prisma.bitacora.create({
+      data: {
+        id_acceso: acceso.id_acceso,
+
+        id_guardia: guardia.id_guardia,
+
+        fecha_hora_entrada: new Date(),
+
+        estado: true,
+
+        comentario:
+          'Acceso validado por guardia vía QR',
+      },
+    });
+
+    return {
+      success: true,
+
+      message:
+        'Acceso validado correctamente.',
+    };
   }
-
-  // Validar estatus
-  if (acceso.estatus === 'Inactivo') {
-    throw new BadRequestException(
-      'El acceso está inactivo.',
-    );
-  }
-
-  // Registrar validación
-  await this.prisma.bitacora.create({
-    data: {
-      id_acceso: acceso.id_acceso,
-
-      id_guardia: guardia.id_guardia,
-
-      fecha_hora_entrada: new Date(),
-
-      comentario:
-        'Acceso validado por guardia vía QR',
-    },
-  });
-
-  return {
-    success: true,
-
-    message:
-      'Acceso validado correctamente.',
-  };
-}
 
   async denegarAcceso(
     codigoQr: string,
@@ -479,7 +473,7 @@ export class AccesosServiciosService {
       },
     });
 
-    // Registrar en bitácora
+    // Registrar rechazo en bitácora
     await this.prisma.bitacora.create({
       data: {
         id_acceso: acceso.id_acceso,
@@ -490,13 +484,13 @@ export class AccesosServiciosService {
         fecha_hora_entrada:
           new Date(),
 
-        comentario:
-          `ACCESO DENEGADO: ${motivo}`,
+        estado: false,
+
+        comentario: motivo,
       },
     });
 
-    // Opcional:
-    // desactivar acceso después del rechazo
+    // Desactivar acceso después del rechazo
     await this.prisma.acceso.update({
       where: {
         id_acceso: acceso.id_acceso,
@@ -515,65 +509,125 @@ export class AccesosServiciosService {
     };
   }
 
-  async registrarIngresoManual(datos: RegistroManualDto, idUsuarioGuardia: string) {
-    const guardia = await this.prisma.guardia.findFirst({
-      where: { id_usuario: idUsuarioGuardia },
+  async registrarIngresoManual(
+  datos: RegistroManualDto,
+  idUsuarioGuardia: string,
+) {
+  const guardia =
+    await this.prisma.guardia.findFirst({
+      where: {
+        id_usuario: idUsuarioGuardia,
+      },
     });
 
-    if (!guardia) {
-      throw new NotFoundException('Guardia no encontrado.');
-    }
+  if (!guardia) {
+    throw new NotFoundException(
+      'Guardia no encontrado.',
+    );
+  }
 
-    // 1. Buscar vivienda y extraer al primer residente
-    const vivienda = await this.prisma.vivienda.findFirst({
-      where: { numero_vivienda: { contains: datos.vivienda, mode: 'insensitive' } },
-      include: { residentes: true },
+  // 1. Buscar vivienda y obtener residente
+  const vivienda =
+    await this.prisma.vivienda.findFirst({
+      where: {
+        numero_vivienda: {
+          equals:
+            datos.vivienda.trim(),
+          mode: 'insensitive',
+        },
+      },
+
+      include: {
+        residentes: true,
+      },
     });
 
-    if (!vivienda || vivienda.residentes.length === 0) {
-      throw new NotFoundException(`No se encontró la vivienda o no tiene residentes asociados (${datos.vivienda}).`);
-    }
+  if (
+    !vivienda ||
+    vivienda.residentes.length === 0
+  ) {
+    throw new NotFoundException(
+      `No se encontró la vivienda o no tiene residentes asociados (${datos.vivienda}).`,
+    );
+  }
 
-    const residente = vivienda.residentes[0];
+  const residente =
+    vivienda.residentes[0];
 
-    // 2. Crear un Visitante exprés
-    const visitante = await this.prisma.visitante.create({
+  // 2. Crear visitante exprés
+  const visitante =
+    await this.prisma.visitante.create({
       data: {
         nombre: datos.nombre,
-        motivo: datos.motivo ? `Ingreso manual (${datos.empresa}): ${datos.motivo}` : `Ingreso manual (${datos.empresa})`,
+
+        motivo: datos.motivo
+          ? `Ingreso manual (${datos.empresa}): ${datos.motivo}`
+          : `Ingreso manual (${datos.empresa})`,
+
         es_frecuente: false,
-        id_residente: residente.id_residente,
-      }
+
+        id_residente:
+          residente.id_residente,
+      },
     });
 
-    // 3. Crear un Acceso temporal (expira al final del día)
-    const hoy = new Date();
-    const expiracion = new Date(hoy);
-    expiracion.setHours(23, 59, 59, 999);
+  // 3. Crear acceso temporal
+  const hoy = new Date();
 
-    const acceso = await this.prisma.acceso.create({
+  const expiracion =
+    new Date(hoy);
+
+  expiracion.setHours(
+    23,
+    59,
+    59,
+    999,
+  );
+
+  const acceso =
+    await this.prisma.acceso.create({
       data: {
-        id_usuario: residente.id_usuario,
-        id_visitante: visitante.id_visitante,
-        fecha_expiracion: expiracion,
+        id_usuario:
+          residente.id_usuario,
+
+        id_visitante:
+          visitante.id_visitante,
+
+        fecha_expiracion:
+          expiracion,
+
         estatus: 'Activo',
-        comentario_admin: 'Creado por ingreso manual en caseta',
-      }
+
+        comentario_admin:
+          'Creado por ingreso manual en caseta',
+      },
     });
 
-    // 4. Registrar en Bitácora
-    await this.prisma.bitacora.create({
-      data: {
-        id_acceso: acceso.id_acceso,
-        id_guardia: guardia.id_guardia,
-        fecha_hora_entrada: new Date(),
-        comentario: `Ingreso manual: ${datos.empresa}. ${datos.motivo || ''}`.trim(),
-      }
-    });
+  // 4. Registrar en bitácora
+  await this.prisma.bitacora.create({
+    data: {
+      id_acceso: acceso.id_acceso,
 
-    return {
-      success: true,
-      message: 'Ingreso manual registrado correctamente.',
-    };
-  }
+      id_guardia:
+        guardia.id_guardia,
+
+      fecha_hora_entrada:
+        new Date(),
+
+      estado: true,
+
+      comentario:
+        `Ingreso manual: ${datos.empresa}. ${
+          datos.motivo || ''
+        }`.trim(),
+    },
+  });
+
+  return {
+    success: true,
+
+    message:
+      'Ingreso manual registrado correctamente.',
+  };
+}
 }
