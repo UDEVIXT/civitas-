@@ -4,7 +4,7 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -45,7 +45,7 @@ const formSchema = z.object({
     .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, "Solo se permiten letras"),
   
   notas: z.string().optional(),
-  foto: z.string().optional(),
+  foto: z.any().optional(),
   horarios: z.array(horarioDiaSchema),
 }).superRefine((data, ctx) => {
   let tieneDiasActivos = false;
@@ -85,6 +85,7 @@ interface ModalEditarEmpleadoProps {
 
 export function ModalEditarEmpleado({ empleado, isOpen, onClose, onSave, isSaving }: ModalEditarEmpleadoProps) {
   // Plantilla por defecto para los 7 días
+  const [imagenPreview, setImagenPreview] = React.useState<string | null>(null);
   const horariosPorDefecto = DIAS_SEMANA.map(dia => ({
     dia,
     activo: false,
@@ -99,13 +100,14 @@ export function ModalEditarEmpleado({ empleado, isOpen, onClose, onSave, isSavin
       telefono: "",
       cargo: "",
       notas: "",
-      foto: "",
+      foto: undefined,
       horarios: horariosPorDefecto,
     },
   });
 
 React.useEffect(() => {
     if (empleado) {
+      setImagenPreview(null);
       const telefonoLimpio = (empleado.telefono || "").replace(/\D/g, "");
  
       const servicioAny = empleado.servicio as any;
@@ -170,7 +172,7 @@ React.useEffect(() => {
         telefono: telefonoLimpio,
         cargo: cargoReal,
         notas: servicioAny?.notas || empleadoAny.motivo || "", 
-        foto: empleado.url_imagen || "",
+        foto: undefined,
         horarios: horariosMapeados,
       });
     }
@@ -200,7 +202,7 @@ React.useEffect(() => {
                 <Avatar className="h-24 w-24 border-4 border-white shadow-md">
                   {/* Asegúrate de leer 'url_imagen' y usar undefined si no existe, no un string estático */}
                   <AvatarImage 
-                    src={empleado?.url_imagen || undefined} 
+                    src={imagenPreview || empleado?.url_imagen || undefined} 
                     className="object-cover" 
                   />
                   <AvatarFallback className="bg-emerald-100 text-emerald-700 font-bold text-2xl">
@@ -208,6 +210,32 @@ React.useEffect(() => {
                     {empleado?.nombre?.charAt(0)?.toUpperCase() || "?"}
                   </AvatarFallback>
                 </Avatar>
+
+                <FormField control={form.control} name="foto" render={({ field: { value, onChange, ...fieldProps } }) => (
+                <FormItem className="space-y-0">
+                  <FormLabel className="cursor-pointer bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-sm flex items-center gap-1.5 mt-1">
+                    <Upload className="h-3.5 w-3.5" />
+                    Cambiar Foto
+                  </FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          onChange(file); // Setea el archivo físico real en el formulario
+                          setImagenPreview(URL.createObjectURL(file)); // Genera la URL temporal de visualización
+                        }
+                      }}
+                      {...fieldProps}
+                    />
+                  </FormControl>
+                  <FormMessage className="text-[11px] mt-1" />
+                </FormItem>
+              )} />
+              
               <div className="flex flex-col gap-0.5">
                 <p className="text-base sm:text-lg font-extrabold text-gray-950 tracking-tight">
                   {form.watch("nombre") || "Sin nombre"}
