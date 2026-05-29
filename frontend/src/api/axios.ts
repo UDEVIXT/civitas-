@@ -45,7 +45,7 @@ apiClient.interceptors.response.use(
       
       // CORRECCIÓN: Si el error 401 viene de verificar código o hacer login,
       // NO intentamos refrescar el token. Devolvemos el error original al componente.
-      const rutasSinAutenticacion = ["/auth/login", "/auth/forgot-password", "/auth/verify-code", "/auth/reset-password"];
+      const rutasSinAutenticacion = ["/auth/login", "/auth/forgot-password", "/auth/verify-code", "/auth/reset-password", "/auth/validar-credencial", "/auth/register"];
       if (originalRequest.url && rutasSinAutenticacion.some(ruta => originalRequest.url!.includes(ruta))) {
         return Promise.reject(error);
       }

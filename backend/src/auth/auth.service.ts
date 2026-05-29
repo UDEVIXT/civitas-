@@ -247,11 +247,7 @@ export class AuthService {
     // ---------------------------------------------
     // TEXTO COMPLETO
     // ---------------------------------------------
-    const textoDetectado = (
-      textoFrente +
-      ' ' +
-      textoReverso
-    ).toUpperCase();
+    const textoDetectado = (textoFrente + ' ' + textoReverso).toUpperCase();
 
     // ---------------------------------------------
     // PALABRAS CLAVE
@@ -290,13 +286,12 @@ export class AuthService {
 
     if (
       dto.rol !== 'Administrador' &&
-      dto.rol !== 'Guardia'
+      dto.rol !== 'Guardia' &&
+      dto.rol !== 'Residente'
     ) {
       //console.log('\nROL INVALIDO');
 
-      throw new UnauthorizedException(
-        'Rol no permitido para validación.',
-      );
+      throw new UnauthorizedException('Rol no permitido para validación.');
     }
 
     //console.log('\n ROL VALIDO');
@@ -497,19 +492,21 @@ export class AuthService {
   async forgotPassword(identificador: string) {
     try {
       // CA001: Verificar que el usuario exista (por username O por correo)
-    const user = await this.prisma.usuario.findFirst({
-      where: {
-        OR: [
-          { nombre_usuario: identificador },
-          { correo: identificador } // Ajusta 'correo' al nombre real de tu columna en schema.prisma
-        ],
-      },
-    });
+      const user = await this.prisma.usuario.findFirst({
+        where: {
+          OR: [
+            { nombre_usuario: identificador },
+            { correo: identificador }, // Ajusta 'correo' al nombre real de tu columna en schema.prisma
+          ],
+        },
+      });
 
-    if (!user) {
-      // Lanza un error 404 directo al frontend
-      throw new NotFoundException('El usuario asociado a este correo no existe.');
-    }
+      if (!user) {
+        // Lanza un error 404 directo al frontend
+        throw new NotFoundException(
+          'El usuario asociado a este correo no existe.',
+        );
+      }
 
       // Generar un código numérico seguro de 6 dígitos
       const codigo = crypto.randomInt(100000, 999999).toString();
@@ -542,15 +539,17 @@ export class AuthService {
       };
     } catch (error) {
       // --- AÑADE ESTA LÍNEA PARA VER EL ERROR REAL EN LA TERMINAL ---
-      console.error('ERROR REAL DE CORREO:', error); 
-      
+      console.error('ERROR REAL DE CORREO:', error);
+
       if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Error al procesar la solicitud de recuperación.');
+      throw new InternalServerErrorException(
+        'Error al procesar la solicitud de recuperación.',
+      );
     }
   }
 
   // 2. Valida la vigencia del código (Cumple CA004, CA005)
-// 2. Valida la vigencia del código
+  // 2. Valida la vigencia del código
   async verifyResetCode(identificador: string, codigo: string) {
     console.log('\n--- DIAGNÓSTICO DE VERIFICACIÓN ---');
     console.log(`Buscando usuario: [${identificador}] con código: [${codigo}]`);
@@ -560,7 +559,7 @@ export class AuthService {
       where: {
         OR: [
           { nombre_usuario: identificador },
-          { correo: { equals: identificador, mode: 'insensitive' } } // Ignora mayúsculas
+          { correo: { equals: identificador, mode: 'insensitive' } }, // Ignora mayúsculas
         ],
       },
     });
@@ -572,14 +571,18 @@ export class AuthService {
 
     // 2. Verificamos que el código sea idéntico
     if (user.resetPasswordToken !== codigo) {
-      console.log(`❌ FALLO 2: Discrepancia de código. Esperaba [${user.resetPasswordToken}], recibió [${codigo}]`);
+      console.log(
+        `❌ FALLO 2: Discrepancia de código. Esperaba [${user.resetPasswordToken}], recibió [${codigo}]`,
+      );
       throw new UnauthorizedException('El código introducido es incorrecto.');
     }
 
     // 3. Verificamos la vigencia del tiempo
     const ahora = new Date();
     if (user.resetPasswordExpires && user.resetPasswordExpires < ahora) {
-      console.log(`❌ FALLO 3: Tiempo expirado. Hora BD: ${user.resetPasswordExpires.toISOString()} | Hora Servidor: ${ahora.toISOString()}`);
+      console.log(
+        `❌ FALLO 3: Tiempo expirado. Hora BD: ${user.resetPasswordExpires.toISOString()} | Hora Servidor: ${ahora.toISOString()}`,
+      );
       throw new UnauthorizedException('El código ha expirado por tiempo.');
     }
 
