@@ -10,6 +10,7 @@ import type { MiBitacoraItem, MiBitacoraDetalle, PersonaBitacora } from "../type
 
 type SortDirection = "asc" | "desc";
 type SortField = 'fecha_hora_entrada' | 'fecha_hora_salida' | 'metodo' | null;
+type PaginationItem = number | "ellipsis";
 
 const PAGE_SIZE = 10;
 const REFRESH_INTERVAL_MS = 15000;
@@ -65,6 +66,59 @@ function sortBitacoraRecords(
   });
 }
 
+function buildLocalDayStartIso(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day, 0, 0, 0, 0).toISOString();
+}
+
+function buildLocalDayEndIso(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
+}
+
+function isRecordWithinSelectedDates(
+  record: MiBitacoraItem,
+  dateFrom: string,
+  dateTo: string,
+) {
+  const entryTime = new Date(record.fecha_hora_entrada).getTime();
+  if (Number.isNaN(entryTime)) {
+    return false;
+  }
+
+  if (dateFrom) {
+    const fromTime = new Date(buildLocalDayStartIso(dateFrom)).getTime();
+    if (entryTime < fromTime) {
+      return false;
+    }
+  }
+
+  if (dateTo) {
+    const toTime = new Date(buildLocalDayEndIso(dateTo)).getTime();
+    if (entryTime > toTime) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function buildPaginationItems(totalPages: number, currentPage: number): PaginationItem[] {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  if (currentPage <= 4) {
+    return [1, 2, 3, 4, 5, "ellipsis", totalPages];
+  }
+
+  if (currentPage >= totalPages - 3) {
+    return [1, "ellipsis", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+  }
+
+  return [1, "ellipsis", currentPage - 1, currentPage, currentPage + 1, "ellipsis", totalPages];
+}
+
 export function useMiBitacora(residentUserId: string) {
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
@@ -110,8 +164,8 @@ export function useMiBitacora(residentUserId: string) {
         const baseFilters = {
           search,
           personType: personType === "all" ? undefined : personType,
-          dateFrom: dateFrom ? `${dateFrom}T00:00:00.000Z` : undefined,
-          dateTo: dateTo ? `${dateTo}T23:59:59.999Z` : undefined,
+          dateFrom: dateFrom ? buildLocalDayStartIso(dateFrom) : undefined,
+          dateTo: dateTo ? buildLocalDayEndIso(dateTo) : undefined,
           page: 1,
           limit: PAGE_SIZE,
         };
@@ -124,7 +178,9 @@ export function useMiBitacora(residentUserId: string) {
         );
 
         const extraResponses = extraRequests.length > 0 ? await Promise.all(extraRequests) : [];
-        const combinedRecords = [firstResponse, ...extraResponses].flatMap((response) => response.data);
+        const combinedRecords = [firstResponse, ...extraResponses]
+          .flatMap((response) => response.data)
+          .filter((record) => isRecordWithinSelectedDates(record, dateFrom, dateTo));
 
         setAllRecords(combinedRecords);
         hasLoadedRef.current = true;
@@ -270,7 +326,15 @@ export function useMiBitacora(residentUserId: string) {
     return () => window.clearInterval(interval);
   }, [fetchList]);
 
-  const sortedRecords = React.useMemo(() => sortBitacoraRecords(allRecords, sortField, sort), [allRecords, sortField, sort]);
+  const filteredRecords = React.useMemo(
+    () => allRecords.filter((record) => isRecordWithinSelectedDates(record, dateFrom, dateTo)),
+    [allRecords, dateFrom, dateTo],
+  );
+
+  const sortedRecords = React.useMemo(
+    () => sortBitacoraRecords(filteredRecords, sortField, sort),
+    [filteredRecords, sortField, sort],
+  );
 
   const groupedAll = React.useMemo(() => {
     if (groupBy === null) return [{ method: '', items: sortedRecords }];
@@ -332,8 +396,10 @@ export function useMiBitacora(residentUserId: string) {
     return keys.map((k) => ({ method: k, items: map.get(k)! }));
   }, [paginatedFlattened, groupBy]);
 
-  const pages = Array.from({ length: totalPages }, (_, index) => index + 1);
-  const visiblePages = pages.slice(Math.max(0, currentPage - 2), Math.min(pages.length, currentPage + 3));
+  const visiblePages = React.useMemo(
+    () => buildPaginationItems(totalPages, currentPage),
+    [totalPages, currentPage],
+  );
 
   function toggleSort(field: SortField) {
     if (sortField === field) {
@@ -390,7 +456,6 @@ export function useMiBitacora(residentUserId: string) {
     totalPages,
     paginatedFlattened,
     groupedRecords,
-    pages,
     visiblePages,
     toggleSort,
     toggleGroup,
