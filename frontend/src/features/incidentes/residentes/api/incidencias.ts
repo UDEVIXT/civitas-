@@ -36,7 +36,23 @@ export const obtenerIncidencias = async (
     params: filtros,
   });
   const body = response.data;
-  return Array.isArray(body) ? body : (body.data ?? []);
+  const raw: any[] = Array.isArray(body) ? body : (body.data ?? []);
+  return raw.map((item) => ({
+    id_reporte: item.id_reporte,
+    motivo: item.motivo ?? item.titulo_o_tipo ?? "",
+    descripcion: item.descripcion ?? "",
+    estado: item.estado,
+    prioridad: item.prioridad ?? undefined,
+    es_anonimo: item.es_anonimo ?? false,
+    token_seguimiento: item.token_seguimiento ?? null,
+    resultado_esperado: item.resultado_esperado ?? null,
+    resultado_solucion: item.resultado_solucion ?? null,
+    createdAt: item.createdAt ?? item.fecha_hora ?? item.fecha_creacion ?? "",
+    evidencias: item.evidencias ?? (item.fotos ?? []).map((f: any) => ({
+      url_archivo: f.url ?? f.url_archivo ?? "",
+      nombre_archivo: f.nombre ?? f.nombre_archivo ?? "",
+    })),
+  }));
 };
 
 export const obtenerDetalleIncidencia = async (
