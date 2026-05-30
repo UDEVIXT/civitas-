@@ -70,6 +70,7 @@ export const toggleEmpleadoActivo = async (
 };
 
 // Se modificó la función para que reciba directamente el FormData desde el hook y soporte la foto
+// residente-api.ts
 export const actualizarEmpleadoResidente = async (id: string, formData: FormData) => {
   try {
     const response = await apiClient.put(`/mi-empleado/${id.trim()}`, formData, {
@@ -77,13 +78,22 @@ export const actualizarEmpleadoResidente = async (id: string, formData: FormData
         "Content-Type": "multipart/form-data",
       },
     });
-    return { success: true, data: response.data };
+    // Retornamos directamente la data del servidor en caso de éxito
+    return response.data;
   } catch (error: any) {
-    return {
-      success: false,
-      message:
-        error.response?.data?.message || "Error al actualizar los datos.",
-    };
+    console.error("Error al actualizar los datos del empleado:", error);
+
+    // (Criterio Defecto-HU-1.5.3.2)
+    if (error.isAxiosError && !error.response) {
+      throw new Error("Error de conexión: No se pudo conectar con el servidor. Revisa tu red.");
+    }
+
+    //responde con un error controlado
+    throw (
+      error?.response?.data || {
+        message: "Error al actualizar los datos.",
+      }
+    );
   }
 };
 
