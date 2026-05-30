@@ -30,6 +30,18 @@ export class PerfilController {
 
     return this.perfilService.actualizarMiPerfil(id_usuario, body);
   }
+
+  @Put('cambiar-contrasena')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Residente', 'Guardia', 'Administrador')
+  async cambiarContrasena(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: { contrasena_actual: string; nueva_contrasena: string },
+  ) {
+    const id_usuario = req.user.userId;
+
+    return this.perfilService.cambiarContrasena(id_usuario, body);
+  }
   
 }
 

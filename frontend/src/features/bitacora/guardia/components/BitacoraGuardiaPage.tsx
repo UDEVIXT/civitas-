@@ -160,6 +160,11 @@ export function BitacoraGuardiaPage() {
     setSelectedIds([]);
   };
 
+  const selectedRecordsData =
+    bitacoraData?.data?.filter((r: BitacoraRegistro) =>
+      selectedIds.includes(r.id),
+    ) || [];
+
   const confirmMassExit = async () => {
     if (selectedIds.length === 0) return;
 
@@ -170,6 +175,13 @@ export function BitacoraGuardiaPage() {
         selectedIds.map((id) => bitacoraService.registrarSalida(id.toString())),
       );
 
+      const nombresArray = selectedRecordsData.map((r: BitacoraRegistro) => r.nombre);
+      const nombresMostrados = nombresArray.slice(0, 5).join(", ");
+      const nombresExtra = nombresArray.length > 5 ? ` y ${nombresArray.length - 5} más` : "";
+
+      toast.success("Salidas registradas", {
+        description: `Se registraron correctamente las salidas de: ${nombresMostrados}${nombresExtra}.`,
+      });
       handleSuccess();
     } catch (error) {
       console.error("Error al registrar salidas masivas:", error);
@@ -178,11 +190,6 @@ export function BitacoraGuardiaPage() {
       setIsMassLoading(false);
     }
   };
-
-  const selectedRecordsData =
-    bitacoraData?.data?.filter((r: BitacoraRegistro) =>
-      selectedIds.includes(r.id),
-    ) || [];
 
   if (!isMounted) return null;
 
