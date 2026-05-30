@@ -84,12 +84,7 @@ export function useResidenteEmpleados(idResidente: string) {
     isError, 
     refetch,
   } = useQuery({
-    queryKey: [
-      "residente-empleados",
-      idResidente,
-      debouncedSearch,
-    ],
-
+    queryKey: ["residente-empleados", idResidente, debouncedSearch],
     queryFn: () =>
       obtenerMisEmpleados(
         {
@@ -98,8 +93,10 @@ export function useResidenteEmpleados(idResidente: string) {
         },
         debouncedSearch,
       ),
-
     enabled: !!idResidente,
+    
+    retry: false, 
+    networkMode: "always",
   });
 
   if (error) {

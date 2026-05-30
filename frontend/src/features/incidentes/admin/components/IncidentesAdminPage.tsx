@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { MapPin, Image as ImageIcon, ChevronLeft, ChevronRight, AlertCircle, RefreshCw } from "lucide-react";
 import { FiltrosIncidentesAdmin } from "./FiltrosIncidentesAdmin";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +57,30 @@ export function IncidentesAdminPage() {
     setCurrentPage,
     refetch,
   } = useIncidenciasAdmin();
+
+  const [pageInput, setPageInput] = useState(String(currentPage));
+  const [pageError, setPageError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPageInput(String(currentPage));
+    setPageError(null);
+  }, [currentPage]);
+
+  const handlePageInputSubmit = () => {
+    const num = parseInt(pageInput, 10);
+    if (isNaN(num) || num < 1) {
+      setPageError(`Ingresa un número entre 1 y ${totalPages}.`);
+      setPageInput(String(currentPage));
+      return;
+    }
+    if (num > totalPages) {
+      setPageError(`No existe la página ${num}. Redirigiendo a la última (${totalPages}).`);
+      setCurrentPage(totalPages);
+      return;
+    }
+    setPageError(null);
+    setCurrentPage(num);
+  };
 
   return (
     <div className="p-6 space-y-5">
@@ -177,32 +201,52 @@ export function IncidentesAdminPage() {
         </Table>
       </div>
 
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-muted-foreground">
+        <span className="text-center sm:text-left">
           {loading ? "Cargando..." : `Mostrando ${Math.min((currentPage - 1) * 8 + 1, incidentes.length)}–${Math.min(currentPage * 8, incidentes.length)} de ${incidentes.length}`}
         </span>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(currentPage - 1)}
-            disabled={currentPage === 1 || loading}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Anterior
-          </Button>
-          <span className="px-1">
-            {currentPage} / {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(currentPage + 1)}
-            disabled={currentPage === totalPages || loading}
-          >
-            Siguiente
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+        <div className="flex flex-col items-center sm:items-end gap-1">
+          <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1 || loading}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span className="hidden xs:inline">Anterior</span>
+            </Button>
+            <div className="flex items-center gap-1 text-sm">
+              <span>Página</span>
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={pageInput}
+                onChange={(e) => { setPageInput(e.target.value); setPageError(null); }}
+                onKeyDown={(e) => e.key === "Enter" && handlePageInputSubmit()}
+                onBlur={handlePageInputSubmit}
+                disabled={loading}
+                className="w-12 h-8 text-center rounded-md border border-input bg-background text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <span>de {totalPages}</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage === totalPages || loading}
+            >
+              <span className="hidden xs:inline">Siguiente</span>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          {pageError && (
+            <p className="text-xs text-amber-600 flex items-center gap-1 text-center sm:text-right">
+              <AlertCircle className="h-3 w-3 shrink-0" />
+              {pageError}
+            </p>
+          )}
         </div>
       </div>
     </div>
