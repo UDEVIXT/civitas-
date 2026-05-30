@@ -5,7 +5,7 @@ export interface ActividadReciente {
   nombre_repartidor: string;
   residente_vinculado: string;
   tiempo_transcurrido: string;
-  estado: "ENTRADA" | "SALIDA";
+  estado: "AUTORIZADO" | "RECHAZADO";
 }
 
 export interface DetalleServicio {
