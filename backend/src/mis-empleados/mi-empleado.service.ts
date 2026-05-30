@@ -8,10 +8,14 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ArchivosService } from '../r2-module/archivos.service';
 
 @Injectable()
 export class EmpleadoService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+  private prisma: PrismaService,
+  private readonly archivosService: ArchivosService,
+) {}
 
   private readonly dayOrder = [
     'LUNES',
@@ -403,11 +407,31 @@ export class EmpleadoService {
   }
 */
 
-async actualizarEmpleado(id: string, data: any) {
-  console.log("BODY QUE LLEGA AL BACKEND:", data);
+async actualizarEmpleado(
+  id: string,
+  data: any,
+  file?: Express.Multer.File,
+) {
+  console.log('BODY QUE LLEGA AL BACKEND:', data);
+  console.log('FILE QUE LLEGA AL SERVICE:', file?.originalname);
+
+  let urlImagen: string | undefined = undefined;
+
+  // 1. Subir imagen FUERA de la transacción
+  if (file) {
+    console.log('🟡 Subiendo imagen fuera de la transacción...');
+
+    urlImagen = await this.archivosService.subirImagen(
+      file,
+      'empleados-domesticos',
+    );
+
+    console.log('🟢 URL IMAGEN SUBIDA:', urlImagen);
+  }
+
   try {
     return await this.prisma.$transaction(async (tx) => {
-      // 1. Buscamos el visitante para saber si existe y obtener su servicio
+      // 2. Buscar visitante
       const visitante = await tx.visitante.findUnique({
         where: { id_visitante: id },
         select: { id_servicio: true },
@@ -417,27 +441,35 @@ async actualizarEmpleado(id: string, data: any) {
         throw new NotFoundException('Empleado no encontrado');
       }
 
-      // 2. Actualizamos datos personales + notas
+      // 3. Armar datos de visitante
       const datosVisitante: any = {
         nombre: data.nombre,
         telefono: data.telefono,
         notas_adicionales: data.notas_adicionales,
       };
 
-      if (data.url_imagen !== undefined) {
-        datosVisitante.url_imagen = data.url_imagen;
+      if (urlImagen) {
+        datosVisitante.url_imagen = urlImagen;
       }
 
-      if (data.foto !== undefined && data.foto !== '') {
-        datosVisitante.url_imagen = data.foto;
-      }
+      console.log('🟡 DATOS VISITANTE PARA UPDATE:', datosVisitante);
 
-      await tx.visitante.update({
+      // 4. Guardar cambios en Visitante
+      const visitanteActualizado = await tx.visitante.update({
         where: { id_visitante: id },
         data: datosVisitante,
+        select: {
+          id_visitante: true,
+          nombre: true,
+          telefono: true,
+          url_imagen: true,
+          notas_adicionales: true,
+        },
       });
 
-      // 3. Si tiene servicio, actualizamos cargo y horarios
+      console.log('🟢 VISITANTE ACTUALIZADO:', visitanteActualizado);
+
+      // 5. Actualizar servicio y horarios
       if (visitante.id_servicio) {
         const mapeoDias: Record<string, string> = {
           Lunes: 'LUNES',
@@ -480,7 +512,7 @@ async actualizarEmpleado(id: string, data: any) {
         });
       }
 
-      // 4. Actualizar bitácora del acceso
+      // 6. Actualizar acceso
       await tx.acceso.updateMany({
         where: { id_visitante: id, estatus: 'Activo' },
         data: {
@@ -492,6 +524,7 @@ async actualizarEmpleado(id: string, data: any) {
         success: true,
         statusCode: 200,
         message: 'Empleado actualizado con éxito',
+        data: visitanteActualizado,
       };
     });
   } catch (error: any) {
@@ -510,7 +543,6 @@ async actualizarEmpleado(id: string, data: any) {
     });
   }
 }
-
 
   async eliminarEmpleado(id: string, motivo?: string, id_residente?: string) {
     try {

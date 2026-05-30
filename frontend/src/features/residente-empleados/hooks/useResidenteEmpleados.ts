@@ -135,23 +135,30 @@ export function useResidenteEmpleados(idResidente: string) {
       const salidaLimpia =
         primerDiaActivo?.hora_salida || "16:00";
 
-const payloadBackend = {
-  nombre: values.nombre,
-  telefono: values.telefono || "",
-  cargo: values.cargo || "",
-  notas_adicionales: values.notas_adicionales || "",
-  foto: "",
-  dias_autorizados: diasAutorizados,
-  hora_entrada: entradaLimpia,
-  hora_salida: salidaLimpia,
-};
-
-console.log("🚀 [HOOK] Payload enviado al backend:", payloadBackend);
-
-return actualizarEmpleadoResidente(
-  selectedEmpleado.id_visitante,
-  payloadBackend,
-);
+      const formData = new FormData();
+          
+      formData.append("accion", "actualizacion_residente");
+      formData.append("nombre", values.nombre);
+      formData.append("telefono", values.telefono || "");
+      formData.append("cargo", values.cargo || "");
+      formData.append("notas_adicionales", values.notas_adicionales || "");
+      formData.append("hora_entrada", entradaLimpia);
+      formData.append("hora_salida", salidaLimpia);
+      formData.append("dias_autorizados", JSON.stringify(diasAutorizados));
+          
+      if (values.foto instanceof File) {
+        formData.append("foto_empleado", values.foto);
+      }
+      
+      console.log("🚀 [HOOK] FormData enviado al backend:");
+      for (const [key, value] of formData.entries()) {
+        console.log(key, value);
+      }
+      
+      return actualizarEmpleadoResidente(
+        selectedEmpleado.id_visitante,
+        formData,
+      );
     },
 
     onSuccess: (res: any) => {
