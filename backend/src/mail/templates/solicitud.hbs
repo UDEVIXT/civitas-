@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bienvenido a Civitas</title>
+    <title>Solicitud de cambio de rol</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -66,26 +66,14 @@
 
     <div class="container">
         <div class="header">
-            <h1>¡Bienvenido a Civitas!</h1>
+            <h1>Solicitud de cambio de rol</h1>
         </div>
 
         <div class="content">
-            <h2>¡Hola, {{nombre}}!</h2>
-            <p>Nos emociona muchísimo tenerte con nosotros. Tu cuenta ha sido creada con éxito y tu validación de INE fue completamente aprobada.</p>
-            <p>Para comenzar a explorar la plataforma y asegurarnos de que esta dirección de correo te pertenece, por favor confirma tu cuenta haciendo clic en el siguiente enlace:</p>
+            <h2>Hola, {{nombre}}</h2>
+            <p>Tu solicitud para tener el rol de {{rol}} ha sido enviada correctamente.</p>
+            <p>En breve un administrador evaluara tu solicitud y te indicará los pasos posteriores a seguir.</p>
             
-            <div class="btn-container">
-                <a href="http://localhost:3000/verify?token={{verificationToken}}" class="btn">
-                    Verificar mi cuenta
-                </a>
-            </div>
-
-            <p>Si el botón no funciona, también puedes copiar y pegar este enlace en tu navegador:</p>
-            <p style="word-break: break-all; font-size: 13px; color: #3182ce;">
-                http://localhost:3000/verify?token={{verificationToken}}
-            </p>
-            
-            <p>Si tú no solicitaste este registro, puedes ignorar este correo con total seguridad.</p>
         </div>
 
         <div class="footer">

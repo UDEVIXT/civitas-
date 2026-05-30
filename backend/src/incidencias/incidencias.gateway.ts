@@ -13,12 +13,12 @@ export class IncidenciasGateway implements OnGatewayConnection {
   @WebSocketServer()
   server!: Server;
 
-  constructor(private readonly incidenciasService: IncidenciasService) {
+ /* constructor(private readonly incidenciasService: IncidenciasService) {
     // Escuchamos el Observable que creamos en el servicio para los reportes
     this.incidenciasService.getStream().subscribe((reporte) => {
       this.handleIncidenciaUpdate(reporte);
     });
-  }
+  }*/
 
   // Cuando el usuario se conecta, lo unimos a su propia sala usando su id_usuario
   handleConnection(client: Socket) {

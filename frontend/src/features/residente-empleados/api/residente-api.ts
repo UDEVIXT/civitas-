@@ -57,6 +57,10 @@ export const toggleEmpleadoActivo = async (
   } catch (error: any) {
     console.error("Error al cambiar estado del empleado:", error);
 
+    if (error.isAxiosError && !error.response) {
+      throw new Error("Error de conexión: No se pudo conectar con el servidor. Revisa tu red.");
+    }
+
     throw (
       error?.response?.data || {
         message: "No se pudo actualizar el estado del empleado",
@@ -65,28 +69,31 @@ export const toggleEmpleadoActivo = async (
   }
 };
 
-export const actualizarEmpleadoResidente = async (id: string, data: any) => {
+// Se modificó la función para que reciba directamente el FormData desde el hook y soporte la foto
+// residente-api.ts
+export const actualizarEmpleadoResidente = async (id: string, formData: FormData) => {
   try {
-    const response = await apiClient.put(`/mi-empleado/${id.trim()}`, {
-      accion: "actualizacion_residente",
-      data: {
-        nombre: data.nombre,
-        telefono: data.telefono,
-        foto: data.foto,
-        cargo: data.cargo,
-        hora_entrada: data.hora_entrada,
-        hora_salida: data.hora_salida,
-        dias_autorizados: data.dias_autorizados,
-        notas: data.notas,
+    const response = await apiClient.put(`/mi-empleado/${id.trim()}`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
       },
     });
-    return { success: true, data: response.data };
+    // Retornamos directamente la data del servidor en caso de éxito
+    return response.data;
   } catch (error: any) {
-    return {
-      success: false,
-      message:
-        error.response?.data?.message || "Error al actualizar los datos.",
-    };
+    console.error("Error al actualizar los datos del empleado:", error);
+
+    // (Criterio Defecto-HU-1.5.3.2)
+    if (error.isAxiosError && !error.response) {
+      throw new Error("Error de conexión: No se pudo conectar con el servidor. Revisa tu red.");
+    }
+
+    //responde con un error controlado
+    throw (
+      error?.response?.data || {
+        message: "Error al actualizar los datos.",
+      }
+    );
   }
 };
 

@@ -205,6 +205,34 @@ export class AuthService {
     }
   }
 
+async verifyEmail(token: string) {
+  const user = await this.prisma.usuario.findFirst({
+    where: { token_verificacion: token },
+  });
+
+  if (!user) {
+    throw new BadRequestException('Token de verificación inválido o expirado.');
+  }
+
+  if (user.correo_verificado) {
+    return { message: 'El correo ya ha sido verificado anteriormente.' };
+  }
+
+  // Actualizar el estado del usuario
+  await this.prisma.usuario.update({
+    where: { id_usuario: user.id_usuario },
+    data: {
+      correo_verificado: true,
+      token_verificacion: null, // Opcional: limpiar el token una vez usado
+    },
+  });
+
+  return {
+    success: true,
+    message: 'Correo verificado exitosamente. Ya puedes iniciar sesión.',
+  };
+}
+
   async validarCredencial(
     dto: ValidarCredencialDto,
     archivos: {
