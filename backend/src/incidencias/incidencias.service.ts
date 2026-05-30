@@ -1,123 +1,106 @@
-import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
-import { Subject, Observable } from 'rxjs';
-import { PrismaService } from '../prisma/prisma.service';
-import { EstadoIncidencia, Reporte } from '@prisma/client';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service'; // Ajusta según tu ruta
+import { TipoReporte } from '@prisma/client';
 
 @Injectable()
 export class IncidenciasService {
-  private updates$ = new Subject<any>();
-
   constructor(private prisma: PrismaService) {}
 
-  /**
-   * CA001, CA002, CA006, CA007, CA010
-   * Obtiene la lista paginada, filtrada y ordenada desde la tabla Reporte.
-   */
-  async getIncidencias(
-    id_usuario: string, // Cambiado a id_usuario de acuerdo al esquema unificado
-    estado?: EstadoIncidencia,
-    order: 'asc' | 'desc' = 'desc',
-    skip: number = 0,
-    take: number = 10
-  ) {
+  async obtenerIncidentesPaginados(query: { page?: string; limit?: string; estado?: any; prioridad?: any }) {
     try {
-      return await this.prisma.reporte.findMany({
-        where: {
-          id_usuario: id_usuario,
-          tipo: 'INCIDENCIA', 
-          ...(estado && { estado }),
-        },
-        // CA002: Mapeamos los campos equivalentes del modelo Reporte
-        select: {
-          id_reporte: true,
-          motivo: true,        // Mapea como el título o tipo de incidente
-          descripcion: true,
-          estado: true,        // EstadoIncidencia (PENDIENTE, EN_PROCESO, etc.)
-          prioridad: true,     // PrioridadReporte (BAJA, MEDIA, ALTA)
-          es_anonimo: true,
-          token_seguimiento: true,
-          resultado_esperado: true,
-          resultado_solucion: true,
-          createdAt: true,
-          evidencias: {        // CA002: Incluye las evidencias adjuntas
-            select: {
-              url_archivo: true,
-              nombre_archivo: true,
-            }
-          }
-        },
-        // Nota: Como tu modelo Reporte actual no tiene un 'fecha_creacion' o 'createdAt',
-        // si te marca error aquí, añade 'createdAt DateTime @default(now())' a tu modelo Reporte en el esquema.
-        // Por ahora lo ordenamos por id_reporte para evitar fallos si no existe la fecha.
-        orderBy: { createdAt: order }, 
-        skip,
-        take,
-      });
-    } catch (error) {
-      // CA009: Mensaje claro en caso de error técnico
-      console.error('Error al cargar incidencias desde reportes:', error);
-      throw new InternalServerErrorException('Error al cargar las incidencias. Intente más tarde.');
-    }
-  }
+      const page = Math.max(1, parseInt(query.page || '1', 10));
+      const limit = Math.max(1, parseInt(query.limit || '10', 10));
+      const skip = (page - 1) * limit;
 
-  /**
-   * CA003, CA005
-   * Obtiene el detalle de una incidencia (Reporte de tipo INCIDENCIA).
-   */
-  async getIncidenciaDetalle(id_reporte: string) {
-    const reporte = await this.prisma.reporte.findFirst({
-      where: { 
-        id_reporte,
-        tipo: 'INCIDENCIA' // Nos aseguramos de que no sea una queja o sugerencia
-      },
-      include: {
-        evidencias: true,
-      },
-    });
+      const whereClause: any = {
+        tipo: TipoReporte.INCIDENCIA,
+      };
 
-    if (!reporte) {
-      throw new NotFoundException(`La incidencia con ID ${id_reporte} no existe.`);
-    }
+      if (query.estado) whereClause.estado = query.estado;
+      if (query.prioridad) whereClause.prioridad = query.prioridad;
 
-    return reporte;
-  }
+      const totalRegistros = await this.prisma.reporte.count({ where: whereClause });
+      const totalPaginas = Math.ceil(totalRegistros / limit) || 1;
 
-  /**
-   * CA004, CA011
-   * Actualiza el estado del reporte y emite el evento en tiempo real.
-   */
-  async updateEstado(id_reporte: string, nuevoEstado: EstadoIncidencia) {
-    try {
-      // 1. Verificar existencia y tipo
-      const reporteActual = await this.prisma.reporte.findFirst({
-        where: { id_reporte, tipo: 'INCIDENCIA' },
-      });
-
-      if (!reporteActual) {
-        throw new NotFoundException('Incidencia no encontrada en el sistema');
+      if (page > totalPaginas) {
+        return {
+          success: true,
+          message: "No hay más registros disponibles.",
+          data: [],
+          pagination: { totalRegistros, totalPaginas, paginaActual: page, registrosPorPagina: limit }
+        };
       }
 
-      // 2. Actualizar el estado en el reporte
-      const reporteActualizado = await this.prisma.reporte.update({
-        where: { id_reporte },
-        data: { estado: nuevoEstado },
+      // CONSULTA OPTIMIZADA PARA TU FRONTEND
+      const incidentesRaw = await this.prisma.reporte.findMany({
+        where: whereClause,
+        skip: skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          evidencias: true, // Requerido: Fotos adjuntas
+          usuario: {
+            include: {
+              persona: true // Requerido: Nombre del residente que reportó
+            }
+          }
+        }
       });
 
-      // CA004: Emitir cambio inmediato a través del canal SSE
-      this.emitChange(reporteActualizado);
-      
-      return reporteActualizado;
+      // MAPEO Y AJUSTES DE DATOS PARA EL FRONTEND
+      const incidentesFormateados = incidentesRaw.map(incidente => {
+        // Validar si es anónimo para proteger los datos del residente
+        const residenteInfo = incidente.es_anonimo 
+          ? { nombre: "Anónimo" } 
+          : { 
+              nombre: incidente.usuario?.persona?.nombre || "Usuario no encontrado",
+              correo: incidente.usuario?.correo 
+            };
+
+        return {
+          id_reporte: incidente.id_reporte,
+          titulo_o_tipo: incidente.motivo, // Requerido: Tu campo 'motivo' sirve como título
+          descripcion: incidente.descripcion, // Requerido: Descripción
+          fecha_hora: incidente.createdAt, // Requerido: Fecha y hora
+          estado: incidente.estado, // Requerido: Estado actual
+          prioridad: incidente.prioridad, // Requerido: Prioridad asignada
+          es_anonimo: incidente.es_anonimo,
+          
+          // Requerido: Ubicación (Convertimos Decimal de Prisma a Number de JS)
+          ubicacion: {
+            latitud: Number(incidente.latitud),
+            longitud: Number(incidente.longitud)
+          },
+          
+          // Requerido: Fotos adjuntas mapeadas limpiamente
+          fotos: incidente.evidencias.map(e => ({
+            id: e.id_evidencia,
+            nombre: e.nombre_archivo,
+            url: e.url_archivo
+          })),
+          
+          // Requerido: Datos del creador respetando el anonimato
+          reportado_por: residenteInfo
+        };
+      });
+
+      return {
+        success: true,
+        data: incidentesFormateados,
+        pagination: {
+          totalRegistros,
+          totalPaginas,
+          paginaActual: page,
+          registrosPorPagina: limit,
+          hasMore: page < totalPaginas,
+        },
+      };
+
     } catch (error) {
-      if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException('Error al actualizar el estado de la incidencia.');
+      console.error('Error en IncidenciasService:', error);
+      throw new InternalServerErrorException(
+        'No se pudo cargar esta página de registros. Por favor, inténtelo de nuevo.'
+      );
     }
-  }
-
-  private emitChange(data: any) {
-    this.updates$.next(data);
-  }
-
-  getStream(): Observable<any> {
-    return this.updates$.asObservable();
   }
 }
