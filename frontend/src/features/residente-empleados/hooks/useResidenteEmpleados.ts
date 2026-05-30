@@ -27,7 +27,7 @@ type UpdateEmpleadoValues = {
   telefono?: string;
   cargo?: string;
   foto?: any;
-  notas?: string;
+  notas_adicionales?: string;
   horarios?: HorarioForm[];
 };
 
@@ -126,30 +126,29 @@ export function useResidenteEmpleados(idResidente: string) {
       const salidaLimpia = primerDiaActivo?.hora_salida || "16:00";
 
       const formData = new FormData();
-
+          
       formData.append("accion", "actualizacion_residente");
-
-      // Mapeamos las propiedades simulando la estructura del objeto "data" que espera el DTO
-      formData.append("data[nombre]", values.nombre);
-      formData.append("data[telefono]", values.telefono || "");
-      formData.append("data[cargo]", values.cargo || "");
-      formData.append("data[notas]", values.notas || "");
-      formData.append("data[hora_entrada]", entradaLimpia);
-      formData.append("data[hora_salida]", salidaLimpia);
-
-      formData.append("data[dias_autorizados]", JSON.stringify(diasAutorizados));
-
+      formData.append("nombre", values.nombre);
+      formData.append("telefono", values.telefono || "");
+      formData.append("cargo", values.cargo || "");
+      formData.append("notas_adicionales", values.notas_adicionales || "");
+      formData.append("hora_entrada", entradaLimpia);
+      formData.append("hora_salida", salidaLimpia);
+      formData.append("dias_autorizados", JSON.stringify(diasAutorizados));
+          
       if (values.foto instanceof File) {
-        // La clave 'foto_empleado' debe coincidir exactamente con el nombre de @UploadedFile() del backend.
         formData.append("foto_empleado", values.foto);
       }
-
-      // 🛡️ Validamos red de manera preventiva antes de disparar la petición de edición
-      if (typeof window !== "undefined" && !navigator.onLine) {
-        return Promise.reject(new Error("Problema técnico o de red detectado. No se pueden guardar los cambios."));
+      
+      console.log("🚀 [HOOK] FormData enviado al backend:");
+      for (const [key, value] of formData.entries()) {
+        console.log(key, value);
       }
-
-      return actualizarEmpleadoResidente(selectedEmpleado.id_visitante, formData);
+      
+      return actualizarEmpleadoResidente(
+        selectedEmpleado.id_visitante,
+        formData,
+      );
     },
 
     onSuccess: () => {

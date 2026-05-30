@@ -9,6 +9,11 @@ import {
   Body,
   BadRequestException,
   Req,
+  UseInterceptors,
+  UploadedFile,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
 } from '@nestjs/common';
 
 // Importamos tu servicio especializado de la carpeta mis-empleados
@@ -20,6 +25,8 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth/jwt-auth.guard';
 import { AuthGuard } from '@nestjs/passport';
 import { use } from 'passport';
 import type { AuthenticatedRequest } from 'src/request/AuthenticatedRequest';
+import { FileInterceptor } from '@nestjs/platform-express';
+import 'multer';
 
 @Controller('mi-empleado') // 1. Cambiado para que sea tu endpoint exclusivo
 export class EmpleadoController {
@@ -73,52 +80,81 @@ export class EmpleadoController {
     return { message: 'Empleado creado' };
   }
 
-  @Put(':id')
-  async update(
-    @Param('id') id: string,
-    @Body()
-    body: {
-      accion?: string;
-      data?: any;
-      activo?: boolean;
-      motivo?: string;
-      id_residente?: string;
-    },
-  ) {
-    const { accion, data } = body;
-    // Soporte para peticiones donde los datos vienen en la raíz o dentro del objeto 'data'
-    const activo = body.activo !== undefined ? body.activo : data?.activo;
-    const motivo = body.motivo !== undefined ? body.motivo : data?.motivo;
-    const id_residente =
-      body.id_residente !== undefined ? body.id_residente : data?.id_residente;
+@Put(':id')
+@UseInterceptors(FileInterceptor('foto_empleado'))
+async update(
+  @Param('id') id: string,
+  @Body() body: any = {},
+  @UploadedFile(
+    new ParseFilePipe({
+      validators: [
+        new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 10 }),
+        new FileTypeValidator({ fileType: '.(png|jpeg|jpg)' }),
+      ],
+      fileIsRequired: false,
+    }),
+  )
+  file?: Express.Multer.File,
+) {
+  console.log('🔥 ENTRÓ AL PUT /mi-empleado/:id');
+  console.log('ID:', id);
+  console.log('BODY COMPLETO EN CONTROLLER:', body);
+  console.log('FILE EN CONTROLLER:', file?.originalname);
 
-    // ESCENARIO A: Tu actualización personalizada desde el modal del residente
-    if (accion === 'actualizacion_residente') {
-      if (!data || !data.nombre) {
-        throw new BadRequestException(
-          'El nombre del empleado es obligatorio para actualizar',
-        );
-      }
-      // Llamamos al servicio pasando los datos estructurados del modal
-      return this.empleadoService.actualizarEmpleado(id, data);
+  const accion = body.accion;
+
+  const dataRecibida = body.data ?? body;
+
+  if (accion === 'actualizacion_residente') {
+    const diasAutorizados =
+      typeof dataRecibida.dias_autorizados === 'string'
+        ? JSON.parse(dataRecibida.dias_autorizados)
+        : dataRecibida.dias_autorizados || [];
+
+    const data = {
+      nombre: dataRecibida.nombre,
+      telefono: dataRecibida.telefono,
+      cargo: dataRecibida.cargo,
+      notas_adicionales: dataRecibida.notas_adicionales,
+      hora_entrada: dataRecibida.hora_entrada,
+      hora_salida: dataRecibida.hora_salida,
+      dias_autorizados: diasAutorizados,
+    };
+
+    if (!data.nombre) {
+      throw new BadRequestException(
+        'El nombre del empleado es obligatorio para actualizar',
+      );
     }
 
-    // ESCENARIO B: Cambio de estado rápido (Baja / Reactivación tradicional)
-    if (activo !== undefined) {
-      if (activo === false) {
-        if (!motivo || !motivo.trim()) {
-          throw new BadRequestException('El motivo de la baja es requerido');
-        }
-        return this.empleadoService.eliminarEmpleado(id, motivo, id_residente);
-      }
-      return this.empleadoService.reactivarEmpleado(id, id_residente);
-    }
-
-    // Si no entra en ninguna condición válida
-    throw new BadRequestException(
-      'Petición no reconocida. Verifica los parámetros enviados.',
-    );
+    return this.empleadoService.actualizarEmpleado(id, data, file);
   }
+
+  const activo = body.activo !== undefined ? body.activo : dataRecibida.activo;
+  const motivo = body.motivo !== undefined ? body.motivo : dataRecibida.motivo;
+  const id_residente =
+    body.id_residente !== undefined
+      ? body.id_residente
+      : dataRecibida.id_residente;
+
+  if (activo !== undefined) {
+    const activoBool = activo === true || activo === 'true';
+
+    if (activoBool === false) {
+      if (!motivo || !motivo.trim()) {
+        throw new BadRequestException('El motivo de la baja es requerido');
+      }
+
+      return this.empleadoService.eliminarEmpleado(id, motivo, id_residente);
+    }
+
+    return this.empleadoService.reactivarEmpleado(id, id_residente);
+  }
+
+  throw new BadRequestException(
+    'Petición no reconocida. Verifica los parámetros enviados.',
+  );
+}
 
   @Delete(':id')
   remove(@Param('id') id: string) {
