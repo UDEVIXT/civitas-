@@ -5,7 +5,7 @@ export interface ActividadReciente {
   nombre_repartidor: string;
   residente_vinculado: string;
   tiempo_transcurrido: string;
-  estado: "AUTORIZADO" | "RECHAZADO";
+  estado: "ENTRADA" | "SALIDA";
 }
 
 export interface DetalleServicio {
@@ -20,20 +20,24 @@ export interface DetalleServicio {
 
 export const accesosServiciosApi = {
   obtenerActividadReciente: async (): Promise<ActividadReciente[]> => {
-    const { data } = await api.get("/accesos-servicios/actividad-reciente");
+    const { data } = await api.get("/accesos-servicios");
+    return data;
+  },
+
+  obtenerDetalleServicio: async (codigoQr: string): Promise<DetalleServicio> => {
+    const { data } = await api.get(`/accesos-servicios/escanear/${codigoQr}`);
     return data.data;
   },
 
-  obtenerDetalleServicio: async (id: string): Promise<DetalleServicio> => {
-    const { data } = await api.get(`/accesos-servicios/${id}`);
-    return data.data;
+  validarAcceso: async (codigoQr: string): Promise<void> => {
+    await api.get(`/accesos-servicios/validar/${codigoQr}`);
   },
 
-  validarAcceso: async (id: string): Promise<void> => {
-    await api.post(`/accesos-servicios/${id}/validar`);
+  denegarAcceso: async (codigoQr: string, motivo: string): Promise<void> => {
+    await api.post(`/accesos-servicios/denegar/${codigoQr}`, { motivo });
   },
 
-  denegarAcceso: async (id: string, motivo: string): Promise<void> => {
-    await api.post(`/accesos-servicios/${id}/denegar`, { motivo });
+  registrarIngresoManual: async (datosManuales: { nombre: string; empresa: string; motivo: string; vivienda: string }): Promise<void> => {
+    await api.post("/accesos-servicios/registro-manual", datosManuales);
   }
 };

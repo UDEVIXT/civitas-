@@ -246,16 +246,17 @@ export function useResidenteEmpleados(idResidente: string) {
     },
 
     onError: (error: any) => {
-      const backendMessage = error.response?.data?.message;
+      // Capturamos el mensaje de error de la respuesta del backend, o un mensaje de error nativo (ej. red)
+      const backendMessage = error?.response?.data?.message || error?.message || error?.data?.message;
 
       const mensajeFinal = Array.isArray(backendMessage)
         ? backendMessage.join(". ")
-        : backendMessage || "Ocurrió un error.";
+        : backendMessage || "Ocurrió un error. No se pudo procesar la baja.";
 
       setBajaError(mensajeFinal);
 
       toast({
-        title: "Error",
+        title: "Error de conexión o sistema",
         description: mensajeFinal,
         variant: "destructive",
       });
@@ -299,6 +300,17 @@ export function useResidenteEmpleados(idResidente: string) {
 
   const confirmBaja = () => {
     if (!selectedEmpleado) return;
+
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      const msg = "Problema técnico o de red detectado. No se puede guardar la baja.";
+      setBajaError(msg);
+      toast({
+        title: "Sin conexión",
+        description: msg,
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (bajaMode === "deactivate" && !motivoBaja.trim()) {
       setBajaError("Debes escribir un motivo.");

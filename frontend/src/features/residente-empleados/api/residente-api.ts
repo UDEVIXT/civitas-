@@ -57,6 +57,10 @@ export const toggleEmpleadoActivo = async (
   } catch (error: any) {
     console.error("Error al cambiar estado del empleado:", error);
 
+    if (error.isAxiosError && !error.response) {
+      throw new Error("Error de conexión: No se pudo conectar con el servidor. Revisa tu red.");
+    }
+
     throw (
       error?.response?.data || {
         message: "No se pudo actualizar el estado del empleado",
