@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdatePerfilDto } from './dto/update-perfil.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class PerfilService {
@@ -146,4 +147,85 @@ export class PerfilService {
     }
   }
 
+  async cambiarContrasena(
+    id_usuario: string,
+    data: {
+      contrasena_actual: string;
+      nueva_contrasena: string;
+    },
+  ) {
+    try {
+      const { contrasena_actual, nueva_contrasena } = data;
+
+      const usuario = await this.prisma.usuario.findUnique({
+        where: {
+          id_usuario,
+        },
+      });
+
+      if (!usuario) {
+        throw new NotFoundException('Usuario no encontrado.');
+      }
+
+      // Comparar password actual
+      const passwordValida = await bcrypt.compare(
+        contrasena_actual,
+        usuario.password,
+      );
+
+      if (!passwordValida) {
+        throw new BadRequestException(
+          'La contraseña actual es incorrecta.',
+        );
+      }
+
+      // Evitar misma contraseña
+      const mismaPassword = await bcrypt.compare(
+        nueva_contrasena,
+        usuario.password,
+      );
+
+      if (mismaPassword) {
+        throw new BadRequestException(
+          'La nueva contraseña debe ser diferente a la actual.',
+        );
+      }
+
+      // Hash nueva contraseña
+      const hashedPassword = await bcrypt.hash(
+        nueva_contrasena,
+        10,
+      );
+
+      await this.prisma.usuario.update({
+        where: {
+          id_usuario,
+        },
+        data: {
+          password: hashedPassword,
+        },
+      });
+
+      return {
+        success: true,
+        message: 'Contraseña actualizada correctamente.',
+      };
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+
+      console.error(
+        'Error en cambiarContrasena:',
+        error,
+      );
+
+      throw new InternalServerErrorException(
+        'Ocurrió un error al cambiar la contraseña.',
+      );
+    }
+  }
 }

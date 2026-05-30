@@ -37,6 +37,7 @@ export async function seedBitacoras(prisma: PrismaClient) {
           )
         : null;
 
+      const estadoAleatorio = faker.datatype.boolean(0.9);
       await prisma.bitacora.create({
         data: {
           id_acceso: acceso.id_acceso,
@@ -68,6 +69,7 @@ export async function seedBitacoras(prisma: PrismaClient) {
                 'Acceso finalizado correctamente',
               ])
             : null,
+          estado: estadoAleatorio,
         },
       });
     }

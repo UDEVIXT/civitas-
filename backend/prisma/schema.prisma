@@ -149,6 +149,7 @@ model Bitacora {
   fecha_hora_salida  DateTime?
   comentario         String?
   comentario_salida  String?
+  estado             Boolean   @default(true)
   acceso             Acceso    @relation(fields: [id_acceso], references: [id_acceso], onDelete: Cascade)
   guardia            Guardia?  @relation("GuardiaEntrada", fields: [id_guardia], references: [id_guardia])
   guardia_salida Guardia? @relation("GuardiaSalida", fields: [id_guardia_salida], references: [id_guardia])
@@ -267,8 +268,10 @@ enum Estatus_Solicitud {
 model Solicitud_cambio_rol {
   id_solicitud      String            @id @default(uuid())
   id_usuario        String
-  rol_solicitado    Rol               
+  rol_solicitado    Rol                
   razon             String            @db.Text
   estatus_solicitud Estatus_Solicitud @default(Pendiente) 
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
   usuario           Usuario           @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
 }
