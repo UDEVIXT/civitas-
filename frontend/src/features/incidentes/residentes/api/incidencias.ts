@@ -32,10 +32,11 @@ export interface IncidenciasFiltros {
 export const obtenerIncidencias = async (
   filtros: IncidenciasFiltros = {}
 ): Promise<Incidente[]> => {
-  const response = await apiClient.get<Incidente[]>("/incidencias", {
+  const response = await apiClient.get("/incidencias", {
     params: filtros,
   });
-  return response.data;
+  const body = response.data;
+  return Array.isArray(body) ? body : (body.data ?? []);
 };
 
 export const obtenerDetalleIncidencia = async (

@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailerService } from '@nestjs-modules/mailer';
 import { CreateSolicitudCambioRolDto } from './dto/create-solicitud_cambio_rol.dto';
@@ -12,6 +12,21 @@ export class SolicitudCambioRolService {
   ) {}
 
   async create(createSolicitudCambioRolDto: CreateSolicitudCambioRolDto) {
+    if (createSolicitudCambioRolDto.rol_solicitado.toUpperCase() === 'RESIDENTE') {
+      throw new BadRequestException('No está permitido crear una solicitud para el rol de Residente.');
+    }
+
+    const solicitudPendiente = await this.prisma.solicitud_cambio_rol.findFirst({
+      where: {
+        id_usuario: createSolicitudCambioRolDto.id_usuario,
+        estatus_solicitud: 'Pendiente', 
+      },
+    });
+
+    if (solicitudPendiente) {
+      throw new BadRequestException('El usuario ya tiene una solicitud de cambio de rol en proceso.');
+    }
+
     try {
       const nuevaSolicitud = await this.prisma.solicitud_cambio_rol.create({
         data: {
@@ -25,20 +40,26 @@ export class SolicitudCambioRolService {
         }
       });
 
+      const fechaLocal = nuevaSolicitud.createdAt.toLocaleString('es-MX', {
+        timeZone: 'America/Mexico_City',
+        dateStyle: 'short',
+        timeStyle: 'medium'
+      });
+
       const usuarioConNombre = await this.prisma.usuario.findUnique({
-      where: { 
-        id_usuario: nuevaSolicitud.usuario.id_usuario
-      },
-      select: {
-        id_usuario: true,
-        nombre_usuario: true,
-        persona: {
-          select: {
-            nombre: true
+        where: { 
+          id_usuario: nuevaSolicitud.usuario.id_usuario
+        },
+        select: {
+          id_usuario: true,
+          nombre_usuario: true,
+          persona: {
+            select: {
+              nombre: true
+            }
           }
         }
-      }
-    });
+      });
 
     if (!usuarioConNombre) {
       throw new NotFoundException('El usuario no fue encontrado');
