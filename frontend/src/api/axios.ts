@@ -5,11 +5,14 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 
+//vavavavava
+//jajajajaa
+
 const apiClient: AxiosInstance = axios.create({
   baseURL:
     process.env.NEXT_PUBLIC_API_URL ||
     process.env.REACT_APP_API_URL ||
-    "http://localhost:3001/api/",
+    "http://localhost:3002/api/",
   timeout: 10000,
   withCredentials: true,
   headers: {
@@ -45,7 +48,7 @@ apiClient.interceptors.response.use(
       
       // CORRECCIÓN: Si el error 401 viene de verificar código o hacer login,
       // NO intentamos refrescar el token. Devolvemos el error original al componente.
-      const rutasSinAutenticacion = ["/auth/login", "/auth/forgot-password", "/auth/verify-code", "/auth/reset-password"];
+      const rutasSinAutenticacion = ["/auth/login", "/auth/forgot-password", "/auth/verify-code", "/auth/reset-password", "/auth/validar-credencial", "/auth/register"];
       if (originalRequest.url && rutasSinAutenticacion.some(ruta => originalRequest.url!.includes(ruta))) {
         return Promise.reject(error);
       }

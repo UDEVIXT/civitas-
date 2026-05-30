@@ -9,18 +9,33 @@ import { ModalValidacionServicio } from "./ModalValidacionServicio";
 import { ModalRegistroManualServicio } from "./ModalRegistroManualServicio";
 import { useQuery } from "@tanstack/react-query";
 import { accesosServiciosApi } from "../api/accesos-servicios.api";
+import { QrScannerPlugin } from "./QrScannerPlugin";
+import { useToast } from "@/hooks/use-toast";
 
 // Componente principal para el dashboard del Guardia
 export function EscaneoServiciosDashboard() {
   const [selectedAccessId, setSelectedAccessId] = useState<string | null>(null);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [isScannerActive, setIsScannerActive] = useState(true);
+  const { toast } = useToast();
 
   const { data: actividades, isLoading } = useQuery({
     queryKey: ["actividadReciente"],
     queryFn: accesosServiciosApi.obtenerActividadReciente,
   });
 
+  const onScanSuccess = (decodedText: string) => {
+    // Si ya hay un ID seleccionado, no volvemos a procesar hasta que se cierre el modal
+    if (selectedAccessId) return;
+    
+    // Suponiendo que el decodedText es directamente el ID o token esperado
+    setSelectedAccessId(decodedText);
+  };
+
+  const onScanError = (errorMessage: string) => {
+    // El escáner suele emitir muchos errores menores al enfocar
+    // Normalmente se ignoran hasta que tiene un éxito.
+  };
 
   const handleSimulateScan = () => {
     setSelectedAccessId("mock-scan-id");
@@ -49,10 +64,17 @@ export function EscaneoServiciosDashboard() {
 
             <CardContent className="p-0 flex-1 flex items-center justify-center relative">
               {isScannerActive ? (
-                <div className="w-full h-full bg-zinc-200 flex flex-col items-center justify-center border-4 border-dashed border-zinc-300">
-                  <Camera className="w-16 h-16 text-zinc-400 mb-4" />
-                  <p className="text-zinc-500 font-medium mb-4">Esperando código QR o Identificación...</p>
-                  <Button variant="outline" onClick={handleSimulateScan}>
+                <div className="w-full h-full bg-zinc-200 flex flex-col items-center justify-center relative">
+                  <div className="absolute inset-0 [&>div]:!border-none [&>div]:!shadow-none [&>div>video]:!object-cover">
+                    <QrScannerPlugin
+                      fps={10}
+                      qrbox={250}
+                      disableFlip={false}
+                      qrCodeSuccessCallback={onScanSuccess}
+                      qrCodeErrorCallback={onScanError}
+                    />
+                  </div>
+                  <Button variant="outline" onClick={handleSimulateScan} className="absolute bottom-4 z-20">
                     Simular Escaneo Exitoso
                   </Button>
                 </div>
