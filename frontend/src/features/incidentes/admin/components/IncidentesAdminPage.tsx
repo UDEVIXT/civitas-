@@ -117,13 +117,13 @@ export function IncidentesAdminPage() {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="w-[240px]">Incidencia</TableHead>
-              <TableHead>Residente</TableHead>
-              <TableHead className="whitespace-nowrap">Fecha y hora</TableHead>
+              <TableHead className="min-w-[160px]">Incidencia</TableHead>
+              <TableHead className="hidden sm:table-cell">Residente</TableHead>
+              <TableHead className="whitespace-nowrap hidden md:table-cell">Fecha y hora</TableHead>
               <TableHead>Estado</TableHead>
-              <TableHead>Prioridad</TableHead>
-              <TableHead>Ubicación</TableHead>
-              <TableHead className="text-center">Fotos</TableHead>
+              <TableHead className="hidden sm:table-cell">Prioridad</TableHead>
+              <TableHead className="hidden lg:table-cell">Ubicación</TableHead>
+              <TableHead className="hidden lg:table-cell text-center">Fotos</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -147,24 +147,27 @@ export function IncidentesAdminPage() {
                 const estado = estadoBadge[inc.estado];
                 return (
                   <TableRow key={inc.id_incidencia} className="align-top">
-                    <TableCell className="max-w-[240px]">
+                    <TableCell className="min-w-[160px] max-w-[240px]">
                       <p className="font-medium text-sm leading-tight truncate">{inc.titulo}</p>
                       <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{inc.descripcion}</p>
+                      <p className="text-xs text-muted-foreground mt-1 sm:hidden">
+                        {inc.es_anonimo ? "Anónimo" : (inc.nombre_residente ?? "—")}
+                      </p>
                     </TableCell>
-                    <TableCell className="text-sm whitespace-nowrap">
+                    <TableCell className="hidden sm:table-cell text-sm whitespace-nowrap">
                       {inc.es_anonimo ? (
                         <span className="italic text-muted-foreground">Anónimo</span>
                       ) : (
                         inc.nombre_residente ?? <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
+                    <TableCell className="hidden md:table-cell text-sm whitespace-nowrap text-muted-foreground">
                       {formatFecha(inc.fecha_creacion)}
                     </TableCell>
                     <TableCell>
                       <Badge className={estado.className}>{estado.label}</Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       {inc.prioridad ? (
                         <Badge className={prioridadBadge[inc.prioridad].className}>
                           {prioridadBadge[inc.prioridad].label}
@@ -173,7 +176,7 @@ export function IncidentesAdminPage() {
                         <span className="text-muted-foreground text-sm">—</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       {inc.ubicacion ? (
                         <div className="flex items-start gap-1 text-sm text-muted-foreground max-w-[140px]">
                           <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
@@ -183,7 +186,7 @@ export function IncidentesAdminPage() {
                         <span className="text-muted-foreground text-sm">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="hidden lg:table-cell text-center">
                       {inc.fotos && inc.fotos.length > 0 ? (
                         <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
                           <ImageIcon className="h-4 w-4" />

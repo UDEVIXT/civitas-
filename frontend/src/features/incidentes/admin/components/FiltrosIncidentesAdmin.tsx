@@ -61,8 +61,8 @@ export function FiltrosIncidentesAdmin({ filters, onFilterChange }: FiltrosIncid
   };
 
   return (
-    <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
-      <div className="relative w-full md:w-auto">
+    <div className="flex flex-col gap-3">
+      <div className="relative w-full">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         <input
           type="search"
@@ -73,49 +73,51 @@ export function FiltrosIncidentesAdmin({ filters, onFilterChange }: FiltrosIncid
         />
       </div>
 
-      <Select
-        value={filters.estado || "TODOS"}
-        onValueChange={handleEstadoChange}
-      >
-        <SelectTrigger className="w-full md:w-44 h-9">
-          <SelectValue placeholder="Estado" />
-        </SelectTrigger>
-        <SelectContent>
-          {estados.map((e) => (
-            <SelectItem key={e.value} value={e.value}>
-              {e.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={filters.prioridad || "TODAS"}
-        onValueChange={handlePrioridadChange}
-      >
-        <SelectTrigger className="w-full md:w-44 h-9">
-          <SelectValue placeholder="Prioridad" />
-        </SelectTrigger>
-        <SelectContent>
-          {prioridades.map((p) => (
-            <SelectItem key={p.value} value={p.value}>
-              {p.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {hayFiltrosActivos && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleLimpiarFiltros}
-          className="h-9 px-3 text-muted-foreground hover:text-foreground"
+      <div className="flex flex-wrap items-center gap-2">
+        <Select
+          value={filters.estado || "TODOS"}
+          onValueChange={handleEstadoChange}
         >
-          <X className="h-4 w-4 mr-1" />
-          Limpiar
-        </Button>
-      )}
+          <SelectTrigger className="w-[calc(50%-4px)] md:w-44 h-9">
+            <SelectValue placeholder="Estado" />
+          </SelectTrigger>
+          <SelectContent>
+            {estados.map((e) => (
+              <SelectItem key={e.value} value={e.value}>
+                {e.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={filters.prioridad || "TODAS"}
+          onValueChange={handlePrioridadChange}
+        >
+          <SelectTrigger className="w-[calc(50%-4px)] md:w-44 h-9">
+            <SelectValue placeholder="Prioridad" />
+          </SelectTrigger>
+          <SelectContent>
+            {prioridades.map((p) => (
+              <SelectItem key={p.value} value={p.value}>
+                {p.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {hayFiltrosActivos && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLimpiarFiltros}
+            className="h-9 px-3 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4 mr-1" />
+            Limpiar
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
