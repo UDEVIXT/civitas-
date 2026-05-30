@@ -96,6 +96,7 @@ export function useResidenteEmpleados(idResidente: string) {
     enabled: !!idResidente,
     
     retry: false, 
+    networkMode: "always",
   });
 
   if (error) {
