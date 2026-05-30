@@ -57,6 +57,10 @@ export const toggleEmpleadoActivo = async (
   } catch (error: any) {
     console.error("Error al cambiar estado del empleado:", error);
 
+    if (error.isAxiosError && !error.response) {
+      throw new Error("Error de conexión: No se pudo conectar con el servidor. Revisa tu red.");
+    }
+
     throw (
       error?.response?.data || {
         message: "No se pudo actualizar el estado del empleado",
@@ -65,19 +69,12 @@ export const toggleEmpleadoActivo = async (
   }
 };
 
-export const actualizarEmpleadoResidente = async (id: string, data: any) => {
+// Se modificó la función para que reciba directamente el FormData desde el hook y soporte la foto
+export const actualizarEmpleadoResidente = async (id: string, formData: FormData) => {
   try {
-    const response = await apiClient.put(`/mi-empleado/${id.trim()}`, {
-      accion: "actualizacion_residente",
-      data: {
-        nombre: data.nombre,
-        telefono: data.telefono,
-        foto: data.foto,
-        cargo: data.cargo,
-        hora_entrada: data.hora_entrada,
-        hora_salida: data.hora_salida,
-        dias_autorizados: data.dias_autorizados,
-        notas: data.notas,
+    const response = await apiClient.put(`/mi-empleado/${id.trim()}`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
       },
     });
     return { success: true, data: response.data };

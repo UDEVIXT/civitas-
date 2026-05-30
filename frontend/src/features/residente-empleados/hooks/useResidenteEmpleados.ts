@@ -26,7 +26,7 @@ type UpdateEmpleadoValues = {
   nombre: string;
   telefono?: string;
   cargo?: string;
-  foto?: string;
+  foto?: any;
   notas?: string;
   horarios?: HorarioForm[];
 };
@@ -81,6 +81,8 @@ export function useResidenteEmpleados(idResidente: string) {
     data,
     isLoading,
     error,
+    isError, 
+    refetch,
   } = useQuery({
     queryKey: [
       "residente-empleados",
@@ -114,9 +116,7 @@ export function useResidenteEmpleados(idResidente: string) {
   const updateMutation = useMutation({
     mutationFn: (values: UpdateEmpleadoValues) => {
       if (!selectedEmpleado) {
-        return Promise.reject(
-          "No hay empleado seleccionado",
-        );
+        return Promise.reject("No hay empleado seleccionado");
       }
 
       // Días activos
@@ -137,28 +137,30 @@ export function useResidenteEmpleados(idResidente: string) {
       const salidaLimpia =
         primerDiaActivo?.hora_salida || "16:00";
 
-      // Payload backend
-      const payloadBackend = {
-        nombre: values.nombre,
-        telefono: values.telefono,
-        cargo: values.cargo,
-        foto: values.foto || "",
-        notas: values.notas || "",
+      const formData = new FormData();
 
-        dias_autorizados: diasAutorizados,
+      formData.append("accion", "actualizacion_residente");
 
-        hora_entrada: entradaLimpia,
-        hora_salida: salidaLimpia,
-      };
+      // Mapeamos las propiedades simulando la estructura del objeto "data" que espera el DTO
+      formData.append("data[nombre]", values.nombre);
+      formData.append("data[telefono]", values.telefono || "");
+      formData.append("data[cargo]", values.cargo || "");
+      formData.append("data[notas]", values.notas || "");
+      formData.append("data[hora_entrada]", entradaLimpia);
+      formData.append("data[hora_salida]", salidaLimpia);
 
-      console.log(
-        "🚀 [HOOK] Payload plano adaptado enviado al servicio:",
-        payloadBackend,
-      );
+      formData.append("data[dias_autorizados]", JSON.stringify(diasAutorizados));
 
-      return actualizarEmpleadoResidente(
+      if (values.foto instanceof File) {
+        //La clave 'foto_empleado' debe coincidir exactamente con el nombre de @UploadedFile() del backend.
+        formData.append("foto_empleado", values.foto);
+      }
+
+      console.log(" [HOOK] FormData mapeado correctamente con payload multipart.");
+      
+    return actualizarEmpleadoResidente(
         selectedEmpleado.id_visitante,
-        payloadBackend,
+        formData
       );
     },
 
@@ -244,16 +246,17 @@ export function useResidenteEmpleados(idResidente: string) {
     },
 
     onError: (error: any) => {
-      const backendMessage = error.response?.data?.message;
+      // Capturamos el mensaje de error de la respuesta del backend, o un mensaje de error nativo (ej. red)
+      const backendMessage = error?.response?.data?.message || error?.message || error?.data?.message;
 
       const mensajeFinal = Array.isArray(backendMessage)
         ? backendMessage.join(". ")
-        : backendMessage || "Ocurrió un error.";
+        : backendMessage || "Ocurrió un error. No se pudo procesar la baja.";
 
       setBajaError(mensajeFinal);
 
       toast({
-        title: "Error",
+        title: "Error de conexión o sistema",
         description: mensajeFinal,
         variant: "destructive",
       });
@@ -298,6 +301,17 @@ export function useResidenteEmpleados(idResidente: string) {
   const confirmBaja = () => {
     if (!selectedEmpleado) return;
 
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      const msg = "Problema técnico o de red detectado. No se puede guardar la baja.";
+      setBajaError(msg);
+      toast({
+        title: "Sin conexión",
+        description: msg,
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (bajaMode === "deactivate" && !motivoBaja.trim()) {
       setBajaError("Debes escribir un motivo.");
       return;
@@ -312,6 +326,8 @@ export function useResidenteEmpleados(idResidente: string) {
   return {
     empleados: data?.data || [],
     isLoading,
+    isError,
+    refetch, 
     search,
     setSearch,
     modalEdit: {

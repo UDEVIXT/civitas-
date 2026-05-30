@@ -6,6 +6,7 @@ import {
   Search,
   SlidersHorizontal,
   Upload,
+  WifiOff
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -116,6 +117,8 @@ const guardarEmpleado = React.useCallback(
   const {
     empleados,
     isLoading,
+    isError,
+    refetch,
     search,
     setSearch,
     modalEdit,
@@ -260,35 +263,61 @@ const guardarEmpleado = React.useCallback(
           </div>
 
           <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
-            <TablaMisEmpleados
-              items={visibleEmpleados}
-              isLoading={isLoading}
-              onEdit={modalEdit.handleEditClick}
-              onVerHorario={modalHorario.handleVerHorario}
-              onBaja={modalBaja.handleBajaClick}
-            />
-            {/* Paginación */}
-            <div className="flex flex-col items-center justify-between gap-3 border-t border-zinc-200 px-4 py-3 sm:flex-row">
-              <Button
-                variant="outline"
-                className="h-9 rounded-md border-zinc-200 bg-white px-3 text-sm shadow-sm hover:bg-zinc-50"
-                disabled={currentPage === 1}
-                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-              >
-                Previous
-              </Button>
-              <p className="text-sm text-zinc-600">
-                Page {currentPage} of {totalPages}
-              </p>
-              <Button
-                variant="outline"
-                className="h-9 rounded-md border-zinc-200 bg-white px-3 text-sm shadow-sm hover:bg-zinc-50"
-                disabled={currentPage === totalPages}
-                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-              >
-                Next
-              </Button>
-            </div>
+            {isError ? (
+              // ESTADO DE ERROR (Sin conexión o fallo del servidor)
+              <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+                <div className="mb-4 rounded-full bg-red-100 p-4 text-red-600 shadow-sm">
+                  <WifiOff className="h-8 w-8" />
+                </div>
+                <h3 className="mb-2 text-xl font-bold text-zinc-900">Problemas de conexión</h3>
+                <p className="mb-6 max-w-md text-sm text-zinc-500">
+                  No pudimos cargar la información de tus empleados. Verifica tu conexión a internet o el estado del servidor e intenta de nuevo.
+                </p>
+                <Button 
+                  onClick={() => refetch()} 
+                  variant="outline" 
+                  className="border-zinc-300 hover:bg-zinc-50 font-medium"
+                >
+                  Volver a intentar
+                </Button>
+              </div>
+            ) : (
+              // ESTADO NORMAL (Tabla de empleados)
+              <>
+                <TablaMisEmpleados
+                  items={visibleEmpleados}
+                  isLoading={isLoading}
+                  onEdit={modalEdit.handleEditClick}
+                  onVerHorario={modalHorario.handleVerHorario}
+                  onBaja={modalBaja.handleBajaClick}
+                />
+                
+                {/* Paginación */}
+                {!isLoading && filteredEmpleados.length > 0 && (
+                  <div className="flex flex-col items-center justify-between gap-3 border-t border-zinc-200 px-4 py-3 sm:flex-row">
+                    <Button
+                      variant="outline"
+                      className="h-9 rounded-md border-zinc-200 bg-white px-3 text-sm shadow-sm hover:bg-zinc-50"
+                      disabled={currentPage === 1}
+                      onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                    >
+                      Anterior
+                    </Button>
+                    <p className="text-sm text-zinc-600">
+                      Página {currentPage} de {totalPages}
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="h-9 rounded-md border-zinc-200 bg-white px-3 text-sm shadow-sm hover:bg-zinc-50"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                    >
+                      Siguiente
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
           </section>
         </main>
       </div>

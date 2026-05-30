@@ -4,7 +4,7 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -45,7 +45,7 @@ const formSchema = z.object({
     .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, "Solo se permiten letras"),
   
   notas: z.string().optional(),
-  foto: z.string().optional(),
+  foto: z.any().optional(),
   horarios: z.array(horarioDiaSchema),
 }).superRefine((data, ctx) => {
   let tieneDiasActivos = false;
@@ -85,6 +85,7 @@ interface ModalEditarEmpleadoProps {
 
 export function ModalEditarEmpleado({ empleado, isOpen, onClose, onSave, isSaving }: ModalEditarEmpleadoProps) {
   // Plantilla por defecto para los 7 días
+  const [imagenPreview, setImagenPreview] = React.useState<string | null>(null);
   const horariosPorDefecto = DIAS_SEMANA.map(dia => ({
     dia,
     activo: false,
@@ -99,13 +100,14 @@ export function ModalEditarEmpleado({ empleado, isOpen, onClose, onSave, isSavin
       telefono: "",
       cargo: "",
       notas: "",
-      foto: "",
+      foto: undefined,
       horarios: horariosPorDefecto,
     },
   });
 
 React.useEffect(() => {
     if (empleado) {
+      setImagenPreview(null);
       const telefonoLimpio = (empleado.telefono || "").replace(/\D/g, "");
  
       const servicioAny = empleado.servicio as any;
@@ -170,7 +172,7 @@ React.useEffect(() => {
         telefono: telefonoLimpio,
         cargo: cargoReal,
         notas: servicioAny?.notas || empleadoAny.motivo || "", 
-        foto: empleado.url_imagen || "",
+        foto: undefined,
         horarios: horariosMapeados,
       });
     }
@@ -195,21 +197,50 @@ React.useEffect(() => {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             
-            {/* Header con Foto */}
-            <div className="flex flex-col items-center justify-center gap-3 bg-gray-50 p-4 rounded-xl text-center">
-                <Avatar className="h-24 w-24 border-4 border-white shadow-md">
-                  {/* Asegúrate de leer 'url_imagen' y usar undefined si no existe, no un string estático */}
+            {/* Header con Foto (Estilo Superpuesto) */}
+            <div className="flex flex-col items-center justify-center gap-3 bg-gray-50 p-6 rounded-xl text-center">
+              
+              {/* Contenedor relativo para posicionar el botón encima de la foto */}
+              <div className="relative inline-block">
+                <Avatar className="h-28 w-28 border-4 border-white shadow-md">
                   <AvatarImage 
-                    src={empleado?.url_imagen || undefined} 
+                    src={imagenPreview || empleado?.url_imagen || undefined} 
                     className="object-cover" 
                   />
-                  <AvatarFallback className="bg-emerald-100 text-emerald-700 font-bold text-2xl">
-                    {/* Muestra las iniciales si falla la carga o no hay imagen */}
+                  <AvatarFallback className="bg-emerald-100 text-emerald-700 font-bold text-3xl">
                     {empleado?.nombre?.charAt(0)?.toUpperCase() || "?"}
                   </AvatarFallback>
                 </Avatar>
-              <div className="flex flex-col gap-0.5">
-                <p className="text-base sm:text-lg font-extrabold text-gray-950 tracking-tight">
+
+                {/* Botón flotante superpuesto en la esquina inferior derecha */}
+                <FormField control={form.control} name="foto" render={({ field: { value, onChange, ...fieldProps } }) => (
+                  <FormItem className="space-y-0 absolute bottom-0 right-0">
+                    <FormLabel className="cursor-pointer bg-white border border-gray-200 hover:bg-gray-100 text-gray-700 rounded-full h-8 w-8 flex items-center justify-center shadow-sm transition-colors">
+                      <Upload className="h-4 w-4" />
+                      {/* Ocultamos el texto visualmente para que solo quede el icono redondo, como en la referencia */}
+                      <span className="sr-only">Editar Foto</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            onChange(file);
+                            setImagenPreview(URL.createObjectURL(file));
+                          }
+                        }}
+                        {...fieldProps}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )} />
+              </div>
+
+              <div className="flex flex-col gap-0.5 mt-1">
+                <p className="text-xl sm:text-2xl font-extrabold text-gray-950 tracking-tight">
                   {form.watch("nombre") || "Sin nombre"}
                 </p>
               </div>

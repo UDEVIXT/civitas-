@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 
 import type { MiBitacoraItem } from "../types";
 
+const focusRingClass = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white";
+
 interface Props {
   record: MiBitacoraItem;
   groupBy: string | null;
@@ -118,7 +120,7 @@ export default function RecordCard({ record, groupBy, personTypeStyles, personTy
       <div className="mt-3 flex justify-end">
         <button
           type="button"
-          className="inline-flex items-center gap-1 rounded-md border border-[#dfdfdf] px-2.5 py-1.5 text-xs text-[#3f3f3f] hover:bg-[#f6f6f6]"
+          className={`inline-flex items-center gap-1 rounded-md border border-[#dfdfdf] px-2.5 py-1.5 text-xs text-[#3f3f3f] hover:bg-[#f6f6f6] ${focusRingClass}`}
           onClick={() => void onSelectRecord(record)}
           title="Ver detalle"
         >

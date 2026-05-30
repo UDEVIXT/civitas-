@@ -40,6 +40,9 @@ export function ModalSalidaProveedor({ isOpen, onClose, onSuccess, accesoId, vis
             // Simulamos un retraso de 1 segundo para ver el estado "Registrando..."
             await new Promise(resolve => setTimeout(resolve, 1000));
             
+            toast.success("Salida registrada", {
+                description: "Se registró correctamente la salida."
+            });
             onSuccess(); // Cerramos el modal y actualizamos tabla
             setInputId("");
             setNotes("");

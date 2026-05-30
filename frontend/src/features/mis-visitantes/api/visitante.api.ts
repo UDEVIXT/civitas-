@@ -58,6 +58,6 @@ export const generarQrVisitante = async (
     `/visitante/${idVisitante}/generar-qr`,
     fechas ?? {},
   );
-
+  console.log("Respuesta del backend al generar QR:", response.data);
   return response.data;
 };
