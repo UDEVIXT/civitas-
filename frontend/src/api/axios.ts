@@ -4,6 +4,7 @@ import axios, {
   AxiosError,
   InternalAxiosRequestConfig,
 } from "axios";
+import { toast } from "sonner";
 
 //vavavavava
 //jajajajaa
@@ -79,7 +80,10 @@ apiClient.interceptors.response.use(
         
         // Solo redirigimos si el usuario estaba navegando en una zona privada (ej. /dashboard)
         if (!isPublicRoute) {
-          window.location.href = "/login";
+          toast.info("Tu sesión ha expirado por inactividad. Serás redirigido al login.", { duration: 4000 });
+          setTimeout(() => {
+            window.location.href = "/login";
+          }, 3000);
         }
         
         return Promise.reject(refreshError);

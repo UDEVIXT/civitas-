@@ -18,12 +18,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 // CA005 y CA006: Validación de campos requeridos y formatos
 const formSchema = z.object({
-  nombre: z.string().min(1, "El nombre es requerido"),
-  apellidos: z.string().min(1, "Los apellidos son requeridos"),
   telefono: z
     .string()
+    .min(1, "Por favor, introduce datos en este campo")
     .min(10, "El teléfono debe tener al menos 10 dígitos")
-    .regex(/^[0-9]+$/, "El teléfono solo puede contener números") // CA006
+    .regex(/^[0-9]+$/, "Formato de teléfono incorrecto, el campo solo permite números") // CA006
     .max(15, "El teléfono no puede exceder 15 dígitos"),
 });
 
