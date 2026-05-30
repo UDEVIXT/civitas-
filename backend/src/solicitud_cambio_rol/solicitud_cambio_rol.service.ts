@@ -16,6 +16,17 @@ export class SolicitudCambioRolService {
       throw new BadRequestException('No está permitido crear una solicitud para el rol de Residente.');
     }
 
+    const solicitudPendiente = await this.prisma.solicitud_cambio_rol.findFirst({
+      where: {
+        id_usuario: createSolicitudCambioRolDto.id_usuario,
+        estatus_solicitud: 'Pendiente', 
+      },
+    });
+
+    if (solicitudPendiente) {
+      throw new BadRequestException('El usuario ya tiene una solicitud de cambio de rol en proceso.');
+    }
+
     try {
       const nuevaSolicitud = await this.prisma.solicitud_cambio_rol.create({
         data: {
