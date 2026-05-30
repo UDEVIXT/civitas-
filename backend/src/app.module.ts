@@ -22,7 +22,7 @@ import { AccesosServiciosModule } from './accesos-servicios/accesos-servicios.mo
 import { VisitanteModule } from './visitante/visitante.module';
 import { LoginThrottlerGuard } from './auth/guards/login-throttler.guard';
 import { PerfilModule } from './perfil/perfil.module';
-import { SolicitudCambioRolModule } from './solicitud_cambio_rol/solicitud_cambio_rol.module';
+import { SolicitudAdministradorGuardiaModule } from './solicitud_administrador_guardia/solicitud_administrador_guardia.module';
 
 @Module({
   imports: [
@@ -52,7 +52,7 @@ import { SolicitudCambioRolModule } from './solicitud_cambio_rol/solicitud_cambi
     ]),
     MailModule,
     VisitanteModule,
-    SolicitudCambioRolModule,
+    SolicitudAdministradorGuardiaModule,
   ],
   controllers: [AppController],
   providers: [

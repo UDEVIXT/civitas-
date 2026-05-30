@@ -97,7 +97,7 @@ model Usuario {
   persona            Persona        @relation(fields: [id_persona], references: [id_persona])
   sesiones Sesion[]
   reportes             Reporte[]
-  solicitudes_cambio Solicitud_cambio_rol[]
+  solicitudes_admin_guardia Solicitud_administrador_guardia[]
 }
 
 model Residente {
@@ -265,11 +265,15 @@ enum Estatus_Solicitud {
   Rechazada
 }
 
-model Solicitud_cambio_rol {
+model Solicitud_administrador_guardia {
   id_solicitud      String            @id @default(uuid())
-  id_usuario        String
-  rol_solicitado    Rol                
-  razon             String            @db.Text
+  id_usuario        String          @unique
+  rol_solicitado    Rol         
+  nombre           String
+  genero           String
+  fecha_nacimiento DateTime
+  telefono         String?
+  correo             String         @unique
   estatus_solicitud Estatus_Solicitud @default(Pendiente) 
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
