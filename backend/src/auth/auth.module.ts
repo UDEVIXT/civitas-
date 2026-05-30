@@ -6,6 +6,8 @@ import { AuthService } from './auth.service';
 import { NotificacionModule } from '../notificacion/notificacion.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { MailModule } from '../mail/mail.module';
+import { SolicitudAdministradorGuardiaModule } from '../solicitud_administrador_guardia/solicitud_administrador_guardia.module';
+
 @Module({
   imports: [
     JwtModule.register({
@@ -19,6 +21,7 @@ import { MailModule } from '../mail/mail.module';
     }),
     NotificacionModule,
     MailModule,
+    SolicitudAdministradorGuardiaModule
   ],
 
   controllers: [AuthController],

@@ -17,6 +17,9 @@ import { RegisterDto } from './dto/register.dto';
 import { ValidarCredencialDto } from './dto/validar-credencial.dto';
 import { createWorker } from 'tesseract.js';
 import { NotFoundException } from '@nestjs/common';
+import { SolicitudAdministradorGuardiaService } from '../solicitud_administrador_guardia/solicitud_administrador_guardia.service';
+import { Estatus_Solicitud } from '@prisma/client';
+
 function detectarDispositivo(userAgent?: string) {
   if (!userAgent) {
     return 'Desconocido';
@@ -48,6 +51,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly authGateway: AuthGateway,
     private readonly mailerService: MailerService,
+    private readonly solicitudService: SolicitudAdministradorGuardiaService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -64,6 +68,7 @@ export class AuthService {
       verificationAccessToken,
     } = dto;
 
+    /*
     try {
       const payload = await this.jwtService.verifyAsync(
         verificationAccessToken,
@@ -85,7 +90,8 @@ export class AuthService {
       throw new UnauthorizedException(
         'La validación de credencial expiró o es inválida.',
       );
-    }
+    }*/
+   
     // VALIDAR PASSWORDS CA006 — Password y confirmación distintas
     if (password !== confirmPassword) {
       throw new BadRequestException('Las contraseñas no coinciden.');
@@ -144,26 +150,30 @@ export class AuthService {
           },
         });
 
-        if (rol === 'Guardia') {
-          await tx.guardia.create({
-            data: {
-              nombre,
-              id_usuario: usuario.id_usuario,
-            },
-          });
-        }
-
-        if (rol === 'Administrador') {
-          await tx.administrador.create({
-            data: {
-              nombre,
-              id_usuario: usuario.id_usuario,
-            },
-          });
-        }
-
         return usuario;
       });
+
+      if(rol == 'Guardia' || rol == 'Administrador'){
+            const parametros = {
+            id_usuario: usuarioCreado.id_usuario,
+            rol_solicitado: rol,
+            estatus_solicitud: 'Pendiente' as Estatus_Solicitud,
+            nombre,
+            genero,
+            fecha_nacimiento,
+            telefono,
+            correo
+            };
+
+          try{
+            const nuevaSolicitud = await this.solicitudService.create(parametros);
+          }catch(BadRequestException){
+            throw new ConflictException(
+              'No se pudo crear el usuario con rol Guardia/Administrador.',
+            );
+          }
+          
+        }
 
       // ENVIAR CORREO BIENVENIDA - CA001
       try {
