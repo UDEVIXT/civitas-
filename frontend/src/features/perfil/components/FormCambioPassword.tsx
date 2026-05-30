@@ -26,6 +26,7 @@ const formSchema = z
       .regex(/[A-Z]/, "Debe contener al menos una letra mayúscula")
       .regex(/[a-z]/, "Debe contener al menos una letra minúscula")
       .regex(/[0-9]/, "Debe contener al menos un número"),
+    confirmarPassword: z.string().min(1, "Por favor, introduce datos en este campo"),
   })
   .refine((data) => data.passwordNuevo === data.confirmarPassword, {
     message: "Las contraseñas no coinciden",

@@ -18,6 +18,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 // CA005 y CA006: Validación de campos requeridos y formatos
 const formSchema = z.object({
+  nombre: z.string().min(1, "Por favor, introduce datos en este campo"),
+  apellidos: z.string().min(1, "Por favor, introduce datos en este campo"),
   telefono: z
     .string()
     .min(1, "Por favor, introduce datos en este campo")
