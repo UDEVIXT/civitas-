@@ -117,33 +117,48 @@ export class AccesosServiciosService {
   }
 
   async obtenerActividadReciente(limit = 5) {
-    const bitacoras =
-      await this.prisma.bitacora.findMany({
-        take: limit,
+    const bitacoras = await this.prisma.bitacora.findMany({
+      take: limit,
 
-        orderBy: {
-          fecha_hora_entrada: 'desc',
+      orderBy: {
+        fecha_hora_entrada: 'desc',
+      },
+
+      where: {
+        acceso: {
+          visitante: {
+            servicio: {
+              tipo_servicio: {
+                nombre: {
+                  in: [
+                    'Repartidor de Comida',
+                    'Paquetería',
+                  ],
+                },
+              },
+            },
+          },
         },
+      },
 
-        include: {
-          acceso: {
-            include: {
-              visitante: {
-                include: {
-                  servicio: {
-                    include: {
-                      tipo_servicio: true,
-                    },
+      include: {
+        acceso: {
+          include: {
+            visitante: {
+              include: {
+                servicio: {
+                  include: {
+                    tipo_servicio: true,
                   },
+                },
 
-                  residente: {
-                    include: {
-                      vivienda: true,
+                residente: {
+                  include: {
+                    vivienda: true,
 
-                      usuario: {
-                        include: {
-                          persona: true,
-                        },
+                    usuario: {
+                      include: {
+                        persona: true,
                       },
                     },
                   },
@@ -151,10 +166,11 @@ export class AccesosServiciosService {
               },
             },
           },
-
-          guardia: true,
         },
-      });
+
+        guardia: true,
+      },
+    });
 
     const haceCuanto = (fecha: Date) => {
       const ahora = new Date();
@@ -163,8 +179,7 @@ export class AccesosServiciosService {
         ahora.getTime() -
         new Date(fecha).getTime();
 
-      const minutos =
-        Math.floor(diffMs / 60000);
+      const minutos = Math.floor(diffMs / 60000);
 
       if (minutos < 1) {
         return 'Hace unos segundos';
@@ -174,15 +189,13 @@ export class AccesosServiciosService {
         return `Hace ${minutos} min`;
       }
 
-      const horas =
-        Math.floor(minutos / 60);
+      const horas = Math.floor(minutos / 60);
 
       if (horas < 24) {
         return `Hace ${horas} h`;
       }
 
-      const dias =
-        Math.floor(horas / 24);
+      const dias = Math.floor(horas / 24);
 
       return `Hace ${dias} días`;
     };
@@ -206,12 +219,12 @@ export class AccesosServiciosService {
         'Empresa desconocida';
 
       const nombreResidente =
-        residente?.usuario?.persona
-          ?.nombre ?? 'Residente';
+        residente?.usuario?.persona?.nombre ??
+        'Residente';
 
       const vivienda =
-        residente?.vivienda
-          ?.numero_vivienda ?? 'N/A';
+        residente?.vivienda?.numero_vivienda ??
+        'N/A';
 
       return {
         id: bitacora.id_bitacora,

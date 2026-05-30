@@ -8,10 +8,14 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ArchivosService } from '../r2-module/archivos.service';
 
 @Injectable()
 export class EmpleadoService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+  private prisma: PrismaService,
+  private readonly archivosService: ArchivosService,
+) {}
 
   private readonly dayOrder = [
     'LUNES',
@@ -196,6 +200,7 @@ export class EmpleadoService {
           nombre: true,
           telefono: true,
           url_imagen: true,
+          notas_adicionales: true,
 
           servicio: {
             select: {
@@ -402,134 +407,227 @@ export class EmpleadoService {
   }
 */
 
-async actualizarEmpleado(id: string, data: any) {
-    try {
-      return await this.prisma.$transaction(async (tx) => {
-        // 1. Buscamos el registro para obtener la conexión con la tabla Servicio
-        const visitante = await tx.visitante.findUnique({
-          where: { id_visitante: id },
-          select: { id_servicio: true },
-        });
+async actualizarEmpleado(
+  id: string,
+  data: any,
+  file?: Express.Multer.File,
+) {
+  console.log('BODY QUE LLEGA AL BACKEND:', data);
+  console.log('FILE QUE LLEGA AL SERVICE:', file?.originalname);
 
-        if (!visitante) throw new NotFoundException('Empleado no encontrado');
+  let urlImagen: string | undefined = undefined;
 
-        // 2. Actualizamos los datos personales en la tabla Visitante
-        await tx.visitante.update({
-          where: { id_visitante: id },
-          data: {
-            nombre: data.nombre,
-            telefono: data.telefono,
-            // Soporta tanto url_imagen como foto que viene de tu modal
-            url_imagen: data.url_imagen || data.foto,
-          },
-        });
+  // 1. Subir imagen FUERA de la transacción
+  if (file) {
+    console.log('🟡 Subiendo imagen fuera de la transacción...');
 
-        // 3. Si tiene un servicio, procesamos el cargo y construimos el array de horarios dinámicamente
-        if (visitante.id_servicio) {
+    urlImagen = await this.archivosService.subirImagen(
+      file,
+      'empleados-domesticos',
+    );
 
-          // Diccionario para traducir los días del checkbox al ENUM de Postgres
-          const mapeoDias: Record<string, string> = {
-            'Lunes': 'LUNES',
-            'Martes': 'MARTES',
-            'Miércoles': 'MIERCOLES',
-            'Jueves': 'JUEVES',
-            'Viernes': 'VIERNES',
-            'Sábado': 'SABADO',
-            'Domingo': 'DOMINGO'
-          };
+    console.log('🟢 URL IMAGEN SUBIDA:', urlImagen);
+  }
 
-          // Si el front manda el array directo en data.dias_autorizados
-          const diasSeleccionados: string[] = data.dias_autorizados || [];
+  try {
+    return await this.prisma.$transaction(async (tx) => {
+      // 2. Buscar visitante
+      const visitante = await tx.visitante.findUnique({
+        where: { id_visitante: id },
+        select: { id_servicio: true },
+      });
 
-          // Construimos el arreglo mapeado que Prisma necesita para HorarioAccesoServicios
-          const nuevosHorarios = diasSeleccionados.map((dia: string) => {
+      if (!visitante) {
+        throw new NotFoundException('Empleado no encontrado');
+      }
+
+      // 3. Armar datos de visitante
+      const datosVisitante: any = {
+        nombre: data.nombre,
+        telefono: data.telefono,
+        notas_adicionales: data.notas_adicionales,
+      };
+
+      if (urlImagen) {
+        datosVisitante.url_imagen = urlImagen;
+      }
+
+      console.log('🟡 DATOS VISITANTE PARA UPDATE:', datosVisitante);
+
+      // 4. Guardar cambios en Visitante
+      const visitanteActualizado = await tx.visitante.update({
+        where: { id_visitante: id },
+        data: datosVisitante,
+        select: {
+          id_visitante: true,
+          nombre: true,
+          telefono: true,
+          url_imagen: true,
+          notas_adicionales: true,
+        },
+      });
+
+      console.log('🟢 VISITANTE ACTUALIZADO:', visitanteActualizado);
+
+      // 5. Actualizar servicio y horarios
+      if (visitante.id_servicio) {
+        const mapeoDias: Record<string, string> = {
+          Lunes: 'LUNES',
+          Martes: 'MARTES',
+          Miércoles: 'MIERCOLES',
+          Jueves: 'JUEVES',
+          Viernes: 'VIERNES',
+          Sábado: 'SABADO',
+          Domingo: 'DOMINGO',
+        };
+
+        const diasSeleccionados: string[] = data.dias_autorizados || [];
+
+        const nuevosHorarios = diasSeleccionados
+          .map((dia: string) => {
             const diaEnum = mapeoDias[dia];
             if (!diaEnum) return null;
 
-            // Extraemos las horas usando los nombres planos de tu modal
             const entrada = data.hora_entrada || '08:00';
             const salida = data.hora_salida || '16:00';
 
             return {
               dia_semana: diaEnum,
-              // Convertimos a Date para el tipo @db.Time(6) de PostgreSQL
               hora_inicio: new Date(`1970-01-01T${entrada}:00.000Z`),
               hora_fin: new Date(`1970-01-01T${salida}:00.000Z`),
               activo: true,
             };
-          }).filter(Boolean); // Limpiamos elementos nulos
+          })
+          .filter(Boolean);
 
-          await tx.servicio.update({
-            where: { id_servicio: visitante.id_servicio },
-            data: {
-              cargo: data.cargo, // Guardamos el rol seleccionado ("Limpieza", "Nana", etc.)
-              horarios: {
-                // Borramos los horarios viejos para evitar que se amontonen o dupliquen
-                deleteMany: {},
-                // Insertamos el bloque de nuevos días autorizados
-                create: nuevosHorarios as any,
-              },
+        await tx.servicio.update({
+          where: { id_servicio: visitante.id_servicio },
+          data: {
+            cargo: data.cargo,
+            horarios: {
+              deleteMany: {},
+              create: nuevosHorarios as any,
             },
-          });
-        }
-
-        // 4. Actualizar bitácora en la tabla Acceso
-        await tx.acceso.updateMany({
-          where: { id_visitante: id, estatus: 'Activo' },
-          data: { comentario_admin: 'Información actualizada por residente' },
+          },
         });
-
-        return { success: true, statusCode: 200, message: 'Empleado actualizado con éxito' };
-      });
-    } catch (error: any) {
-      console.error('Error en actualizarEmpleado:', error);
-      throw new InternalServerErrorException({
-        message: 'No se pudo actualizar el registro',
-        error: error.message,
-      });
-    }
-  }
-
-
-  async eliminarEmpleado(id: string, motivo?: string, id_residente?: string) {
-    try {
-      const servicio = await this.obtenerServicio(id);
-
-      let nombreAutor = 'Residente';
-      if (id_residente) {
-        const residente = await this.prisma.residente.findUnique({
-          where: { id_residente },
-          include: { usuario: { include: { persona: true } } }
-        });
-        if (residente?.usuario?.persona?.nombre) {
-          nombreAutor = residente.usuario.persona.nombre;
-        }
       }
 
-      const fechaActual = new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
-      const comentarioEstructurado = `Baja por: ${nombreAutor} el ${fechaActual}. Motivo: ${motivo || 'No especificado'}`;
-
-      // Borrado lógico
-      await this.prisma.servicio.update({
-        where: { id_servicio: servicio.id_servicio },
+      // 6. Actualizar acceso
+      await tx.acceso.updateMany({
+        where: { id_visitante: id, estatus: 'Activo' },
         data: {
-          activo: false,
-        },
-      });
-
-      //Revocar su QR
-      await this.prisma.acceso.updateMany({
-        where: { id_visitante: servicio.id_visitante },
-        data: {
-          estatus: 'Inactivo',
-          comentario_admin: comentarioEstructurado,
+          comentario_admin: 'Información actualizada por residente',
         },
       });
 
       return {
+        success: true,
         statusCode: 200,
-        message: `El empleado ${servicio.nombre} ha sido dado de baja exitosamente.`,
+        message: 'Empleado actualizado con éxito',
+        data: visitanteActualizado,
       };
+    });
+  } catch (error: any) {
+    if (
+      error instanceof NotFoundException ||
+      error instanceof BadRequestException
+    ) {
+      throw error;
+    }
+
+    console.error('Error en actualizarEmpleado:', error);
+
+    throw new InternalServerErrorException({
+      message: 'No se pudo actualizar el registro',
+      error: error.message,
+    });
+  }
+}
+
+  async eliminarEmpleado(
+    id: string,
+    motivo?: string,
+    id_residente?: string,
+  ) {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const servicio = await this.obtenerServicio(id);
+
+        let nombreAutor = 'Residente';
+
+        if (id_residente) {
+          const residente = await tx.residente.findUnique({
+            where: { id_residente },
+            include: {
+              usuario: {
+                include: {
+                  persona: true,
+                },
+              },
+            },
+          });
+
+          if (residente?.usuario?.persona?.nombre) {
+            nombreAutor = residente.usuario.persona.nombre;
+          }
+        }
+
+        const fechaActual = new Date().toLocaleString('es-MX', {
+          timeZone: 'America/Mexico_City',
+        });
+
+        const comentarioEstructurado =
+          `Baja por: ${nombreAutor} el ${fechaActual}. ` +
+          `Motivo: ${motivo || 'No especificado'}`;
+
+        // Desactivar servicio
+        await tx.servicio.update({
+          where: {
+            id_servicio: servicio.id_servicio,
+          },
+          data: {
+            activo: false,
+          },
+        });
+
+        // Obtener accesos activos
+        const accesos = await tx.acceso.findMany({
+          where: {
+            id_visitante: servicio.id_visitante,
+            estatus: 'Activo',
+          },
+        });
+
+        // Revocar accesos
+        await tx.acceso.updateMany({
+          where: {
+            id_visitante: servicio.id_visitante,
+          },
+          data: {
+            estatus: 'Inactivo',
+            comentario_admin: comentarioEstructurado,
+          },
+        });
+
+        // Registrar salida en bitácora
+        for (const acceso of accesos) {
+          await tx.bitacora.create({
+            data: {
+              id_acceso: acceso.id_acceso,
+              fecha_hora_entrada: acceso.fecha_creacion,
+              fecha_hora_salida: new Date(),
+              comentario: acceso.comentario_admin,
+              comentario_salida: comentarioEstructurado,
+              estado: false,
+            },
+          });
+        }
+
+        return {
+          statusCode: 200,
+          message: `El empleado ${servicio.nombre} ha sido dado de baja exitosamente.`,
+        };
+      });
     } catch (error) {
       if (
         error instanceof NotFoundException ||
@@ -538,63 +636,103 @@ async actualizarEmpleado(id: string, data: any) {
         throw error;
       }
 
-      // Error 500: Error inesperado
       console.error('Error en eliminarEmpleado:', error);
+
       throw new InternalServerErrorException(
-        'Ocurrió un error inesperado al intentar dar de baja al empleado. Por favor, inténtelo de nuevo más tarde.',
+        'Ocurrió un error inesperado al intentar dar de baja al empleado.',
       );
     }
   }
 
   async reactivarEmpleado(id: string, id_residente?: string) {
     try {
-      const servicio = await this.obtenerServicio(id);
+      return await this.prisma.$transaction(async (tx) => {
+        const servicio = await this.obtenerServicio(id);
 
-      if (servicio.bloqueo_global) {
-        throw new ConflictException(
-          'El empleado fue dado de baja globalmente por el administrador y solo él puede reincorporarlo.',
-        );
-      }
-
-      let nombreAutor = 'Residente';
-      if (id_residente) {
-        const residente = await this.prisma.residente.findUnique({
-          where: { id_residente },
-          include: { usuario: { include: { persona: true } } }
-        });
-        if (residente?.usuario?.persona?.nombre) {
-          nombreAutor = residente.usuario.persona.nombre;
+        if (servicio.bloqueo_global) {
+          throw new ConflictException(
+            'El empleado fue dado de baja globalmente por el administrador y solo él puede reincorporarlo.',
+          );
         }
-      }
 
-      const fechaActual = new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
-      const comentarioEstructurado = `Reactivado por: ${nombreAutor} el ${fechaActual}.`;
+        let nombreAutor = 'Residente';
 
-      await this.prisma.servicio.update({
-        where: { id_servicio: servicio.id_servicio },
-        data: {
-          activo: true,
-        },
+        if (id_residente) {
+          const residente = await tx.residente.findUnique({
+            where: { id_residente },
+            include: {
+              usuario: {
+                include: {
+                  persona: true,
+                },
+              },
+            },
+          });
+
+          if (residente?.usuario?.persona?.nombre) {
+            nombreAutor = residente.usuario.persona.nombre;
+          }
+        }
+
+        const fechaActual = new Date().toLocaleString('es-MX', {
+          timeZone: 'America/Mexico_City',
+        });
+
+        const comentarioEstructurado =
+          `Reactivado por: ${nombreAutor} el ${fechaActual}.`;
+
+        // Reactivar servicio
+        await tx.servicio.update({
+          where: {
+            id_servicio: servicio.id_servicio,
+          },
+          data: {
+            activo: true,
+          },
+        });
+
+        // Obtener accesos asociados
+        const accesos = await tx.acceso.findMany({
+          where: {
+            id_visitante: servicio.id_visitante,
+          },
+        });
+
+        // Reactivar accesos
+        await tx.acceso.updateMany({
+          where: {
+            id_visitante: servicio.id_visitante,
+          },
+          data: {
+            estatus: 'Activo',
+            comentario_admin: comentarioEstructurado,
+          },
+        });
+
+        // Registrar movimiento en bitácora
+        if (accesos.length > 0) {
+          await tx.bitacora.createMany({
+            data: accesos.map((acceso) => ({
+              id_acceso: acceso.id_acceso,
+              fecha_hora_entrada: new Date(),
+              comentario: comentarioEstructurado,
+              estado: true,
+            })),
+          });
+        }
+
+        return {
+          statusCode: 200,
+          message: `El empleado ${servicio.nombre} ha sido reactivado exitosamente.`,
+        };
       });
-
-      await this.prisma.acceso.updateMany({
-        where: { id_visitante: servicio.id_visitante },
-        data: {
-          estatus: 'Activo',
-          comentario_admin: comentarioEstructurado
-        },
-      });
-
-      return {
-        statusCode: 200,
-        message: `El empleado ${servicio.nombre} ha sido reactivado exitosamente.`,
-      };
     } catch (error) {
       if (error instanceof ConflictException) {
         throw error;
       }
 
       console.error('Error en reactivarEmpleado:', error);
+
       throw new InternalServerErrorException(
         'Ocurrió un error inesperado al intentar reactivar al empleado. Por favor, inténtelo de nuevo más tarde.',
       );
