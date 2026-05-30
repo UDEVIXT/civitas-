@@ -544,45 +544,90 @@ async actualizarEmpleado(
   }
 }
 
-  async eliminarEmpleado(id: string, motivo?: string, id_residente?: string) {
+  async eliminarEmpleado(
+    id: string,
+    motivo?: string,
+    id_residente?: string,
+  ) {
     try {
-      const servicio = await this.obtenerServicio(id);
+      return await this.prisma.$transaction(async (tx) => {
+        const servicio = await this.obtenerServicio(id);
 
-      let nombreAutor = 'Residente';
-      if (id_residente) {
-        const residente = await this.prisma.residente.findUnique({
-          where: { id_residente },
-          include: { usuario: { include: { persona: true } } }
-        });
-        if (residente?.usuario?.persona?.nombre) {
-          nombreAutor = residente.usuario.persona.nombre;
+        let nombreAutor = 'Residente';
+
+        if (id_residente) {
+          const residente = await tx.residente.findUnique({
+            where: { id_residente },
+            include: {
+              usuario: {
+                include: {
+                  persona: true,
+                },
+              },
+            },
+          });
+
+          if (residente?.usuario?.persona?.nombre) {
+            nombreAutor = residente.usuario.persona.nombre;
+          }
         }
-      }
 
-      const fechaActual = new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
-      const comentarioEstructurado = `Baja por: ${nombreAutor} el ${fechaActual}. Motivo: ${motivo || 'No especificado'}`;
+        const fechaActual = new Date().toLocaleString('es-MX', {
+          timeZone: 'America/Mexico_City',
+        });
 
-      // Borrado lógico
-      await this.prisma.servicio.update({
-        where: { id_servicio: servicio.id_servicio },
-        data: {
-          activo: false,
-        },
+        const comentarioEstructurado =
+          `Baja por: ${nombreAutor} el ${fechaActual}. ` +
+          `Motivo: ${motivo || 'No especificado'}`;
+
+        // Desactivar servicio
+        await tx.servicio.update({
+          where: {
+            id_servicio: servicio.id_servicio,
+          },
+          data: {
+            activo: false,
+          },
+        });
+
+        // Obtener accesos activos
+        const accesos = await tx.acceso.findMany({
+          where: {
+            id_visitante: servicio.id_visitante,
+            estatus: 'Activo',
+          },
+        });
+
+        // Revocar accesos
+        await tx.acceso.updateMany({
+          where: {
+            id_visitante: servicio.id_visitante,
+          },
+          data: {
+            estatus: 'Inactivo',
+            comentario_admin: comentarioEstructurado,
+          },
+        });
+
+        // Registrar salida en bitácora
+        for (const acceso of accesos) {
+          await tx.bitacora.create({
+            data: {
+              id_acceso: acceso.id_acceso,
+              fecha_hora_entrada: acceso.fecha_creacion,
+              fecha_hora_salida: new Date(),
+              comentario: acceso.comentario_admin,
+              comentario_salida: comentarioEstructurado,
+              estado: false,
+            },
+          });
+        }
+
+        return {
+          statusCode: 200,
+          message: `El empleado ${servicio.nombre} ha sido dado de baja exitosamente.`,
+        };
       });
-
-      //Revocar su QR
-      await this.prisma.acceso.updateMany({
-        where: { id_visitante: servicio.id_visitante },
-        data: {
-          estatus: 'Inactivo',
-          comentario_admin: comentarioEstructurado,
-        },
-      });
-
-      return {
-        statusCode: 200,
-        message: `El empleado ${servicio.nombre} ha sido dado de baja exitosamente.`,
-      };
     } catch (error) {
       if (
         error instanceof NotFoundException ||
@@ -591,63 +636,103 @@ async actualizarEmpleado(
         throw error;
       }
 
-      // Error 500: Error inesperado
       console.error('Error en eliminarEmpleado:', error);
+
       throw new InternalServerErrorException(
-        'Ocurrió un error inesperado al intentar dar de baja al empleado. Por favor, inténtelo de nuevo más tarde.',
+        'Ocurrió un error inesperado al intentar dar de baja al empleado.',
       );
     }
   }
 
   async reactivarEmpleado(id: string, id_residente?: string) {
     try {
-      const servicio = await this.obtenerServicio(id);
+      return await this.prisma.$transaction(async (tx) => {
+        const servicio = await this.obtenerServicio(id);
 
-      if (servicio.bloqueo_global) {
-        throw new ConflictException(
-          'El empleado fue dado de baja globalmente por el administrador y solo él puede reincorporarlo.',
-        );
-      }
-
-      let nombreAutor = 'Residente';
-      if (id_residente) {
-        const residente = await this.prisma.residente.findUnique({
-          where: { id_residente },
-          include: { usuario: { include: { persona: true } } }
-        });
-        if (residente?.usuario?.persona?.nombre) {
-          nombreAutor = residente.usuario.persona.nombre;
+        if (servicio.bloqueo_global) {
+          throw new ConflictException(
+            'El empleado fue dado de baja globalmente por el administrador y solo él puede reincorporarlo.',
+          );
         }
-      }
 
-      const fechaActual = new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
-      const comentarioEstructurado = `Reactivado por: ${nombreAutor} el ${fechaActual}.`;
+        let nombreAutor = 'Residente';
 
-      await this.prisma.servicio.update({
-        where: { id_servicio: servicio.id_servicio },
-        data: {
-          activo: true,
-        },
+        if (id_residente) {
+          const residente = await tx.residente.findUnique({
+            where: { id_residente },
+            include: {
+              usuario: {
+                include: {
+                  persona: true,
+                },
+              },
+            },
+          });
+
+          if (residente?.usuario?.persona?.nombre) {
+            nombreAutor = residente.usuario.persona.nombre;
+          }
+        }
+
+        const fechaActual = new Date().toLocaleString('es-MX', {
+          timeZone: 'America/Mexico_City',
+        });
+
+        const comentarioEstructurado =
+          `Reactivado por: ${nombreAutor} el ${fechaActual}.`;
+
+        // Reactivar servicio
+        await tx.servicio.update({
+          where: {
+            id_servicio: servicio.id_servicio,
+          },
+          data: {
+            activo: true,
+          },
+        });
+
+        // Obtener accesos asociados
+        const accesos = await tx.acceso.findMany({
+          where: {
+            id_visitante: servicio.id_visitante,
+          },
+        });
+
+        // Reactivar accesos
+        await tx.acceso.updateMany({
+          where: {
+            id_visitante: servicio.id_visitante,
+          },
+          data: {
+            estatus: 'Activo',
+            comentario_admin: comentarioEstructurado,
+          },
+        });
+
+        // Registrar movimiento en bitácora
+        if (accesos.length > 0) {
+          await tx.bitacora.createMany({
+            data: accesos.map((acceso) => ({
+              id_acceso: acceso.id_acceso,
+              fecha_hora_entrada: new Date(),
+              comentario: comentarioEstructurado,
+              estado: true,
+            })),
+          });
+        }
+
+        return {
+          statusCode: 200,
+          message: `El empleado ${servicio.nombre} ha sido reactivado exitosamente.`,
+        };
       });
-
-      await this.prisma.acceso.updateMany({
-        where: { id_visitante: servicio.id_visitante },
-        data: {
-          estatus: 'Activo',
-          comentario_admin: comentarioEstructurado
-        },
-      });
-
-      return {
-        statusCode: 200,
-        message: `El empleado ${servicio.nombre} ha sido reactivado exitosamente.`,
-      };
     } catch (error) {
       if (error instanceof ConflictException) {
         throw error;
       }
 
       console.error('Error en reactivarEmpleado:', error);
+
       throw new InternalServerErrorException(
         'Ocurrió un error inesperado al intentar reactivar al empleado. Por favor, inténtelo de nuevo más tarde.',
       );

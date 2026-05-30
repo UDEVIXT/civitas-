@@ -1,3 +1,5 @@
+ //Muestra la tabla de la vista empleados domésticos, con sus respectivos botones para editar, ver horario y dar de baja o reactivar. Es un componente hijo de la vista MisEmpleados. Recibe los empleados como props desde el hook useResidenteEmpleados, que se encarga de hacer la consulta a la API y manejar el estado de carga y errores.
+
 "use client";
 
 import { Pencil, Clock, UserMinus, UserCheck } from "lucide-react";
@@ -56,17 +58,14 @@ function formatHorario(empleado: EmpleadoDomestico) {
   const formatTime = (value?: string | Date) => {
     if (value === undefined || value === null || value === "") return "";
 
-    // Normalize value to a Date when possible
     let date: Date | null = null;
     if (value instanceof Date) {
       date = value;
     } else if (typeof value === "string") {
-      // Try ISO/date string first
       const parsed = new Date(value);
       if (!isNaN(parsed.getTime())) {
         date = parsed;
       } else {
-        // Fallback: accept plain "HH:MM" strings
         const m = value.match(/^(\d{1,2}):(\d{2})/);
         if (m) {
           const hours = parseInt(m[1], 10);
@@ -77,7 +76,6 @@ function formatHorario(empleado: EmpleadoDomestico) {
         }
       }
     } else {
-      // attempt to coerce numbers or other values
       const coerced = new Date(String(value));
       if (!isNaN(coerced.getTime())) date = coerced;
     }
@@ -94,7 +92,6 @@ function formatHorario(empleado: EmpleadoDomestico) {
   return `${firstLabel}-${lastLabel}: ${formatTime(first.hora_inicio)}-${formatTime(last.hora_fin)}`;
 }
 
-// 1. Modificamos el tipo de las Props para recibir la función onBaja
 type MisEmpleadosTableProps = {
   items: EmpleadoDomestico[];
   isLoading: boolean;
@@ -111,7 +108,7 @@ export function TablaMisEmpleados({
   isLoading,
   onEdit,
   onVerHorario,
-  onBaja, // <-- Desestructuramos la nueva prop
+  onBaja, 
 }: MisEmpleadosTableProps) {
   if (isLoading) {
     return (
@@ -129,15 +126,17 @@ export function TablaMisEmpleados({
             <TableRow className="border-zinc-200 bg-zinc-50/80 text-[11px] uppercase tracking-wide text-zinc-500">
               <TableHead className="w-90 pl-5 font-medium text-zinc-500">Nombre</TableHead>
               <TableHead className="w-62.5 font-medium text-zinc-500">Horario Autorizado</TableHead>
+              {/* Nueva columna para el reloj */}
+              <TableHead className="w-24 text-center font-medium text-zinc-500">Detalle</TableHead>
               <TableHead className="w-37.5 font-medium text-zinc-500">Estado</TableHead>
-              <TableHead className="text-right font-medium text-zinc-500">Acción de entrada</TableHead>
+              <TableHead className="text-right font-medium text-zinc-500">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {items.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={4}
+                  colSpan={5} // Cambiado a 5 por la nueva columna
                   className="py-10 text-center text-sm text-zinc-500"
                 >
                   No tienes empleados domésticos registrados.
@@ -174,9 +173,24 @@ export function TablaMisEmpleados({
                         </div>
                       </div>
                     </TableCell>
+                    
                     <TableCell className="text-sm text-zinc-600">
                       {formatHorario(empleado)}
                     </TableCell>
+
+                    {/* Nueva celda exclusiva para el botón de Ver Horario */}
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onVerHorario(empleado)}
+                        className="rounded-full hover:bg-zinc-100 hover:text-blue-600 text-zinc-400"
+                        title="Ver detalle del horario"
+                      >
+                        <Clock className="size-4" />
+                      </Button>
+                    </TableCell>
+
                     <TableCell>
                       <Badge
                         variant="outline"
@@ -190,18 +204,9 @@ export function TablaMisEmpleados({
                         {isActive ? "Activo" : "Inactivo"}
                       </Badge>
                     </TableCell>
+
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onVerHorario(empleado)}
-                          className="rounded-full hover:bg-zinc-100 hover:text-zinc-900"
-                          title="Ver horario"
-                        >
-                          <Clock className="size-4" />
-                        </Button>
-
                         {/* Botón de Editar */}
                         <Button
                           variant="ghost"
@@ -213,7 +218,7 @@ export function TablaMisEmpleados({
                           <Pencil className="size-4" />
                         </Button>
 
-                        {/* 2. Nuevo Botón Dinámico: Suspender o Reactivar */}
+                        {/* Botón Dinámico: Suspender o Reactivar */}
                         <Button
                           variant="ghost"
                           size="icon"

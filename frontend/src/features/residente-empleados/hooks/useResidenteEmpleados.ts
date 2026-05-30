@@ -73,7 +73,7 @@ export function useResidenteEmpleados(idResidente: string) {
   // =========================
 
   console.log(
-    "🚀 [HOOK] El idResidente que llega al hook es:",
+    " [HOOK] El idResidente que llega al hook es:",
     idResidente,
   );
 
@@ -81,13 +81,10 @@ export function useResidenteEmpleados(idResidente: string) {
     data,
     isLoading,
     error,
+    isError, 
+    refetch,
   } = useQuery({
-    queryKey: [
-      "residente-empleados",
-      idResidente,
-      debouncedSearch,
-    ],
-
+    queryKey: ["residente-empleados", idResidente, debouncedSearch],
     queryFn: () =>
       obtenerMisEmpleados(
         {
@@ -96,8 +93,9 @@ export function useResidenteEmpleados(idResidente: string) {
         },
         debouncedSearch,
       ),
-
     enabled: !!idResidente,
+    retry: false, 
+    networkMode: "always",
   });
 
   if (error) {
@@ -114,26 +112,18 @@ export function useResidenteEmpleados(idResidente: string) {
   const updateMutation = useMutation({
     mutationFn: (values: UpdateEmpleadoValues) => {
       if (!selectedEmpleado) {
-        return Promise.reject("No hay empleado seleccionado");
+        return Promise.reject(new Error("No hay empleado seleccionado"));
       }
 
       // Días activos
-      const diasAutorizados = (
-        values.horarios || []
-      )
+      const diasAutorizados = (values.horarios || [])
         .filter((h) => h.activo)
         .map((h) => h.dia);
 
       // Tomamos primer horario activo
-      const primerDiaActivo = (
-        values.horarios || []
-      ).find((h) => h.activo);
-
-      const entradaLimpia =
-        primerDiaActivo?.hora_entrada || "08:00";
-
-      const salidaLimpia =
-        primerDiaActivo?.hora_salida || "16:00";
+      const primerDiaActivo = (values.horarios || []).find((h) => h.activo);
+      const entradaLimpia = primerDiaActivo?.hora_entrada || "08:00";
+      const salidaLimpia = primerDiaActivo?.hora_salida || "16:00";
 
       const formData = new FormData();
           
@@ -161,45 +151,27 @@ export function useResidenteEmpleados(idResidente: string) {
       );
     },
 
-    onSuccess: (res: any) => {
-      if (
-        res &&
-        (res.success ||
-          res.statusCode === 200 ||
-          res.status === 200)
-      ) {
-        queryClient.invalidateQueries({
-          queryKey: ["residente-empleados"],
-        });
+    onSuccess: () => {
+      // Al lanzar excepciones limpias desde la API, si llegamos aquí es un éxito garantizado
+      queryClient.invalidateQueries({
+        queryKey: ["residente-empleados"],
+      });
 
-        setIsEditModalOpen(false);
+      setIsEditModalOpen(false);
 
-        toast({
-          title: "¡Todo listo!",
-          description:
-            "La información se actualizó correctamente.",
-        });
-      } else {
-        toast({
-          title: "No se pudo guardar",
-          description:
-            res?.message ||
-            "Hubo un problema al procesar la información.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "¡Todo listo!",
+        description: "La información se actualizó correctamente.",
+      });
     },
 
     onError: (error: any) => {
-      const backendMessage =
-        error.response?.data?.message;
+      // Captura transparente de errores de red o respuestas del backend
+      const backendMessage = error.response?.data?.message || error.message;
 
-      const mensajeFinal = Array.isArray(
-        backendMessage,
-      )
+      const mensajeFinal = Array.isArray(backendMessage)
         ? backendMessage.join(". ")
-        : backendMessage ||
-          "Parece que hay un problema con el servidor.";
+        : backendMessage || "Parece que hay un problema con el servidor.";
 
       toast({
         title: "Error en la solicitud",
@@ -243,16 +215,17 @@ export function useResidenteEmpleados(idResidente: string) {
     },
 
     onError: (error: any) => {
-      const backendMessage = error.response?.data?.message;
+      // Capturamos el mensaje de error de la respuesta del backend, o un mensaje de error nativo (ej. red)
+      const backendMessage = error?.response?.data?.message || error?.message || error?.data?.message;
 
       const mensajeFinal = Array.isArray(backendMessage)
         ? backendMessage.join(". ")
-        : backendMessage || "Ocurrió un error.";
+        : backendMessage || "Ocurrió un error. No se pudo procesar la baja.";
 
       setBajaError(mensajeFinal);
 
       toast({
-        title: "Error",
+        title: "Error de conexión o sistema",
         description: mensajeFinal,
         variant: "destructive",
       });
@@ -297,8 +270,21 @@ export function useResidenteEmpleados(idResidente: string) {
   const confirmBaja = () => {
     if (!selectedEmpleado) return;
 
-    if (bajaMode === "deactivate" && !motivoBaja.trim()) {
-      setBajaError("Debes escribir un motivo.");
+    // Guardo preventivo estricto para cortes de red
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      const msg = "Problema técnico o de red detectado. No se puede guardar la baja.";
+      setBajaError(msg);
+      toast({
+        title: "Sin conexión",
+        description: msg,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validación de longitud mínima de 5 caracteres que pedía Isacar
+    if (bajaMode === "deactivate" && motivoBaja.trim().length < 5) {
+      setBajaError("Por favor, escribe un motivo más detallado (mínimo 5 caracteres).");
       return;
     }
 
@@ -311,6 +297,8 @@ export function useResidenteEmpleados(idResidente: string) {
   return {
     empleados: data?.data || [],
     isLoading,
+    isError,
+    refetch, 
     search,
     setSearch,
     modalEdit: {

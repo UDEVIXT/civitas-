@@ -21,10 +21,11 @@ export function ModalValidacionServicio({ open, onOpenChange, scannedId }: Modal
   const [isDenying, setIsDenying] = useState(false);
   const [denialReason, setDenialReason] = useState("");
 
-  const { data: servicio, isLoading } = useQuery({
+  const { data: servicio, isLoading, isError, error } = useQuery({
     queryKey: ["detalleServicio", scannedId],
     queryFn: () => accesosServiciosApi.obtenerDetalleServicio(scannedId!),
     enabled: !!scannedId && open,
+    retry: 1, // Limitar reintentos para que el error de red se muestre más rápido
   });
 
   const validarMutation = useMutation({
@@ -91,6 +92,11 @@ export function ModalValidacionServicio({ open, onOpenChange, scannedId }: Modal
         <div className="p-6">
           {isLoading ? (
             <div className="flex justify-center py-8"><Spinner /></div>
+          ) : isError ? (
+            <div className="text-center text-red-500 py-8 px-4 flex flex-col items-center gap-2">
+              <span className="font-bold text-lg">Error de conexión</span>
+              <span className="text-sm">No se pudo verificar el código QR. Por favor, revisa tu conexión a internet e intenta nuevamente.</span>
+            </div>
           ) : !servicio ? (
             <div className="text-center text-zinc-500 py-8">No se encontró información del servicio.</div>
           ) : (
