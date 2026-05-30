@@ -196,6 +196,7 @@ export class EmpleadoService {
           nombre: true,
           telefono: true,
           url_imagen: true,
+          notas_adicionales: true,
 
           servicio: {
             select: {
@@ -403,92 +404,112 @@ export class EmpleadoService {
 */
 
 async actualizarEmpleado(id: string, data: any) {
-    try {
-      return await this.prisma.$transaction(async (tx) => {
-        // 1. Buscamos el registro para obtener la conexión con la tabla Servicio
-        const visitante = await tx.visitante.findUnique({
-          where: { id_visitante: id },
-          select: { id_servicio: true },
-        });
+  console.log("BODY QUE LLEGA AL BACKEND:", data);
+  try {
+    return await this.prisma.$transaction(async (tx) => {
+      // 1. Buscamos el visitante para saber si existe y obtener su servicio
+      const visitante = await tx.visitante.findUnique({
+        where: { id_visitante: id },
+        select: { id_servicio: true },
+      });
 
-        if (!visitante) throw new NotFoundException('Empleado no encontrado');
+      if (!visitante) {
+        throw new NotFoundException('Empleado no encontrado');
+      }
 
-        // 2. Actualizamos los datos personales en la tabla Visitante
-        await tx.visitante.update({
-          where: { id_visitante: id },
-          data: {
-            nombre: data.nombre,
-            telefono: data.telefono,
-            // Soporta tanto url_imagen como foto que viene de tu modal
-            url_imagen: data.url_imagen || data.foto,
-          },
-        });
+      // 2. Actualizamos datos personales + notas
+      const datosVisitante: any = {
+        nombre: data.nombre,
+        telefono: data.telefono,
+        notas_adicionales: data.notas_adicionales,
+      };
 
-        // 3. Si tiene un servicio, procesamos el cargo y construimos el array de horarios dinámicamente
-        if (visitante.id_servicio) {
+      if (data.url_imagen !== undefined) {
+        datosVisitante.url_imagen = data.url_imagen;
+      }
 
-          // Diccionario para traducir los días del checkbox al ENUM de Postgres
-          const mapeoDias: Record<string, string> = {
-            'Lunes': 'LUNES',
-            'Martes': 'MARTES',
-            'Miércoles': 'MIERCOLES',
-            'Jueves': 'JUEVES',
-            'Viernes': 'VIERNES',
-            'Sábado': 'SABADO',
-            'Domingo': 'DOMINGO'
-          };
+      if (data.foto !== undefined && data.foto !== '') {
+        datosVisitante.url_imagen = data.foto;
+      }
 
-          // Si el front manda el array directo en data.dias_autorizados
-          const diasSeleccionados: string[] = data.dias_autorizados || [];
+      await tx.visitante.update({
+        where: { id_visitante: id },
+        data: datosVisitante,
+      });
 
-          // Construimos el arreglo mapeado que Prisma necesita para HorarioAccesoServicios
-          const nuevosHorarios = diasSeleccionados.map((dia: string) => {
+      // 3. Si tiene servicio, actualizamos cargo y horarios
+      if (visitante.id_servicio) {
+        const mapeoDias: Record<string, string> = {
+          Lunes: 'LUNES',
+          Martes: 'MARTES',
+          Miércoles: 'MIERCOLES',
+          Jueves: 'JUEVES',
+          Viernes: 'VIERNES',
+          Sábado: 'SABADO',
+          Domingo: 'DOMINGO',
+        };
+
+        const diasSeleccionados: string[] = data.dias_autorizados || [];
+
+        const nuevosHorarios = diasSeleccionados
+          .map((dia: string) => {
             const diaEnum = mapeoDias[dia];
             if (!diaEnum) return null;
 
-            // Extraemos las horas usando los nombres planos de tu modal
             const entrada = data.hora_entrada || '08:00';
             const salida = data.hora_salida || '16:00';
 
             return {
               dia_semana: diaEnum,
-              // Convertimos a Date para el tipo @db.Time(6) de PostgreSQL
               hora_inicio: new Date(`1970-01-01T${entrada}:00.000Z`),
               hora_fin: new Date(`1970-01-01T${salida}:00.000Z`),
               activo: true,
             };
-          }).filter(Boolean); // Limpiamos elementos nulos
+          })
+          .filter(Boolean);
 
-          await tx.servicio.update({
-            where: { id_servicio: visitante.id_servicio },
-            data: {
-              cargo: data.cargo, // Guardamos el rol seleccionado ("Limpieza", "Nana", etc.)
-              horarios: {
-                // Borramos los horarios viejos para evitar que se amontonen o dupliquen
-                deleteMany: {},
-                // Insertamos el bloque de nuevos días autorizados
-                create: nuevosHorarios as any,
-              },
+        await tx.servicio.update({
+          where: { id_servicio: visitante.id_servicio },
+          data: {
+            cargo: data.cargo,
+            horarios: {
+              deleteMany: {},
+              create: nuevosHorarios as any,
             },
-          });
-        }
-
-        // 4. Actualizar bitácora en la tabla Acceso
-        await tx.acceso.updateMany({
-          where: { id_visitante: id, estatus: 'Activo' },
-          data: { comentario_admin: 'Información actualizada por residente' },
+          },
         });
+      }
 
-        return { success: true, statusCode: 200, message: 'Empleado actualizado con éxito' };
+      // 4. Actualizar bitácora del acceso
+      await tx.acceso.updateMany({
+        where: { id_visitante: id, estatus: 'Activo' },
+        data: {
+          comentario_admin: 'Información actualizada por residente',
+        },
       });
-    } catch (error: any) {
-      console.error('Error en actualizarEmpleado:', error);
-      throw new InternalServerErrorException({
-        message: 'No se pudo actualizar el registro',
-        error: error.message,
-      });
+
+      return {
+        success: true,
+        statusCode: 200,
+        message: 'Empleado actualizado con éxito',
+      };
+    });
+  } catch (error: any) {
+    if (
+      error instanceof NotFoundException ||
+      error instanceof BadRequestException
+    ) {
+      throw error;
     }
+
+    console.error('Error en actualizarEmpleado:', error);
+
+    throw new InternalServerErrorException({
+      message: 'No se pudo actualizar el registro',
+      error: error.message,
+    });
   }
+}
 
 
   async eliminarEmpleado(id: string, motivo?: string, id_residente?: string) {

@@ -66,13 +66,22 @@ export const toggleEmpleadoActivo = async (
 };
 
 // Se modificó la función para que reciba directamente el FormData desde el hook y soporte la foto
-export const actualizarEmpleadoResidente = async (id: string, formData: FormData) => {
+export const actualizarEmpleadoResidente = async (id: string, data: any) => {
   try {
-    const response = await apiClient.put(`/mi-empleado/${id.trim()}`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
+    const response = await apiClient.put(`/mi-empleado/${id.trim()}`, {
+      accion: "actualizacion_residente",
+      data: {
+        nombre: data.nombre,
+        telefono: data.telefono,
+        foto: data.foto,
+        cargo: data.cargo,
+        hora_entrada: data.hora_entrada,
+        hora_salida: data.hora_salida,
+        dias_autorizados: data.dias_autorizados,
+        notas_adicionales: data.notas_adicionales,
       },
     });
+
     return { success: true, data: response.data };
   } catch (error: any) {
     return {

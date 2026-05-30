@@ -44,7 +44,7 @@ const formSchema = z.object({
     .min(1, "Campo obligatorio")
     .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, "Solo se permiten letras"),
   
-  notas: z.string().optional(),
+  notas_adicionales: z.string().optional(),
   foto: z.any().optional(),
   horarios: z.array(horarioDiaSchema),
 }).superRefine((data, ctx) => {
@@ -99,7 +99,7 @@ export function ModalEditarEmpleado({ empleado, isOpen, onClose, onSave, isSavin
       nombre: "",
       telefono: "",
       cargo: "",
-      notas: "",
+      notas_adicionales: "",
       foto: undefined,
       horarios: horariosPorDefecto,
     },
@@ -171,7 +171,7 @@ React.useEffect(() => {
         nombre: empleado.nombre || "",
         telefono: telefonoLimpio,
         cargo: cargoReal,
-        notas: servicioAny?.notas || empleadoAny.motivo || "", 
+        notas_adicionales: empleadoAny.notas_adicionales || empleadoAny.motivo || "", 
         foto: undefined,
         horarios: horariosMapeados,
       });
@@ -366,7 +366,7 @@ React.useEffect(() => {
               )}
             </div>
 
-            <FormField control={form.control} name="notas" render={({ field }) => (
+            <FormField control={form.control} name="notas_adicionales" render={({ field }) => (
               <FormItem>
                 <FormLabel className="font-bold">Notas Adicionales <span className="text-xs font-normal text-gray-400">(Opcional)</span></FormLabel>
                 <FormControl>

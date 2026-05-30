@@ -27,7 +27,7 @@ type UpdateEmpleadoValues = {
   telefono?: string;
   cargo?: string;
   foto?: any;
-  notas?: string;
+  notas_adicionales?: string;
   horarios?: HorarioForm[];
 };
 
@@ -135,31 +135,23 @@ export function useResidenteEmpleados(idResidente: string) {
       const salidaLimpia =
         primerDiaActivo?.hora_salida || "16:00";
 
-      const formData = new FormData();
+const payloadBackend = {
+  nombre: values.nombre,
+  telefono: values.telefono || "",
+  cargo: values.cargo || "",
+  notas_adicionales: values.notas_adicionales || "",
+  foto: "",
+  dias_autorizados: diasAutorizados,
+  hora_entrada: entradaLimpia,
+  hora_salida: salidaLimpia,
+};
 
-      formData.append("accion", "actualizacion_residente");
+console.log("🚀 [HOOK] Payload enviado al backend:", payloadBackend);
 
-      // Mapeamos las propiedades simulando la estructura del objeto "data" que espera el DTO
-      formData.append("data[nombre]", values.nombre);
-      formData.append("data[telefono]", values.telefono || "");
-      formData.append("data[cargo]", values.cargo || "");
-      formData.append("data[notas]", values.notas || "");
-      formData.append("data[hora_entrada]", entradaLimpia);
-      formData.append("data[hora_salida]", salidaLimpia);
-
-      formData.append("data[dias_autorizados]", JSON.stringify(diasAutorizados));
-
-      if (values.foto instanceof File) {
-        //La clave 'foto_empleado' debe coincidir exactamente con el nombre de @UploadedFile() del backend.
-        formData.append("foto_empleado", values.foto);
-      }
-
-      console.log(" [HOOK] FormData mapeado correctamente con payload multipart.");
-      
-    return actualizarEmpleadoResidente(
-        selectedEmpleado.id_visitante,
-        formData
-      );
+return actualizarEmpleadoResidente(
+  selectedEmpleado.id_visitante,
+  payloadBackend,
+);
     },
 
     onSuccess: (res: any) => {

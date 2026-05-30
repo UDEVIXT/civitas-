@@ -118,6 +118,7 @@ model Visitante {
   url_imagen   String?
   tipo_vehiculo String?
   motivo       String?
+  notas_adicionales String? @db.Text
   id_residente String
   id_servicio  String?
   accesos      Acceso[]

@@ -85,6 +85,8 @@ export class EmpleadoController {
       id_residente?: string;
     },
   ) {
+    console.log("BODY COMPLETO EN CONTROLLER:", body);
+    console.log("DATA EN CONTROLLER:", body.data);
     const { accion, data } = body;
     // Soporte para peticiones donde los datos vienen en la raíz o dentro del objeto 'data'
     const activo = body.activo !== undefined ? body.activo : data?.activo;
