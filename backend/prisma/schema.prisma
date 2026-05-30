@@ -267,8 +267,10 @@ enum Estatus_Solicitud {
 model Solicitud_cambio_rol {
   id_solicitud      String            @id @default(uuid())
   id_usuario        String
-  rol_solicitado    Rol               
+  rol_solicitado    Rol                
   razon             String            @db.Text
   estatus_solicitud Estatus_Solicitud @default(Pendiente) 
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
   usuario           Usuario           @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
 }
