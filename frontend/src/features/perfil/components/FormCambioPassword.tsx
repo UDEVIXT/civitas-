@@ -18,14 +18,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 // CA008: Validación de complejidad de la contraseña
 const formSchema = z
   .object({
-    passwordActual: z.string().min(1, "Ingresa tu contraseña actual"),
+    passwordActual: z.string().min(1, "Por favor, introduce datos en este campo"),
     passwordNuevo: z
       .string()
+      .min(1, "Por favor, introduce datos en este campo")
       .min(8, "La contraseña debe tener al menos 8 caracteres")
       .regex(/[A-Z]/, "Debe contener al menos una letra mayúscula")
       .regex(/[a-z]/, "Debe contener al menos una letra minúscula")
       .regex(/[0-9]/, "Debe contener al menos un número"),
-    confirmarPassword: z.string().min(1, "Confirma tu nueva contraseña"),
+    confirmarPassword: z.string().min(1, "Por favor, introduce datos en este campo"),
   })
   .refine((data) => data.passwordNuevo === data.confirmarPassword, {
     message: "Las contraseñas no coinciden",

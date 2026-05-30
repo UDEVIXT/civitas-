@@ -29,11 +29,11 @@ export const useUpdatePerfil = () => {
       queryClient.setQueryData(["perfil"], data);
     },
     onError: (error: any) => {
-      toast.error(
-        error.response?.data?.message ||
-          error.message ||
-          "Ocurrió un error al actualizar el perfil."
-      );
+      const serverMsg = error.response?.data?.message;
+      const finalMsg = serverMsg
+        ? (Array.isArray(serverMsg) ? serverMsg.join(", ") : serverMsg)
+        : "Ocurrió un problema temporal al guardar tus cambios. Por favor, intenta nuevamente en unos momentos. Tus datos no se perderán.";
+      toast.error(finalMsg);
     },
   });
 };
