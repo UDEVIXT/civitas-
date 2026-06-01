@@ -745,7 +745,7 @@ export class BitacoraService {
       );
     }
 
-    // Ejecutar la actualización e inserción en una transacción segura
+    // Ejecutar la actualización e inserción en una transacción segura CA006
     return await this.prisma.$transaction(async (tx) => {
       const accesoActualizado = await tx.acceso.update({
         where: { id_acceso },
