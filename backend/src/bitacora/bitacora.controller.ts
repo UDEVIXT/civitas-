@@ -45,6 +45,11 @@ interface RegistrarSalidaDto {
   comentario_salida?: string;
 }
 
+interface DesactivarQrDto {
+  id_acceso: string;
+  motivo?: string;
+}
+
 const bitacoraUpdates$ = new Subject<BitacoraSseEvent>();
 
 // Subjects por usuario (username) para enviar eventos SSE sólo a los
@@ -270,6 +275,40 @@ export class BitacoraController {
     return {
       success: true,
       message: 'Salida registrada correctamente',
+      data: resultado,
+    };
+  }
+
+  // ---------------------------------------------------------
+  // DESACTIVAR CÓDIGO QR (SÓLO GUARDIA)
+  // ---------------------------------------------------------
+  @Patch('desactivar-qr')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Guardia')
+  async desactivarQr(
+    @Body() dto: DesactivarQrDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const { id_acceso, motivo } = dto;
+    const id_usuario = req.user.userId; // El ID de usuario del guardia que escanea
+
+    if (!id_acceso) {
+      throw new BadRequestException(
+        'El ID de acceso es requerido para desactivar el QR.',
+      );
+    }
+    const resultado = await this.bitacoraService.desactivarQr(
+      id_acceso,
+      id_usuario,
+      motivo,
+    );
+
+    // (Opcional) Aquí puedes disparar eventos SSE si necesitas notificar al residente
+    // en tiempo real que su QR fue invalidado manualmente por el guardia.
+
+    return {
+      success: true,
+      message: 'El código QR ha sido desactivado e historiado correctamente.',
       data: resultado,
     };
   }
