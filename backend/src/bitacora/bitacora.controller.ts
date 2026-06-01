@@ -47,7 +47,7 @@ interface RegistrarSalidaDto {
 
 interface DesactivarQrDto {
   id_acceso: string;
-  motivo: string;
+  motivo: string;  //CA008
 }
 
 const bitacoraUpdates$ = new Subject<BitacoraSseEvent>();
@@ -294,7 +294,7 @@ export class BitacoraController {
 
     if (!id_acceso) {
       throw new BadRequestException(
-        'El ID de acceso es requerido para desactivar el QR.',
+        'El ID de acceso es requerido para desactivar el QR.', //CA004
       );
     }
     const resultado = await this.bitacoraService.desactivarQr(
@@ -302,9 +302,6 @@ export class BitacoraController {
       id_usuario,
       motivo,
     );
-
-    // (Opcional) Aquí puedes disparar eventos SSE si necesitas notificar al residente
-    // en tiempo real que su QR fue invalidado manualmente por el guardia.
 
     return {
       success: true,
