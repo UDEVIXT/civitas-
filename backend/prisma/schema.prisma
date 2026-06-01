@@ -98,6 +98,7 @@ model Usuario {
   sesiones Sesion[]
   reportes             Reporte[]
   solicitudes_admin_guardia Solicitud_administrador_guardia[]
+  desactivaciones_qr        BitacoraDesactivacionQr[]
 }
 
 model Residente {
@@ -139,6 +140,7 @@ model Acceso {
   usuario          Usuario       @relation(fields: [id_usuario], references: [id_usuario])
   visitante        Visitante?    @relation(fields: [id_visitante], references: [id_visitante], onDelete: Cascade)
   bitacora         Bitacora[]
+  bitacora_desactivaciones BitacoraDesactivacionQr[]
 }
 
 model Bitacora {
@@ -279,4 +281,16 @@ model Solicitud_administrador_guardia {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   usuario           Usuario           @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+}
+
+model BitacoraDesactivacionQr {
+  id_desactivacion String   @id @default(uuid())
+  id_acceso        String
+  id_usuario       String 
+  motivo           String?  @db.Text
+  fecha_hora       DateTime @default(now())
+
+  acceso           Acceso   @relation(fields: [id_acceso], references: [id_acceso], onDelete: Cascade)
+  usuario          Usuario  @relation(fields: [id_usuario], references: [id_usuario])
+  @@index([id_acceso])
 }

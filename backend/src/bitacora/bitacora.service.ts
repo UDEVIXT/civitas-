@@ -4,6 +4,7 @@ import {
   ConflictException,
   InternalServerErrorException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -726,5 +727,44 @@ export class BitacoraService {
     }
 
     return Array.from(usernames);
+  }
+
+  async desactivarQr(id_acceso: string, id_usuario: string, motivo?: string) {
+    // Verificar si el acceso existe y si ya está inactivo
+    const accesoActual = await this.prisma.acceso.findUnique({
+      where: { id_acceso },
+    });
+
+    if (!accesoActual) {
+      throw new NotFoundException('El código de acceso escaneado no existe.');
+    }
+
+    if (accesoActual.estatus === 'Inactivo') {
+      throw new BadRequestException(
+        'Este código QR ya se encuentra desactivado.',
+      );
+    }
+
+    // Ejecutar la actualización e inserción en una transacción segura
+    return await this.prisma.$transaction(async (tx) => {
+      const accesoActualizado = await tx.acceso.update({
+        where: { id_acceso },
+        data: { estatus: 'Inactivo' },
+      });
+
+      // Creamos el registro en el historial de desactivaciones
+      const historial = await tx.bitacoraDesactivacionQr.create({
+        data: {
+          id_acceso,
+          id_usuario,
+          motivo: motivo || 'Desactivación manual por el guardia en caseta.',
+        },
+      });
+
+      return {
+        acceso: accesoActualizado,
+        historial,
+      };
+    });
   }
 }
