@@ -83,7 +83,7 @@ export function IncidentesAdminPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 px-4 sm:px-6 space-y-5">
+    <div className="w-full min-w-0 container mx-auto py-6 px-4 sm:px-6 space-y-5">
       <div>
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Incidencias</h1>
         <p className="text-sm text-muted-foreground mt-1">
