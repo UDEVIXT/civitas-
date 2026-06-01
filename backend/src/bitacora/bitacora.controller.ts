@@ -47,7 +47,7 @@ interface RegistrarSalidaDto {
 
 interface DesactivarQrDto {
   id_acceso: string;
-  motivo?: string;
+  motivo: string;
 }
 
 const bitacoraUpdates$ = new Subject<BitacoraSseEvent>();
