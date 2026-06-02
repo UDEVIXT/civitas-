@@ -46,8 +46,8 @@ interface RegistrarSalidaDto {
 }
 
 interface DesactivarQrDto {
-  id_acceso: string;
-  motivo: string;  //CA008
+  codigo_qr: string;
+  motivo: string; //CA008
 }
 
 const bitacoraUpdates$ = new Subject<BitacoraSseEvent>();
@@ -289,16 +289,16 @@ export class BitacoraController {
     @Body() dto: DesactivarQrDto,
     @Req() req: AuthenticatedRequest,
   ) {
-    const { id_acceso, motivo } = dto;
+    const { codigo_qr, motivo } = dto;
     const id_usuario = req.user.userId; // El ID de usuario del guardia que escanea
 
-    if (!id_acceso) {
+    if (!codigo_qr) {
       throw new BadRequestException(
-        'El ID de acceso es requerido para desactivar el QR.', //CA004
+        'El código QR es requerido para desactivarlo.', //CA004
       );
     }
     const resultado = await this.bitacoraService.desactivarQr(
-      id_acceso,
+      codigo_qr,
       id_usuario,
       motivo,
     );

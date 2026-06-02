@@ -729,35 +729,43 @@ export class BitacoraService {
     return Array.from(usernames);
   }
 
-  async desactivarQr(id_acceso: string, id_usuario: string, motivo?: string) {
-    // Verificar si el acceso existe y si ya está inactivo
+  async desactivarQr(codigo_qr: string, id_usuario: string, motivo: string) {
     const accesoActual = await this.prisma.acceso.findUnique({
-      where: { id_acceso },
+      where: { codigo_qr: codigo_qr },
     });
 
+    // NTH001: Si el código QR escaneado no existe en el sistema
     if (!accesoActual) {
       throw new NotFoundException('El código de acceso escaneado no existe.');
     }
 
+    // CA004: Si el QR ya expiró o fue desactivado previamente
     if (accesoActual.estatus === 'Inactivo') {
       throw new BadRequestException(
         'Este código QR ya se encuentra desactivado.',
       );
     }
 
-    // Ejecutar la actualización e inserción en una transacción segura CA006
+    // CA008: Validar obligatoriamente el motivo para cumplir las políticas del residencial
+    if (!motivo || motivo.trim().length === 0) {
+      throw new BadRequestException(
+        'La política del residencial exige capturar un motivo para desactivar el QR.',
+      );
+    }
+
     return await this.prisma.$transaction(async (tx) => {
+      // CA006: Transacción segura
       const accesoActualizado = await tx.acceso.update({
-        where: { id_acceso },
+        where: { id_acceso: accesoActual.id_acceso },
         data: { estatus: 'Inactivo' },
       });
 
-      // Creamos el registro en el historial de desactivaciones
+      // CA007: Creamos el registro en el historial de desactivaciones con relaciones limpias
       const historial = await tx.bitacoraDesactivacionQr.create({
         data: {
-          id_acceso,
+          id_acceso: accesoActual.id_acceso,
           id_usuario,
-          motivo: motivo || 'Desactivación manual por el guardia en caseta.',
+          motivo: motivo.trim(),
         },
       });
 
