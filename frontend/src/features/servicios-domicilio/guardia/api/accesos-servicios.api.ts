@@ -34,7 +34,7 @@ export const accesosServiciosApi = {
   },
 
   denegarAcceso: async (codigoQr: string, motivo: string): Promise<void> => {
-    await api.post(`/accesos-servicios/denegar/${codigoQr}`, { motivo });
+    await api.post('/bitacora/desactivar-qr', { codigo_qr: codigoQr, motivo });
   },
 
   registrarIngresoManual: async (datosManuales: { nombre: string; empresa: string; motivo: string; vivienda: string }): Promise<void> => {
