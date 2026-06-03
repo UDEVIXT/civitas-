@@ -99,6 +99,7 @@ model Usuario {
   reportes             Reporte[]
   solicitudes_admin_guardia Solicitud_administrador_guardia[]
   desactivaciones_qr        BitacoraDesactivacionQr[]
+  bitacora_qr_visitantes    BitacoraQrVisitante[]
 }
 
 model Residente {
@@ -141,6 +142,7 @@ model Acceso {
   visitante        Visitante?    @relation(fields: [id_visitante], references: [id_visitante], onDelete: Cascade)
   bitacora         Bitacora[]
   bitacora_desactivaciones BitacoraDesactivacionQr[]
+  bitacora_qr_visitantes    BitacoraQrVisitante[]
 }
 
 model Bitacora {
@@ -293,4 +295,20 @@ model BitacoraDesactivacionQr {
   acceso           Acceso   @relation(fields: [id_acceso], references: [id_acceso], onDelete: Cascade)
   usuario          Usuario  @relation(fields: [id_usuario], references: [id_usuario])
   @@index([id_acceso])
+}
+
+model BitacoraQrVisitante {
+  id_bitacora_qr String   @id @default(uuid())
+  id_acceso      String
+  id_usuario     String
+  accion         String   @db.VarChar(32)
+  motivo         String?  @db.Text
+  fecha_hora     DateTime @default(now())
+
+  acceso         Acceso   @relation(fields: [id_acceso], references: [id_acceso], onDelete: Cascade)
+  usuario        Usuario  @relation(fields: [id_usuario], references: [id_usuario])
+
+  @@index([id_acceso])
+  @@index([id_usuario])
+  @@index([accion])
 }
