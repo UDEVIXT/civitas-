@@ -19,11 +19,14 @@ export function QrScannerPlugin(props: QrScannerPluginProps) {
   useEffect(() => {
     // Evitamos instanciar múltiples veces si Strict Mode está activo
     if (!scannerRef.current) {
-      const config = {
+      const config: any = {
         fps,
         qrbox,
         aspectRatio,
         disableFlip,
+        videoConstraints: {
+          facingMode: "environment",
+        },
       };
 
       scannerRef.current = new Html5QrcodeScanner(qrcodeRegionId, config, false);

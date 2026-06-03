@@ -9,13 +9,21 @@ export interface ActividadReciente {
 }
 
 export interface DetalleServicio {
-  id: string;
+  id_acceso: string;
+  id_servicio: string | null;
+  id_visitante: string | null;
   nombre_repartidor: string;
   empresa: string;
   residente_vinculado: string;
   vivienda: string;
-  fecha_programada: string;
   tipo_servicio: string;
+  fecha_expiracion: string;
+  estado: string;
+  motivo_invalido: string;
+  detalles_adicionales: {
+    placas?: string;
+    motivo?: string;
+  };
 }
 
 export const accesosServiciosApi = {

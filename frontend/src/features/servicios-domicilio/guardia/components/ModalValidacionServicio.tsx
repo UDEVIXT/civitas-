@@ -114,13 +114,26 @@ export function ModalValidacionServicio({ open, onOpenChange, scannedId }: Modal
                 <span className="font-semibold text-zinc-900">{servicio.residente_vinculado} (Vivienda {servicio.vivienda})</span>
               </div>
               <div className="col-span-2 sm:col-span-1 flex flex-col gap-1">
-                <span className="text-zinc-500 text-xs font-medium uppercase tracking-wider flex items-center gap-1"><Calendar className="w-3 h-3" /> Fecha</span>
-                <span className="font-semibold text-zinc-900">{servicio.fecha_programada}</span>
+                <span className="text-zinc-500 text-xs font-medium uppercase tracking-wider flex items-center gap-1"><Calendar className="w-3 h-3" /> Fecha Expiración</span>
+                <span className="font-semibold text-zinc-900">{servicio.fecha_expiracion ? new Date(servicio.fecha_expiracion).toLocaleString() : 'N/A'}</span>
               </div>
-              <div className="col-span-2 flex flex-col gap-1 mt-2">
+              <div className="col-span-2 sm:col-span-1 flex flex-col gap-1 mt-2">
                 <span className="text-zinc-500 text-xs font-medium uppercase tracking-wider flex items-center gap-1"><FileText className="w-3 h-3" /> Tipo de servicio</span>
                 <span className="font-semibold text-zinc-900">{servicio.tipo_servicio}</span>
               </div>
+              {servicio.detalles_adicionales?.motivo && (
+                <div className="col-span-2 flex flex-col gap-1 mt-2">
+                  <span className="text-zinc-500 text-xs font-medium uppercase tracking-wider flex items-center gap-1"><Info className="w-3 h-3" /> Motivo de visita</span>
+                  <span className="font-semibold text-zinc-900">{servicio.detalles_adicionales.motivo}</span>
+                </div>
+              )}
+              
+              {servicio.estado !== 'VALIDO' && (
+                <div className="col-span-2 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex flex-col gap-1">
+                  <span className="font-bold text-red-700 text-sm">QR Inválido: {servicio.estado}</span>
+                  <span className="text-red-600 text-sm">{servicio.motivo_invalido}</span>
+                </div>
+              )}
               
               {isDenying && (
                 <div className="col-span-2 mt-4 space-y-2 animate-in fade-in slide-in-from-top-2">
@@ -151,7 +164,7 @@ export function ModalValidacionServicio({ open, onOpenChange, scannedId }: Modal
             className={`w-full font-bold shadow-sm rounded-xl text-white ${
               isDenying ? "bg-red-500 hover:bg-red-600" : "bg-amber-500 hover:bg-amber-600"
             }`}
-            disabled={isLoading || !servicio || validarMutation.isPending || denegarMutation.isPending}
+            disabled={isLoading || !servicio || validarMutation.isPending || denegarMutation.isPending || (!isDenying && servicio?.estado !== 'VALIDO')}
           >
             {isDenying ? "Confirmar Rechazo" : "Aceptar acceso"}
           </Button>
