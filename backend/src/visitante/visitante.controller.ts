@@ -17,6 +17,7 @@ import {
 import { VisitanteService } from './visitante.service';
 import { CreateVisitanteDto } from './dto/create-visitante.dto';
 import { UpdateVisitanteDto } from './dto/update-visitante.dto';
+import { UpdateEstadoQrDto } from './dto/update-estado-qr.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import 'multer';
 import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
@@ -106,6 +107,21 @@ export class VisitanteController {
   @Roles('Residente')
   findAll(@Req() req: AuthenticatedRequest) {
     return this.visitanteService.findAllByResidente(req.user.userId);
+  }
+
+  @Patch(':idVisitante/qr-estado')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Residente')
+  actualizarEstadoQr(
+    @Param('idVisitante') idVisitante: string,
+    @Req() req: AuthenticatedRequest,
+    @Body() updateEstadoQrDto: UpdateEstadoQrDto,
+  ) {
+    return this.visitanteService.actualizarEstadoQrFrecuente(
+      idVisitante,
+      req.user.userId,
+      updateEstadoQrDto,
+    );
   }
 
   @Get(':id')
