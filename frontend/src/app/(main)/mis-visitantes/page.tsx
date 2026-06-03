@@ -93,10 +93,10 @@ function mapVisitanteFromBackend(v: BackendVisitante): Visitante {
     es_frecuente: v.es_frecuente,
     estatus,
     id_acceso: ultimoAcceso?.id_acceso,
-    codigo_acceso: ultimoAcceso?.codigo_qr,
+    codigo_acceso: ultimoAcceso?.codigo_qr ?? undefined,
     estado_qr: v.estado_qr,
     puede_generar_qr: estatus !== "Activo",
-    url_foto: v.url_imagen,
+    url_foto: v.url_imagen ?? undefined,
   };
 }
 
