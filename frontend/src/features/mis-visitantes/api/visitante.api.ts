@@ -1,5 +1,6 @@
 import apiClient from "@/api/axios";
 import type { VisitanteFormValues } from "../schemas/visitante.schema";
+import type { AccionQrVisitante } from "../types";
 
 export const crearVisitante = async (data: VisitanteFormValues) => {
   // 1. Unimos tu campo de fecha y hora para crear la fecha_inicio en formato ISO
@@ -59,5 +60,16 @@ export const generarQrVisitante = async (
     fechas ?? {},
   );
   console.log("Respuesta del backend al generar QR:", response.data);
+  return response.data;
+};
+
+export const actualizarEstadoQrVisitante = async (
+  idVisitante: string,
+  data: { accion: AccionQrVisitante; motivo?: string },
+) => {
+  const response = await apiClient.patch(
+    `/visitante/${idVisitante}/qr-estado`,
+    data,
+  );
   return response.data;
 };
