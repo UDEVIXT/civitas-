@@ -37,10 +37,6 @@ export function EscaneoServiciosDashboard() {
     // Normalmente se ignoran hasta que tiene un éxito.
   };
 
-  const handleSimulateScan = () => {
-    setSelectedAccessId("mock-scan-id");
-  };
-
   return (
     <div className="p-6 max-w-7xl mx-auto flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -74,9 +70,10 @@ export function EscaneoServiciosDashboard() {
                       qrCodeErrorCallback={onScanError}
                     />
                   </div>
-                  <Button variant="outline" onClick={handleSimulateScan} className="absolute bottom-4 z-20">
-                    Simular Escaneo Exitoso
-                  </Button>
+                  <div className="absolute bottom-4 z-20 bg-zinc-900/80 text-white px-4 py-2 rounded-full backdrop-blur-md font-medium text-sm flex items-center gap-2">
+                    <Camera className="w-4 h-4" />
+                    Escaneo directo mediante cámara
+                  </div>
                 </div>
               ) : (
                 <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
