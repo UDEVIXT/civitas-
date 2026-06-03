@@ -9,6 +9,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateVisitanteDto } from './dto/create-visitante.dto';
 import { UpdateVisitanteDto } from './dto/update-visitante.dto';
+import { UpdateEstadoQrDto } from './dto/update-estado-qr.dto';
 import 'multer';
 import { ArchivosService } from '../r2-module/archivos.service';
 import { randomBytes } from 'crypto';
@@ -420,6 +421,15 @@ export class VisitanteService {
       throw new NotFoundException('Residente not found for the given user ID');
     }
 
+    await this.prisma.acceso.updateMany({
+      where: {
+        estatus: 'Activo',
+        fecha_expiracion: { lt: new Date() },
+        visitante: { id_residente: residente.id_residente },
+      },
+      data: { estatus: 'Inactivo' },
+    });
+
     const visitantes = await this.prisma.visitante.findMany({
       where: { id_residente: residente.id_residente },
       include: {
@@ -450,6 +460,143 @@ export class VisitanteService {
         puede_generar_qr: estado_qr !== 'ACTIVO',
       };
     });
+  }
+
+  async actualizarEstadoQrFrecuente(
+    idVisitante: string,
+    idUsuario: string,
+    updateEstadoQrDto: UpdateEstadoQrDto,
+  ) {
+    const accion = updateEstadoQrDto.accion;
+    const motivo = updateEstadoQrDto.motivo?.trim();
+
+    if (accion === 'deshabilitar' && !motivo) {
+      throw new BadRequestException(
+        'El motivo es obligatorio para deshabilitar el QR.',
+      );
+    }
+
+    const visitante = await this.prisma.visitante.findUnique({
+      where: { id_visitante: idVisitante },
+      include: {
+        residente: { select: { id_usuario: true } },
+        accesos: {
+          orderBy: { fecha_creacion: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!visitante) {
+      throw new NotFoundException('Visitante no encontrado.');
+    }
+
+    if (visitante.residente.id_usuario !== idUsuario) {
+      throw new ForbiddenException(
+        'No tienes permiso para modificar este QR.',
+      );
+    }
+
+    if (!visitante.es_frecuente) {
+      throw new BadRequestException(
+        'Solo se puede habilitar o deshabilitar el QR de visitantes frecuentes.',
+      );
+    }
+
+    const acceso = visitante.accesos[0];
+
+    if (!acceso || !acceso.codigo_qr) {
+      throw new BadRequestException(
+        'El visitante no tiene un QR asociado para modificar.',
+      );
+    }
+
+    const estadoActual = this.calcularEstadoQr(acceso);
+
+    if (estadoActual === 'EXPIRADO') {
+      if (acceso.estatus !== 'Inactivo') {
+        await this.prisma.acceso.update({
+          where: { id_acceso: acceso.id_acceso },
+          data: { estatus: 'Inactivo' },
+        });
+      }
+
+      throw new BadRequestException(
+        'El QR ya expiro. Genera un nuevo codigo de acceso para volver a usarlo.',
+      );
+    }
+
+    if (accion === 'deshabilitar' && estadoActual === 'INACTIVO') {
+      throw new BadRequestException('El QR ya se encuentra deshabilitado.');
+    }
+
+    if (accion === 'habilitar' && estadoActual === 'ACTIVO') {
+      throw new BadRequestException('El QR ya se encuentra habilitado.');
+    }
+
+    try {
+      const estatus = accion === 'habilitar' ? 'Activo' : 'Inactivo';
+      const accionBitacora =
+        accion === 'habilitar' ? 'HABILITADO' : 'DESHABILITADO';
+      const motivoBitacora =
+        motivo ||
+        (accion === 'habilitar'
+          ? 'QR habilitado por el residente.'
+          : 'QR deshabilitado por el residente.');
+
+      const resultado = await this.prisma.$transaction(async (prisma) => {
+        const accesoActualizado = await prisma.acceso.update({
+          where: { id_acceso: acceso.id_acceso },
+          data: { estatus },
+          select: {
+            id_acceso: true,
+            id_visitante: true,
+            codigo_qr: true,
+            fecha_creacion: true,
+            fecha_expiracion: true,
+            estatus: true,
+          },
+        });
+
+        await prisma.bitacoraQrVisitante.create({
+          data: {
+            id_acceso: acceso.id_acceso,
+            id_usuario: idUsuario,
+            accion: accionBitacora,
+            motivo: motivoBitacora,
+          },
+        });
+
+        return accesoActualizado;
+      });
+
+      return {
+        success: true,
+        message:
+          accion === 'habilitar'
+            ? 'QR habilitado correctamente.'
+            : 'QR deshabilitado correctamente.',
+        data: {
+          ...resultado,
+          id_visitante: visitante.id_visitante,
+          estado_qr: this.calcularEstadoQr(resultado),
+          accion: accionBitacora,
+          motivo: motivoBitacora,
+        },
+      };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'Error tecnico al actualizar el estado del QR.',
+      );
+    }
   }
 
   findOne(id: number) {
