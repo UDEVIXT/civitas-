@@ -129,12 +129,30 @@ export class VisitanteController {
     return this.visitanteService.findOne(+id);
   }
 
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
+  @Patch(':idVisitante')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Residente')
+  @UseInterceptors(FileInterceptor('foto_visitante'))
+  async update(
+    @Param('idVisitante') idVisitante: string,
+    @Req() req: AuthenticatedRequest,
     @Body() updateVisitanteDto: UpdateVisitanteDto,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 10 }), // 10MB
+          new FileTypeValidator({ fileType: '.(png|jpeg|jpg)' }),
+        ],
+        fileIsRequired: false,
+      }),
+    ) file?: Express.Multer.File,
   ) {
-    return this.visitanteService.update(+id, updateVisitanteDto);
+    return this.visitanteService.update(
+      idVisitante, 
+      req.user.userId, 
+      updateVisitanteDto, 
+      file
+    );
   }
 
   @Delete(':id')
