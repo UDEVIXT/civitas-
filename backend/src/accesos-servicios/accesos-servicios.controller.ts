@@ -49,21 +49,18 @@ export class AccesosServiciosController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Guardia')
   async escanearQr(@Param('codigoQr') codigoQr: string) {
+    console.log('Código QR recibido en el backend:', codigoQr);
     try {
-      let idLimpioQr = codigoQr;
-
-      // Si parece una URL, intentamos extraer el ID; si no, asumimos que es el UUID directo.
-      if (codigoQr.startsWith('http') || codigoQr.includes('%3A%2F%2F')) {
-        idLimpioQr = await obtenerIdDesdeUrlQr(codigoQr);
-      }
-
+      //const idLimpioQr = await obtenerIdDesdeUrlQr(codigoQr);
+      //console.log('ID limpio del QR:', idLimpioQr);
       return {
         success: true,
-        data: await this.accesosServiciosService.obtenerDatosPorQr(idLimpioQr),
+        data: await this.accesosServiciosService.obtenerDatosPorQr(codigoQr),
       };
     } catch (error) {
+      //console.log('Error al procesar el código QR:', error.message);
       throw new BadRequestException(
-        error.message || 'Error interno al procesar el código QR.',
+        error || 'Error interno al procesar el código QR.',
       );
     }
   }
