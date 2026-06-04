@@ -1,9 +1,14 @@
 import axios from 'axios';
 
 export async function obtenerIdDesdeUrlQr(codigoQrEncrypted: string): Promise<string> {
-  const urlExternaReal = decodeURIComponent(codigoQrEncrypted);
-  //console.log(`Haciendo petición desde el servidor a: ${urlExternaReal}`);
+  let urlExternaReal = decodeURIComponent(codigoQrEncrypted);
+  
+  // Asegurarse de que sea una URL válida para axios
+  if (!urlExternaReal.startsWith('http')) {
+      throw new Error('La cadena proporcionada no es una URL válida ni un identificador directo admitido.');
+  }
 
+  //console.log(`Haciendo petición desde el servidor a: ${urlExternaReal}`);
   const respuestaExterna = await axios.get(urlExternaReal);
   const htmlCompleto = respuestaExterna.data;
 

@@ -17,14 +17,27 @@ import { ModalRegistrarSalida } from "../components/ModalRegistrarSalida";
 import { bitacoraService } from "@/services/bitacora.service";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
+import { ModalValidacionServicio } from "@/features/servicios-domicilio/guardia/components/ModalValidacionServicio";
 
 export function BitacoraGuardiaPage() {
   const [isMounted, setIsMounted] = React.useState(false);
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+
+  // Estados para el modal de validación automática por QR
+  const [scannedCode, setScannedCode] = React.useState<string | null>(null);
+  const [isAutoModalOpen, setIsAutoModalOpen] = React.useState(false);
 
   React.useEffect(() => {
     setIsMounted(true);
-  }, []);
+
+    const code = searchParams.get("code");
+    if (code) {
+      setScannedCode(code);
+      setIsAutoModalOpen(true);
+    }
+  }, [searchParams]);
 
   const [filters, setFilters] = React.useState<BitacoraFiltro>({
     page: "1",
@@ -222,6 +235,12 @@ export function BitacoraGuardiaPage() {
         selectedIds={selectedIds}
         onToggleSelection={toggleSelection}
         onRegisterExitClick={(registro) => setRegistroParaSalida(registro)}
+      />
+
+      <ModalValidacionServicio
+        open={isAutoModalOpen}
+        onOpenChange={setIsAutoModalOpen}
+        scannedId={scannedCode}
       />
 
       {registroParaSalida && (

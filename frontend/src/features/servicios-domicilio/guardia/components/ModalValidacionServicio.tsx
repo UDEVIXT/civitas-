@@ -100,8 +100,11 @@ export function ModalValidacionServicio({ open, onOpenChange, scannedId }: Modal
             <div className="flex justify-center py-8"><Spinner /></div>
           ) : isError ? (
             <div className="text-center text-red-500 py-8 px-4 flex flex-col items-center gap-2">
-              <span className="font-bold text-lg">Error de conexión</span>
-              <span className="text-sm">No se pudo verificar el código QR. Por favor, revisa tu conexión a internet e intenta nuevamente.</span>
+              <span className="font-bold text-lg">Error de validación</span>
+              <span className="text-sm">
+                {(error as any)?.response?.data?.message || 
+                 "No se pudo verificar el código QR. Por favor, intenta de nuevo o verifica manualmente."}
+              </span>
             </div>
           ) : !servicio ? (
             <div className="text-center text-zinc-500 py-8">No se encontró información del servicio.</div>
