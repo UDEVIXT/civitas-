@@ -37,14 +37,16 @@ export class AccesosServiciosController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Guardia')
   async escanearQr(@Param('codigoQr') codigoQr: string) {
+    console.log('Código QR recibido en el backend:', codigoQr);
     try {
-      const idLimpioQr = await obtenerIdDesdeUrlQr(codigoQr);
-
+      //const idLimpioQr = await obtenerIdDesdeUrlQr(codigoQr);
+      //console.log('ID limpio del QR:', idLimpioQr);
       return {
         success: true,
-        data: await this.accesosServiciosService.obtenerDatosPorQr(idLimpioQr),
+        data: await this.accesosServiciosService.obtenerDatosPorQr(codigoQr),
       };
     } catch (error) {
+      //console.log('Error al procesar el código QR:', error.message);
       throw new BadRequestException(
         error || 'Error interno al procesar el código QR externo.',
       );

@@ -65,7 +65,7 @@ export class AccesosServiciosService {
       motivo_invalido =
         'El código QR está inactivo.';
     }
-
+    console.log('Acceso encontrado para el código QR:', acceso, motivo_invalido);
     const visitante = acceso.visitante;
 
     const servicio = visitante?.servicio;

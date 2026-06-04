@@ -33,15 +33,9 @@ export const accesosServiciosApi = {
   },
 
   obtenerDetalleServicio: async (codigoQr: string): Promise<DetalleServicio> => {
-    try {
-      const urlCodificada = encodeURIComponent(codigoQr);
-      const { data } = await api.get(`/accesos-servicios/escanear/${urlCodificada}`);
-        
+    console.log('Código QR enviado al backend para obtener detalles:', codigoQr);
+      const { data } = await api.get(`/accesos-servicios/escanear/${codigoQr}`); 
       return data.data;
-    } catch (error) {
-      console.error("Error al escanear en el servidor:", error);
-      throw error;
-    }
   },
 
   validarAcceso: async (codigoQr: string): Promise<void> => {

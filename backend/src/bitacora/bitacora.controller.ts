@@ -299,11 +299,11 @@ export class BitacoraController {
     }
 
     try {
-      const idLimpioQr = await obtenerIdDesdeUrlQr(codigo_qr);
+      //const idLimpioQr = await obtenerIdDesdeUrlQr(codigo_qr);
       //console.log(`Recibida solicitud para desactivar QR Real: ${idLimpioQr} con motivo: ${motivo}`);
 
       const resultado = await this.bitacoraService.desactivarQr(
-        idLimpioQr,
+        codigo_qr,
         id_usuario,
         motivo,
       );
