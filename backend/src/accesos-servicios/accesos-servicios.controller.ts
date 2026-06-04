@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseGuards,
+  Req,
+  Query,
+  BadRequestException,
+} from '@nestjs/common';
 import { AccesosServiciosService } from './accesos-servicios.service';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
@@ -19,7 +29,9 @@ interface AuthenticatedRequest extends Request {
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles('Guardia', 'Administrador')
 export class AccesosServiciosController {
-  constructor(private readonly accesosServiciosService: AccesosServiciosService) {}
+  constructor(
+    private readonly accesosServiciosService: AccesosServiciosService,
+  ) {}
 
   @Get()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -48,7 +60,7 @@ export class AccesosServiciosController {
     } catch (error) {
       //console.log('Error al procesar el código QR:', error.message);
       throw new BadRequestException(
-        error || 'Error interno al procesar el código QR externo.',
+        error || 'Error interno al procesar el código QR.',
       );
     }
   }
@@ -82,19 +94,16 @@ export class AccesosServiciosController {
     @Body() body: { motivo: string },
     @Req() req: AuthenticatedRequest,
   ) {
-    const idGuardia =
-      req.user.userId;
+    const idGuardia = req.user.userId;
 
     return {
       success: true,
 
-      data:
-        await this.accesosServiciosService
-          .denegarAcceso(
-            codigoQr,
-            idGuardia,
-            body.motivo,
-          ),
+      data: await this.accesosServiciosService.denegarAcceso(
+        codigoQr,
+        idGuardia,
+        body.motivo,
+      ),
     };
   }
 
@@ -106,7 +115,7 @@ export class AccesosServiciosController {
     @Body() body: RegistroManualDto,
   ) {
     const idGuardia = req.user.userId;
-    
+
     return {
       success: true,
       data: await this.accesosServiciosService.registrarIngresoManual(
