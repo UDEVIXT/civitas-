@@ -1,11 +1,15 @@
 import axios from 'axios';
 
-export async function obtenerIdDesdeUrlQr(codigoQrEncrypted: string): Promise<string> {
+export async function obtenerIdDesdeUrlQr(
+  codigoQrEncrypted: string,
+): Promise<string> {
   let urlExternaReal = decodeURIComponent(codigoQrEncrypted);
-  
+
   // Asegurarse de que sea una URL válida para axios
   if (!urlExternaReal.startsWith('http')) {
-      throw new Error('La cadena proporcionada no es una URL válida ni un identificador directo admitido.');
+    throw new Error(
+      'La cadena proporcionada no es una URL válida ni un identificador directo admitido.',
+    );
   }
 
   //console.log(`Haciendo petición desde el servidor a: ${urlExternaReal}`);
@@ -14,7 +18,9 @@ export async function obtenerIdDesdeUrlQr(codigoQrEncrypted: string): Promise<st
 
   const match = htmlCompleto.match(/<p>([\s\S]*?)<\/p>/);
   if (!match || !match[1]) {
-    throw new Error('No se pudo encontrar el código de acceso en el HTML del QR.');
+    throw new Error(
+      'No se pudo encontrar el código de acceso en el HTML del QR.',
+    );
   }
 
   const idLimpio = match[1].trim();

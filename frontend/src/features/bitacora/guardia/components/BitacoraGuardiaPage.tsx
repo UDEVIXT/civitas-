@@ -101,10 +101,10 @@ export function BitacoraGuardiaPage() {
                     guardia_salida: data.guardia_salida ?? item.guardia_salida,
                     fecha_salida: data.fecha_salida ?? new Date().toISOString(),
                   }
-                : item
+                : item,
             ),
           };
-        }
+        },
       );
 
       data.ids_afectados.forEach((id: string) => {
@@ -116,7 +116,8 @@ export function BitacoraGuardiaPage() {
             data: {
               ...old.data,
               estado: "fuera",
-              comentario_salida: data.comentario_salida ?? old.data.comentario_salida,
+              comentario_salida:
+                data.comentario_salida ?? old.data.comentario_salida,
               guardia_salida: data.guardia_salida ?? old.data.guardia_salida,
               fecha_salida: data.fecha_salida ?? new Date().toISOString(),
             },
@@ -188,9 +189,12 @@ export function BitacoraGuardiaPage() {
         selectedIds.map((id) => bitacoraService.registrarSalida(id.toString())),
       );
 
-      const nombresArray = selectedRecordsData.map((r: BitacoraRegistro) => r.nombre);
+      const nombresArray = selectedRecordsData.map(
+        (r: BitacoraRegistro) => r.nombre,
+      );
       const nombresMostrados = nombresArray.slice(0, 5).join(", ");
-      const nombresExtra = nombresArray.length > 5 ? ` y ${nombresArray.length - 5} más` : "";
+      const nombresExtra =
+        nombresArray.length > 5 ? ` y ${nombresArray.length - 5} más` : "";
 
       toast.success("Salidas registradas", {
         description: `Se registraron correctamente las salidas de: ${nombresMostrados}${nombresExtra}.`,
