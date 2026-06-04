@@ -299,7 +299,13 @@ export class BitacoraController {
     }
 
     try {
-      const idLimpioQr = await obtenerIdDesdeUrlQr(codigo_qr);
+      let idLimpioQr = codigo_qr;
+
+      // Si parece una URL, intentamos extraer el ID; si no, asumimos que es el UUID directo.
+      if (codigo_qr.startsWith('http') || codigo_qr.includes('%3A%2F%2F')) {
+        idLimpioQr = await obtenerIdDesdeUrlQr(codigo_qr);
+      }
+
       //console.log(`Recibida solicitud para desactivar QR Real: ${idLimpioQr} con motivo: ${motivo}`);
 
       const resultado = await this.bitacoraService.desactivarQr(
