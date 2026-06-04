@@ -9,6 +9,7 @@ import {
   Clock,
   UserCheck,
   Scan,
+  HardHat,
 } from "lucide-react";
 
 export interface Route {
@@ -25,6 +26,13 @@ export const routes: Route[] = [
     label: "Bitácora Guardia",
     description: "Registro de accesos de visitantes, empleados y proveedores.",
     icon: ClipboardList,
+    roles: [ROLES.GUARDIA],
+  },
+  {
+    path: "/guardia-empleados",
+    label: "Empleados Domésticos",
+    description: "Lista de empleados domésticos autorizados por los residentes.",
+    icon: HardHat,
     roles: [ROLES.GUARDIA],
   },
   {
