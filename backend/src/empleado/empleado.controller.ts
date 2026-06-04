@@ -71,6 +71,26 @@ export class EmpleadoController {
       idUsuarioActivo: esResidente ? req.user.userId : undefined,
     });
   }
+  // =========================================================================
+  // HU-1.5.5: Ruta para que el Guardia consulte la lista de autorizados
+  // =========================================================================
+  @Get('lista-guardia')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Guardia') // Restringido únicamente para Guardias (CA001)
+  async findEmpleadosParaGuardia(
+    @Query('search') search?: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+    @Query('idVivienda') idVivienda?: string,
+  ) {
+    return this.empleadoService.obtenerEmpleadosParaGuardia({
+      search,
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      idVivienda,
+    });
+  }
+  
   @Get(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Administrador')

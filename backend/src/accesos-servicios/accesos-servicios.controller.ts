@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, BadRequestException } from '@nestjs/common';
 import { AccesosServiciosService } from './accesos-servicios.service';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
 import { Roles } from 'src/auth/decorators/roles/roles.decorator';
 import { Request } from 'express';
 import { RegistroManualDto } from './dto/registro-manual.dto';
+import { obtenerIdDesdeUrlQr } from '../common/utils/qr-utils';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -27,19 +28,27 @@ export class AccesosServiciosController {
     @Req() req: AuthenticatedRequest,
     @Query('limit') limit = '5',
   ) {
-    const id_user = req.user.userId;
-    //console.log("ID del usuario autenticado:", id_user);
-    return await this.accesosServiciosService.obtenerActividadReciente(Number(limit));
+    return await this.accesosServiciosService.obtenerActividadReciente(
+      Number(limit),
+    );
   }
 
   @Get('escanear/:codigoQr')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Guardia')
   async escanearQr(@Param('codigoQr') codigoQr: string) {
-    return {
-      success: true,
-      data: await this.accesosServiciosService.obtenerDatosPorQr(codigoQr),
-    };
+    try {
+      const idLimpioQr = await obtenerIdDesdeUrlQr(codigoQr);
+
+      return {
+        success: true,
+        data: await this.accesosServiciosService.obtenerDatosPorQr(idLimpioQr),
+      };
+    } catch (error) {
+      throw new BadRequestException(
+        error || 'Error interno al procesar el código QR externo.',
+      );
+    }
   }
 
   @Get(':id')
@@ -56,7 +65,6 @@ export class AccesosServiciosController {
     @Req() req: AuthenticatedRequest,
   ) {
     const idGuardia = req.user.userId;
-
     return {
       success: true,
       data: await this.accesosServiciosService.validarAcceso(

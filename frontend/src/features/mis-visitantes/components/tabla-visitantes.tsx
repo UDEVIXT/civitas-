@@ -14,11 +14,13 @@ import type { Visitante } from "../types";
 interface TablaVisitantesProps {
   visitantes: Visitante[];
   onCodigoAccesoClick?: (visitante: Visitante) => void;
+  onEditarClick?: () => void;
 }
 
 export function TablaVisitantes({
   visitantes,
   onCodigoAccesoClick,
+  onEditarClick,
 }: TablaVisitantesProps) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -119,7 +121,10 @@ export function TablaVisitantes({
                   <button className="p-1.5 hover:text-red-500 transition-colors">
                     <Trash2 className="h-4 w-4" />
                   </button>
-                  <button className="p-1.5 hover:text-blue-500 transition-colors">
+                  <button
+                    className="p-1.5 hover:text-blue-500 transition-colors"
+                    onClick={onEditarClick}
+                  >
                     <Edit2 className="h-4 w-4" />
                   </button>
                 </div>
