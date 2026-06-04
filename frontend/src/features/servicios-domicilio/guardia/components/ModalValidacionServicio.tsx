@@ -239,17 +239,6 @@ export function ModalValidacionServicio({
                   </span>
                 </div>
               )}
-
-              {servicio.estado !== "VALIDO" && (
-                <div className="col-span-2 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex flex-col gap-1">
-                  <span className="font-bold text-red-700 text-sm">
-                    QR Inválido: {servicio.estado}
-                  </span>
-                  <span className="text-red-600 text-sm">
-                    {servicio.motivo_invalido}
-                  </span>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -260,27 +249,25 @@ export function ModalValidacionServicio({
           <Button
             variant="outline"
             onClick={() => (isDenying ? setIsDenying(false) : handleDenegar())}
-            className="w-full bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50 hover:text-red-600 rounded-xl"
-            disabled={
-              validarMutation.isPending ||
-              (isDenying && denialReason.trim().length < 5)
-            }
+            className="cursor-pointer w-full bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50 hover:text-red-600 rounded-xl"
+            disabled={validarMutation.isPending}
+
           >
             {isDenying ? "Cancelar" : "Denegar acceso"}
           </Button>
           <Button
             onClick={isDenying ? handleDenegar : handleValidar}
-            className={`w-full font-bold shadow-sm rounded-xl text-white ${
-              isDenying
-                ? "bg-red-500 hover:bg-red-600"
-                : "bg-amber-500 hover:bg-amber-600"
-            }`}
+            className={`w-full font-bold shadow-sm rounded-xl text-white  ${isDenying
+              ? "cursor-pointer bg-red-500 hover:bg-red-600 disabled:bg-red-300 disabled:hover:bg-red-300 disabled:cursor-not-allowed"
+              : "cursor-pointer bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 disabled:hover:bg-amber-300 disabled:cursor-not-allowed"
+              }`}
             disabled={
               isLoading ||
               !servicio ||
               validarMutation.isPending ||
               denegarMutation.isPending ||
-              (!isDenying && servicio?.estado !== "VALIDO")
+              (!isDenying && servicio?.estado !== "VALIDO") ||
+              (isDenying && denialReason.trim().length < 5)
             }
           >
             {isDenying ? "Confirmar Rechazo" : "Aceptar acceso"}

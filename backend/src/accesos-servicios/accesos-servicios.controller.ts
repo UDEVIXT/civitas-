@@ -49,7 +49,7 @@ export class AccesosServiciosController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Guardia')
   async escanearQr(@Param('codigoQr') codigoQr: string) {
-    console.log('Código QR recibido en el backend:', codigoQr);
+    //console.log('Código QR recibido en el backend:', codigoQr);
     try {
       //const idLimpioQr = await obtenerIdDesdeUrlQr(codigoQr);
       //console.log('ID limpio del QR:', idLimpioQr);
