@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 
 // Componentes
 import { ModalVisitante } from "@/features/mis-visitantes/components/modal-visitante";
+import { ModalEditarVisitante } from "@/features/mis-visitantes/components/modal-editar-visitante";
 import { ModalQR } from "@/features/mis-visitantes/components/modal-qr/modalQR";
 import { ModalQRGestion } from "@/features/mis-visitantes/components/modal-qr/modalQR-gestion";
 import { TablaVisitantes } from "@/features/mis-visitantes/components/tabla-visitantes";
@@ -111,6 +112,7 @@ export default function MisVisitantesPage() {
   const [visitanteQrGestion, setVisitanteQrGestion] =
     useState<Visitante | null>(null);
   const [isUpdatingQr, setIsUpdatingQr] = useState(false);
+  const [editarModalOpen, setEditarModalOpen] = useState(false);
 
   // Empezamos sin visitantes para ver el Empty State de Figma
   const [visitantes, setVisitantes] = useState<Visitante[]>([]);
@@ -201,6 +203,10 @@ export default function MisVisitantesPage() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleEditarClick = () => {
+    setEditarModalOpen(true);
   };
 
   const handleCodigoAccesoClick = async (visitante: Visitante) => {
@@ -393,6 +399,7 @@ export default function MisVisitantesPage() {
         <TablaVisitantes
           visitantes={visitantesFiltrados}
           onCodigoAccesoClick={handleCodigoAccesoClick}
+          onEditarClick={handleEditarClick}
         />
       )}
 
@@ -404,6 +411,11 @@ export default function MisVisitantesPage() {
           isSaving={isSaving}
         />
       )}
+
+      <ModalEditarVisitante
+        isOpen={editarModalOpen}
+        onClose={() => setEditarModalOpen(false)}
+      />
 
       <ModalQR
         isOpen={isQrModalOpen}
