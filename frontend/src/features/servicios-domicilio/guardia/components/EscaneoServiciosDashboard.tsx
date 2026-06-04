@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ModalValidacionServicio } from "./ModalValidacionServicio";
 import { ModalRegistroManualServicio } from "./ModalRegistroManualServicio";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { accesosServiciosApi } from "../api/accesos-servicios.api";
 import { QrScannerPlugin } from "./QrScannerPlugin";
 import { useToast } from "@/hooks/use-toast";
@@ -17,19 +17,44 @@ export function EscaneoServiciosDashboard() {
   const [selectedAccessId, setSelectedAccessId] = useState<string | null>(null);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [isScannerActive, setIsScannerActive] = useState(true);
+  const [isVerifying, setIsVerifying] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: actividades, isLoading } = useQuery({
     queryKey: ["actividadReciente"],
     queryFn: accesosServiciosApi.obtenerActividadReciente,
   });
 
-  const onScanSuccess = (decodedText: string) => {
+  const onScanSuccess = async (decodedText: string) => {
     // Si ya hay un ID seleccionado, no volvemos a procesar hasta que se cierre el modal
-    if (selectedAccessId) return;
+    if (selectedAccessId || isVerifying) return;
     
-    // Suponiendo que el decodedText es directamente el ID o token esperado
-    setSelectedAccessId(decodedText);
+    setIsVerifying(true);
+    try {
+      const data = await queryClient.fetchQuery({
+        queryKey: ["detalleServicio", decodedText],
+        queryFn: () => accesosServiciosApi.obtenerDetalleServicio(decodedText),
+      });
+
+      if (data.estado !== "VALIDO") {
+        toast({
+          title: `QR Inválido: ${data.estado}`,
+          description: data.motivo_invalido || "El código QR escaneado no es válido.",
+          variant: "destructive",
+        });
+      } else {
+        setSelectedAccessId(decodedText);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error de validación",
+        description: error.response?.data?.message || "No se pudo verificar el código QR.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   const onScanError = (errorMessage: string) => {
@@ -38,7 +63,7 @@ export function EscaneoServiciosDashboard() {
   };
 
   const handleSimulateScan = () => {
-    setSelectedAccessId("mock-scan-id");
+    onScanSuccess("mock-scan-id");
   };
 
   return (
