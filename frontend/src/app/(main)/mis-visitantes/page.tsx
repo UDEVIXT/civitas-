@@ -26,7 +26,7 @@ import {
   generarQrVisitante,
   getVisitantes,
 } from "@/features/mis-visitantes/api/visitante.api";
-const [visitanteEditando, setVisitanteEditando] = useState<Visitante | null>(null);
+
 type BackendEstatusAcceso = "Activo" | "Inactivo";
 type BackendEstadoQr = NonNullable<Visitante["estado_qr"]>;
 
@@ -103,6 +103,9 @@ function mapVisitanteFromBackend(v: BackendVisitante): Visitante {
 
 export default function MisVisitantesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [visitanteEditando, setVisitanteEditando] = useState<Visitante | null>(
+    null,
+  );
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [qrValue, setQrValue] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -167,8 +170,11 @@ export default function MisVisitantesPage() {
     try {
       if (visitanteEditando) {
         // FLUJO DE EDICIÓN (PATCH)
-        const responseBackend = await actualizarVisitante(visitanteEditando.id_visitante, values);
-        
+        const responseBackend = await actualizarVisitante(
+          visitanteEditando.id_visitante,
+          values,
+        );
+
         // El backend devuelve success: true y un mensaje. Si hubo regeneración de QR (CA007),
         // es recomendable recargar la tabla o actualizar el estado local del visitante.
         setVisitantes((prev) =>
@@ -183,8 +189,8 @@ export default function MisVisitantesPage() {
                   // Nota: Si el backend regeneró el QR, deberías actualizar id_acceso y codigo_acceso aquí
                   // extrayéndolos de responseBackend.data si el servicio los devuelve.
                 }
-              : v
-          )
+              : v,
+          ),
         );
         toast.success("Información del visitante actualizada con éxito");
       } else {
@@ -194,7 +200,8 @@ export default function MisVisitantesPage() {
         const codigoQr = ultimoAcceso?.codigo_qr || "";
 
         const nuevoVisitante: Visitante = {
-          id_visitante: responseBackend?.id_visitante || Math.random().toString(),
+          id_visitante:
+            responseBackend?.id_visitante || Math.random().toString(),
           nombre_completo: values.nombre_completo,
           motivo_visita: values.motivo_visita,
           tipo_visitante: values.tipo_visitante as Visitante["tipo_visitante"],
@@ -218,14 +225,16 @@ export default function MisVisitantesPage() {
         }
         toast.success("Visitante registrado correctamente");
       }
-      
+
       // Limpieza de estados
       setIsModalOpen(false);
       setVisitanteEditando(null);
     } catch (error: any) {
       console.error("Error al guardar en la API:", error);
       // CA004, CA006, NTH001: Captura de errores de negocio o formato desde el backend
-      const mensaje = error.response?.data?.message || "Hubo un problema al guardar los datos.";
+      const mensaje =
+        error.response?.data?.message ||
+        "Hubo un problema al guardar los datos.";
       toast.error(mensaje);
     } finally {
       setIsSaving(false);
@@ -247,7 +256,11 @@ export default function MisVisitantesPage() {
       visitante.fecha_expiracion &&
       new Date(visitante.fecha_expiracion) <= new Date();
 
-    if (visitante.estatus === "Activo" && visitante.codigo_acceso && !qrExpirado) {
+    if (
+      visitante.estatus === "Activo" &&
+      visitante.codigo_acceso &&
+      !qrExpirado
+    ) {
       setQrValue(visitante.codigo_acceso);
       setIsQrModalOpen(true);
       return;
