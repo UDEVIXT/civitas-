@@ -32,11 +32,15 @@ export const accesosServiciosApi = {
     return data;
   },
 
-  obtenerDetalleServicio: async (codigoQr: string): Promise<DetalleServicio> => {
+  obtenerDetalleServicio: async (
+    codigoQr: string,
+  ): Promise<DetalleServicio> => {
     try {
       const urlCodificada = encodeURIComponent(codigoQr);
-      const { data } = await api.get(`/accesos-servicios/escanear/${urlCodificada}`);
-        
+      const { data } = await api.get(
+        `/accesos-servicios/escanear/${urlCodificada}`,
+      );
+
       return data.data;
     } catch (error) {
       console.error("Error al escanear en el servidor:", error);
@@ -45,14 +49,20 @@ export const accesosServiciosApi = {
   },
 
   validarAcceso: async (codigoQr: string): Promise<void> => {
-    await api.get(`/accesos-servicios/validar/${codigoQr}`);
+    const urlCodificada = encodeURIComponent(codigoQr);
+    await api.get(`/accesos-servicios/validar/${urlCodificada}`);
   },
 
   denegarAcceso: async (codigoQr: string, motivo: string): Promise<void> => {
-    await api.patch('/bitacora/desactivar-qr', { codigo_qr: codigoQr, motivo });
+    await api.patch("/bitacora/desactivar-qr", { codigo_qr: codigoQr, motivo });
   },
 
-  registrarIngresoManual: async (datosManuales: { nombre: string; empresa: string; motivo: string; vivienda: string }): Promise<void> => {
+  registrarIngresoManual: async (datosManuales: {
+    nombre: string;
+    empresa: string;
+    motivo: string;
+    vivienda: string;
+  }): Promise<void> => {
     await api.post("/accesos-servicios/registro-manual", datosManuales);
-  }
+  },
 };
