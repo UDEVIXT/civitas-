@@ -549,4 +549,130 @@ export class EmpleadoService {
       };
     });
   }
+  // =========================================================================
+  // HU-1.5.5: Guardia consulta lista de empleados domésticos autorizados
+  // =========================================================================
+  async obtenerEmpleadosParaGuardia(filters: {
+    search?: string;
+    page: number;
+    limit?: number;
+    idVivienda?: string;
+  }) {
+    const { search, page, limit, idVivienda } = filters;
+    const take = limit ?? 10;
+    const skip = (page - 1) * take;
+
+    // Filtro inicial idéntico para asegurar que solo traemos 'Empleado'
+    const where: any = {
+      servicio: {
+        tipo_servicio: {
+          categoria: 'Empleado',
+        },
+      },
+    };
+
+    // CA003: Filtro por propiedad/vivienda
+    if (idVivienda) {
+      where.residente = { id_vivienda: idVivienda };
+    }
+
+    // CA004: Búsqueda por nombre del empleado
+    if (search) {
+      where.nombre = {
+        contains: search,
+        mode: 'insensitive',
+      };
+    }
+
+    try {
+      // CA006: Paginación progresiva optimizada con Promise.all
+      const [visitantes, total] = await Promise.all([
+        this.prisma.visitante.findMany({
+          where,
+          select: {
+            id_visitante: true,
+            nombre: true,
+            telefono: true,
+            servicio: {
+              select: {
+                id_servicio: true,
+                activo: true,
+                bloqueo_global: true,
+                cargo: true,
+                horarios: {
+                  where: { activo: true },
+                  select: { dia_semana: true, hora_inicio: true, hora_fin: true },
+                },
+              },
+            },
+            residente: {
+              select: {
+                vivienda: { select: { id_vivienda: true, numero_vivienda: true } },
+                usuario: { select: { persona: { select: { nombre: true } } } },
+              },
+            },
+          },
+          skip,
+          take,
+          orderBy: { nombre: 'asc' },
+        }),
+        this.prisma.visitante.count({ where }),
+      ]);
+
+      // Transformación y aplanado para cumplir con lo solicitado por Front-end
+      const dataAplanada = visitantes.map((v) => {
+        const serv = v.servicio;
+        
+        // Formatear los horarios a strings legibles "HH:MM"
+        const horariosAutorizados = serv?.horarios.map((h) => {
+          // Convertimos explícitamente a objeto Date para poder usar toLocaleTimeString de forma segura
+          const fechaInicio = new Date(h.hora_inicio);
+          const fechaFin = new Date(h.hora_fin);
+
+          const inicio = fechaInicio.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+          const fin = fechaFin.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+          return `${inicio} - ${fin}`;
+        }) || [];
+
+        const diasAutorizados = serv?.horarios.map((h) => h.dia_semana) || [];
+
+        // CA005, CA008 y CA009: Evaluar el estado del acceso
+        let estadoAcceso = 'Inactivo';
+        if (serv && serv.activo && !serv.bloqueo_global) {
+          estadoAcceso = 'Activo';
+        }
+
+        return {
+          id_visitante: v.id_visitante,
+          id_servicio: serv?.id_servicio || null,
+          nombre_completo: v.nombre,
+          propiedad_asociada: v.residente?.vivienda?.numero_vivienda || 'Sin asignar',
+          id_vivienda: v.residente?.vivienda?.id_vivienda || null,
+          residente_asociado: v.residente?.usuario?.persona?.nombre || 'Desconocido',
+          tipo_empleado: serv?.cargo || 'General',
+          dias_autorizados: [...new Set(diasAutorizados)], // Evita duplicados de días
+          horarios_autorizados: horariosAutorizados,
+          estado_acceso: estadoAcceso,
+          bloqueo_global: serv?.bloqueo_global || false, // Clave para pintar en rojo (CA008)
+        };
+      });
+
+      return {
+        success: true,
+        meta: {
+          total,
+          page,
+          limit: take,
+          total_pages: Math.ceil(total / take),
+        },
+        data: dataAplanada,
+      };
+    } catch (error: any) { 
+      this.logger.error(`Error en obtenerEmpleadosParaGuardia: ${error.message}`);
+      // CA007: Control de problemas técnicos sin enviar datos corruptos
+      throw new InternalServerErrorException(
+        'Ocurrió un problema técnico al cargar la lista de empleados domésticos.',
+      );
+    }
+  }
 }
