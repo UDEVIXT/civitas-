@@ -33,8 +33,15 @@ export const accesosServiciosApi = {
   },
 
   obtenerDetalleServicio: async (codigoQr: string): Promise<DetalleServicio> => {
-    const { data } = await api.get(`/accesos-servicios/escanear/${codigoQr}`);
-    return data.data;
+    try {
+      const urlCodificada = encodeURIComponent(codigoQr);
+      const { data } = await api.get(`/accesos-servicios/escanear/${urlCodificada}`);
+        
+      return data.data;
+    } catch (error) {
+      console.error("Error al escanear en el servidor:", error);
+      throw error;
+    }
   },
 
   validarAcceso: async (codigoQr: string): Promise<void> => {
@@ -42,7 +49,7 @@ export const accesosServiciosApi = {
   },
 
   denegarAcceso: async (codigoQr: string, motivo: string): Promise<void> => {
-    await api.post('/bitacora/desactivar-qr', { codigo_qr: codigoQr, motivo });
+    await api.patch('/bitacora/desactivar-qr', { codigo_qr: codigoQr, motivo });
   },
 
   registrarIngresoManual: async (datosManuales: { nombre: string; empresa: string; motivo: string; vivienda: string }): Promise<void> => {
