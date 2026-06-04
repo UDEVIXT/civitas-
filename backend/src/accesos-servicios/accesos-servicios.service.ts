@@ -117,14 +117,12 @@ export class AccesosServiciosService {
   }
 
   async obtenerActividadReciente(limit = 5) {
-    const bitacoras = await this.prisma.bitacora.findMany({
+    const desactivaciones = await this.prisma.bitacoraDesactivacionQr.findMany({
       take: limit,
-
       orderBy: {
-        fecha_hora_entrada: 'desc',
+        fecha_hora: 'desc',
       },
-
-      where: {
+      /*where: {
         acceso: {
           visitante: {
             servicio: {
@@ -139,9 +137,13 @@ export class AccesosServiciosService {
             },
           },
         },
-      },
-
+      },*/
       include: {
+        usuario: {
+          include: {
+            persona: true,
+          },
+        },
         acceso: {
           include: {
             visitante: {
@@ -151,11 +153,9 @@ export class AccesosServiciosService {
                     tipo_servicio: true,
                   },
                 },
-
                 residente: {
                   include: {
                     vivienda: true,
-
                     usuario: {
                       include: {
                         persona: true,
@@ -167,85 +167,50 @@ export class AccesosServiciosService {
             },
           },
         },
-
-        guardia: true,
       },
     });
 
     const haceCuanto = (fecha: Date) => {
       const ahora = new Date();
-
-      const diffMs =
-        ahora.getTime() -
-        new Date(fecha).getTime();
-
+      const diffMs = ahora.getTime() - new Date(fecha).getTime();
       const minutos = Math.floor(diffMs / 60000);
 
       if (minutos < 1) {
         return 'Hace unos segundos';
       }
-
       if (minutos < 60) {
         return `Hace ${minutos} min`;
       }
-
       const horas = Math.floor(minutos / 60);
-
       if (horas < 24) {
         return `Hace ${horas} h`;
       }
-
       const dias = Math.floor(horas / 24);
-
       return `Hace ${dias} días`;
     };
 
-    return bitacoras.map((bitacora) => {
-      const visitante =
-        bitacora.acceso?.visitante;
+    return desactivaciones.map((bitacora) => {
+      const visitante = bitacora.acceso?.visitante;
+      const servicio = visitante?.servicio;
+      const residente = visitante?.residente;
 
-      const servicio =
-        visitante?.servicio;
-
-      const residente =
-        visitante?.residente;
-
-      const nombreVisitante =
-        visitante?.nombre ??
-        'Sin visitante';
-
-      const empresa =
-        servicio?.nombre_empresa ??
-        'Empresa desconocida';
-
+      const nombreVisitante = visitante?.nombre ?? 'Sin visitante';
+      const empresa = servicio?.nombre_empresa ?? 'Empresa desconocida';
       const nombreResidente =
-        residente?.usuario?.persona?.nombre ??
-        'Residente';
+        residente?.usuario?.persona?.nombre ?? 'Residente';
+      const vivienda = residente?.vivienda?.numero_vivienda ?? 'N/A';
 
-      const vivienda =
-        residente?.vivienda?.numero_vivienda ??
-        'N/A';
+      const desactivadoPor = bitacora.usuario?.persona?.nombre ?? 'Sistema';
 
       return {
-        id: bitacora.id_bitacora,
-
-        nombre_repartidor:
-          `${nombreVisitante} (${empresa})`,
-
-        residente_vinculado:
-          `${nombreResidente} (Vivienda ${vivienda})`,
-
-        tiempo_transcurrido:
-          haceCuanto(
-            bitacora.fecha_hora_entrada,
-          ),
-
-        estado: bitacora.estado
-          ? 'AUTORIZADO'
-          : 'RECHAZADO',
-
-        comentario:
-          bitacora.comentario,
+        id: bitacora.id_desactivacion,
+        nombre_repartidor: `${nombreVisitante} (${empresa})`,
+        residente_vinculado: `${nombreResidente} (Vivienda ${vivienda})`,
+        tiempo_transcurrido: haceCuanto(bitacora.fecha_hora),
+        estado:
+          bitacora.acceso?.estatus === 'Activo' ? 'ACTIVO' : 'DESACTIVADO',
+        comentario: bitacora.motivo,
+        desactivado_por: desactivadoPor,
       };
     });
   }
