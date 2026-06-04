@@ -117,7 +117,7 @@ export function IncidentesAdminPage() {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="min-w-[160px]">Incidencia</TableHead>
+              <TableHead className="min-w-40">Incidencia</TableHead>
               <TableHead className="hidden sm:table-cell">Residente</TableHead>
               <TableHead className="whitespace-nowrap hidden md:table-cell">Fecha y hora</TableHead>
               <TableHead>Estado</TableHead>
@@ -147,7 +147,7 @@ export function IncidentesAdminPage() {
                 const estado = estadoBadge[inc.estado];
                 return (
                   <TableRow key={inc.id_incidencia} className="align-top">
-                    <TableCell className="min-w-[160px] max-w-[240px]">
+                    <TableCell className="min-w-40 max-w-60">
                       <p className="font-medium text-sm leading-tight truncate">{inc.titulo}</p>
                       <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{inc.descripcion}</p>
                       <p className="text-xs text-muted-foreground mt-1 sm:hidden">
@@ -178,7 +178,7 @@ export function IncidentesAdminPage() {
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
                       {inc.ubicacion ? (
-                        <div className="flex items-start gap-1 text-sm text-muted-foreground max-w-[140px]">
+                        <div className="flex items-start gap-1 text-sm text-muted-foreground max-w-35">
                           <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                           <span className="line-clamp-2">{inc.ubicacion}</span>
                         </div>
