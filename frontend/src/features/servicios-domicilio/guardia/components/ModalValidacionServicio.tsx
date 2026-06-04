@@ -1,6 +1,6 @@
 "use client";
 
-import { Info, User, Clock, Building, Calendar, Briefcase, FileText } from "lucide-react";
+import { Info, User, Clock, Building, Calendar, Briefcase, FileText, QrCode } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,6 +9,9 @@ import { toast } from "@/hooks/use-toast";
 import { Spinner } from "@/components/ui/spinner";
 import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
+import QRCode from "react-qr-code";
+
+
 
 interface ModalValidacionProps {
   open: boolean;
@@ -42,8 +45,9 @@ export function ModalValidacionServicio({ open, onOpenChange, scannedId }: Modal
 
   const denegarMutation = useMutation({
     mutationFn: ({ id, motivo }: { id: string, motivo: string }) => accesosServiciosApi.denegarAcceso(id, motivo),
-    onSuccess: () => {
-      toast({ title: "Acceso denegado", description: "Incidencia registrada: Datos no coinciden.", variant: "destructive" });
+      onSuccess: (data) => {
+      // El backend respondió con éxito (código 200/201)
+      toast({ title: "Desactivación exitosa", description: "El código QR ha sido desactivado correctamente.", variant: "default" });
       queryClient.invalidateQueries({ queryKey: ["actividadReciente"] });
       setIsDenying(false);
       setDenialReason("");
@@ -78,18 +82,20 @@ export function ModalValidacionServicio({ open, onOpenChange, scannedId }: Modal
     }}>
       <DialogContent className="max-w-md rounded-2xl p-0 overflow-hidden bg-white">
         <div className="flex flex-col items-center justify-center pt-8 pb-4 bg-zinc-50 border-b border-zinc-100">
-          <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-4">
+          <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 ${isDenying ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
             <Info className="w-7 h-7" />
           </div>
           <DialogHeader className="text-center px-6">
-            <DialogTitle className="text-xl font-bold text-zinc-900 text-center">Información del servicio</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-zinc-900 text-center">
+              {isDenying ? "¿Estás seguro de denegar el acceso?" : "Información del servicio"}
+            </DialogTitle>
             <DialogDescription className="text-zinc-500 mt-1">
-              Detalles del servicio registrado
+              {isDenying ? "Confirmación de rechazo de entrada" : "Detalles del servicio registrado"}
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <div className="p-6">
+        <div className={`px-6 pt-6 ${isDenying ? 'pb-2' : 'pb-4'}`}>
           {isLoading ? (
             <div className="flex justify-center py-8"><Spinner /></div>
           ) : isError ? (
@@ -99,6 +105,25 @@ export function ModalValidacionServicio({ open, onOpenChange, scannedId }: Modal
             </div>
           ) : !servicio ? (
             <div className="text-center text-zinc-500 py-8">No se encontró información del servicio.</div>
+          ) : isDenying ? (
+            <div className="flex flex-col items-center gap-4 py-2 animate-in fade-in zoom-in-95">
+              <div className="p-4 bg-white rounded-xl shadow-sm border border-zinc-100">
+                <QRCode value={scannedId || ""} size={160} />
+              </div>
+              <div className="text-center space-y-1">
+                <p className="text-sm text-zinc-600 px-4 text-justify font-bold">Al finalizar el acceso, se registrará la salida del visitante y 
+                  el código QR quedará desactivado por lo que no podrá volver a utilizarse.</p>
+              </div>
+              <div className="w-full mt-2 space-y-2">
+                <label className="text-xs font-semibold text-zinc-900 uppercase mb-0.5">Motivo de finalización</label>
+                <Textarea 
+                  placeholder="Ej. La identificación no coincide con la registrada"
+                  value={denialReason}
+                  onChange={(e) => setDenialReason(e.target.value)}
+                  className="resize-none"
+                />
+              </div>
+            </div>
           ) : (
             <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
               <div className="col-span-2 sm:col-span-1 flex flex-col gap-1">
@@ -134,23 +159,11 @@ export function ModalValidacionServicio({ open, onOpenChange, scannedId }: Modal
                   <span className="text-red-600 text-sm">{servicio.motivo_invalido}</span>
                 </div>
               )}
-              
-              {isDenying && (
-                <div className="col-span-2 mt-4 space-y-2 animate-in fade-in slide-in-from-top-2">
-                  <label className="text-xs font-semibold text-zinc-900 uppercase">Motivo del rechazo</label>
-                  <Textarea 
-                    placeholder="Ej. La identificación no coincide con la registrada"
-                    value={denialReason}
-                    onChange={(e) => setDenialReason(e.target.value)}
-                    className="resize-none"
-                  />
-                </div>
-              )}
             </div>
           )}
         </div>
 
-        <DialogFooter className="grid grid-cols-2 gap-3 p-6 pt-0 border-t border-zinc-100 bg-zinc-50/50 mt-2">
+        <DialogFooter className={`grid grid-cols-2 gap-3 p-6 pt-0 border-t border-zinc-100 bg-zinc-50/50 ${isDenying ? 'mt-0' : 'mt-2'}`}>
           <Button 
             variant="outline" 
             onClick={() => isDenying ? setIsDenying(false) : handleDenegar()}
