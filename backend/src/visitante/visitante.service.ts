@@ -9,6 +9,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateVisitanteDto } from './dto/create-visitante.dto';
 import { UpdateVisitanteDto } from './dto/update-visitante.dto';
+import { UpdateEstadoQrDto } from './dto/update-estado-qr.dto';
 import 'multer';
 import { ArchivosService } from '../r2-module/archivos.service';
 import { randomBytes } from 'crypto';
@@ -420,6 +421,15 @@ export class VisitanteService {
       throw new NotFoundException('Residente not found for the given user ID');
     }
 
+    await this.prisma.acceso.updateMany({
+      where: {
+        estatus: 'Activo',
+        fecha_expiracion: { lt: new Date() },
+        visitante: { id_residente: residente.id_residente },
+      },
+      data: { estatus: 'Inactivo' },
+    });
+
     const visitantes = await this.prisma.visitante.findMany({
       where: { id_residente: residente.id_residente },
       include: {
@@ -452,12 +462,288 @@ export class VisitanteService {
     });
   }
 
+  async actualizarEstadoQrFrecuente(
+    idVisitante: string,
+    idUsuario: string,
+    updateEstadoQrDto: UpdateEstadoQrDto,
+  ) {
+    const accion = updateEstadoQrDto.accion;
+    const motivo = updateEstadoQrDto.motivo?.trim();
+
+    if (accion === 'deshabilitar' && !motivo) {
+      throw new BadRequestException(
+        'El motivo es obligatorio para deshabilitar el QR.',
+      );
+    }
+
+    const visitante = await this.prisma.visitante.findUnique({
+      where: { id_visitante: idVisitante },
+      include: {
+        residente: { select: { id_usuario: true } },
+        accesos: {
+          orderBy: { fecha_creacion: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!visitante) {
+      throw new NotFoundException('Visitante no encontrado.');
+    }
+
+    if (visitante.residente.id_usuario !== idUsuario) {
+      throw new ForbiddenException(
+        'No tienes permiso para modificar este QR.',
+      );
+    }
+
+    if (!visitante.es_frecuente) {
+      throw new BadRequestException(
+        'Solo se puede habilitar o deshabilitar el QR de visitantes frecuentes.',
+      );
+    }
+
+    const acceso = visitante.accesos[0];
+
+    if (!acceso || !acceso.codigo_qr) {
+      throw new BadRequestException(
+        'El visitante no tiene un QR asociado para modificar.',
+      );
+    }
+
+    const estadoActual = this.calcularEstadoQr(acceso);
+
+    if (estadoActual === 'EXPIRADO') {
+      if (acceso.estatus !== 'Inactivo') {
+        await this.prisma.acceso.update({
+          where: { id_acceso: acceso.id_acceso },
+          data: { estatus: 'Inactivo' },
+        });
+      }
+
+      throw new BadRequestException(
+        'El QR ya expiro. Genera un nuevo codigo de acceso para volver a usarlo.',
+      );
+    }
+
+    if (accion === 'deshabilitar' && estadoActual === 'INACTIVO') {
+      throw new BadRequestException('El QR ya se encuentra deshabilitado.');
+    }
+
+    if (accion === 'habilitar' && estadoActual === 'ACTIVO') {
+      throw new BadRequestException('El QR ya se encuentra habilitado.');
+    }
+
+    try {
+      const estatus = accion === 'habilitar' ? 'Activo' : 'Inactivo';
+      const accionBitacora =
+        accion === 'habilitar' ? 'HABILITADO' : 'DESHABILITADO';
+      const motivoBitacora =
+        motivo ||
+        (accion === 'habilitar'
+          ? 'QR habilitado por el residente.'
+          : 'QR deshabilitado por el residente.');
+
+      const resultado = await this.prisma.$transaction(async (prisma) => {
+        const accesoActualizado = await prisma.acceso.update({
+          where: { id_acceso: acceso.id_acceso },
+          data: { estatus },
+          select: {
+            id_acceso: true,
+            id_visitante: true,
+            codigo_qr: true,
+            fecha_creacion: true,
+            fecha_expiracion: true,
+            estatus: true,
+          },
+        });
+
+        await prisma.bitacoraQrVisitante.create({
+          data: {
+            id_acceso: acceso.id_acceso,
+            id_usuario: idUsuario,
+            accion: accionBitacora,
+            motivo: motivoBitacora,
+          },
+        });
+
+        return accesoActualizado;
+      });
+
+      return {
+        success: true,
+        message:
+          accion === 'habilitar'
+            ? 'QR habilitado correctamente.'
+            : 'QR deshabilitado correctamente.',
+        data: {
+          ...resultado,
+          id_visitante: visitante.id_visitante,
+          estado_qr: this.calcularEstadoQr(resultado),
+          accion: accionBitacora,
+          motivo: motivoBitacora,
+        },
+      };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'Error tecnico al actualizar el estado del QR.',
+      );
+    }
+  }
+
   findOne(id: number) {
     return `This action returns a #${id} visitante`;
   }
 
-  update(id: number, updateVisitanteDto: UpdateVisitanteDto) {
-    return `This action updates a #${id} visitante`;
+  async update(
+    idVisitante: string,
+    idUsuario: string,
+    dto: UpdateVisitanteDto,
+    file?: Express.Multer.File,
+  ) {
+    // 1. Validación de Propiedad (NTH002)
+    const visitante = await this.prisma.visitante.findUnique({
+      where: { id_visitante: idVisitante },
+      include: {
+        residente: { select: { id_usuario: true } },
+        accesos: {
+          orderBy: { fecha_creacion: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!visitante) {
+      throw new NotFoundException('Visitante no encontrado.');
+    }
+
+    if (visitante.residente.id_usuario !== idUsuario) {
+      throw new ForbiddenException('No tienes permiso para editar este registro.');
+    }
+
+    const accesoActual = visitante.accesos[0];
+
+    // 2. Límites de tiempo (CA003 y NTH001)
+    const ahora = new Date();
+    let esPasadoLaLlegada = false;
+
+    if (accesoActual) {
+      const horaLlegada = new Date(accesoActual.fecha_creacion);
+      if (ahora >= horaLlegada) {
+        esPasadoLaLlegada = true;
+      }
+    }
+
+    if (esPasadoLaLlegada) {
+      const keys = Object.keys(dto).filter((k) => dto[k] !== undefined && dto[k] !== null && dto[k] !== '');
+      // Permitimos modificar 'fecha_fin' u otros campos específicos de salida
+      const intentaEditarNoPermitido = keys.some((k) => k !== 'fecha_fin') || !!file;
+      
+      if (intentaEditarNoPermitido) {
+        throw new BadRequestException('La visita ya está en curso o la hora de llegada ha pasado. Solo está permitida la modificación de la hora de salida.');
+      }
+    }
+
+    // 3. Detección de Cambios y Aborto Temprano (CA008)
+    const { fecha_inicio, fecha_fin, nombre, tipo_visitante, tipo_vehiculo, telefono, es_frecuente } = dto;
+    let hayCambiosDatos = false;
+    let hayCambiosFechas = false;
+
+    if (nombre !== undefined && nombre !== visitante.nombre) hayCambiosDatos = true;
+    if (tipo_visitante !== undefined && tipo_visitante !== visitante.motivo) hayCambiosDatos = true;
+    if (tipo_vehiculo !== undefined && tipo_vehiculo !== visitante.tipo_vehiculo) hayCambiosDatos = true;
+    if (telefono !== undefined && telefono !== visitante.telefono) hayCambiosDatos = true;
+    if (es_frecuente !== undefined && es_frecuente !== visitante.es_frecuente) hayCambiosDatos = true;
+
+    if (accesoActual) {
+      if (fecha_inicio && new Date(fecha_inicio).getTime() !== new Date(accesoActual.fecha_creacion).getTime()) hayCambiosFechas = true;
+      if (fecha_fin && new Date(fecha_fin).getTime() !== new Date(accesoActual.fecha_expiracion).getTime()) hayCambiosFechas = true;
+    }
+
+    if (!hayCambiosDatos && !hayCambiosFechas && !file) {
+      return { success: true, message: 'Operación omitida: No se detectaron modificaciones en los campos.' };
+    }
+
+    // 4. Procesamiento de Archivos Multimedia
+    let nuevaUrlImagen = visitante.url_imagen;
+    if (file) {
+      nuevaUrlImagen = await this.archivosService.subirImagen(file, 'visitantes');
+    }
+
+    // 5. Transacción Atómica (CA005, CA006, CA007)
+    try {
+      const requiereNuevoQr = hayCambiosFechas || (nombre !== undefined && nombre !== visitante.nombre) || (tipo_visitante !== undefined && tipo_visitante !== visitante.motivo);
+
+      return await this.prisma.$transaction(async (prisma) => {
+        // Actualización de registro base
+        await prisma.visitante.update({
+          where: { id_visitante: idVisitante },
+          data: {
+            ...(nombre !== undefined && { nombre }),
+            ...(tipo_visitante !== undefined && { motivo: tipo_visitante }),
+            ...(tipo_vehiculo !== undefined && { tipo_vehiculo }),
+            ...(telefono !== undefined && { telefono }),
+            ...(es_frecuente !== undefined && { es_frecuente }),
+            ...(file && { url_imagen: nuevaUrlImagen }),
+          },
+        });
+
+        // Actualización de la ventana de acceso
+        if (hayCambiosFechas && accesoActual) {
+          const nuevaCreacion = fecha_inicio ? new Date(fecha_inicio) : accesoActual.fecha_creacion;
+          const nuevaExpiracion = fecha_fin ? new Date(fecha_fin) : accesoActual.fecha_expiracion;
+          
+          await prisma.acceso.update({
+            where: { id_acceso: accesoActual.id_acceso },
+            data: {
+              fecha_creacion: nuevaCreacion,
+              fecha_expiracion: nuevaExpiracion,
+            },
+          });
+        }
+
+        // Invalidación y regeneración de llaves criptográficas (CA007)
+        if (requiereNuevoQr && accesoActual && accesoActual.codigo_qr) {
+          await prisma.acceso.update({
+            where: { id_acceso: accesoActual.id_acceso },
+            data: { estatus: 'Inactivo' },
+          });
+
+          const codigoQr = await this.generarCodigoQrUnico(prisma);
+          const { inicio, fin } = this.obtenerFechasAcceso(
+            fecha_inicio || accesoActual.fecha_creacion.toISOString(),
+            fecha_fin || accesoActual.fecha_expiracion.toISOString()
+          );
+          
+          await prisma.acceso.create({
+            data: {
+              id_usuario: idUsuario,
+              id_visitante: idVisitante,
+              codigo_qr: codigoQr,
+              fecha_creacion: inicio,
+              fecha_expiracion: fin,
+              estatus: 'Activo',
+            },
+          });
+        }
+
+        return {
+          success: true,
+          message: 'Información del visitante actualizada con éxito.',
+        };
+      });
+    } catch (error) {
+      console.error('Error actualizando visitante:', error);
+      throw new InternalServerErrorException('Error técnico al procesar la actualización en la base de datos.');
+    }
   }
 
   remove(id: number) {

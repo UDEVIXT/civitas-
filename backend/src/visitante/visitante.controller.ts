@@ -17,6 +17,7 @@ import {
 import { VisitanteService } from './visitante.service';
 import { CreateVisitanteDto } from './dto/create-visitante.dto';
 import { UpdateVisitanteDto } from './dto/update-visitante.dto';
+import { UpdateEstadoQrDto } from './dto/update-estado-qr.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import 'multer';
 import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
@@ -108,17 +109,50 @@ export class VisitanteController {
     return this.visitanteService.findAllByResidente(req.user.userId);
   }
 
+  @Patch(':idVisitante/qr-estado')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Residente')
+  actualizarEstadoQr(
+    @Param('idVisitante') idVisitante: string,
+    @Req() req: AuthenticatedRequest,
+    @Body() updateEstadoQrDto: UpdateEstadoQrDto,
+  ) {
+    return this.visitanteService.actualizarEstadoQrFrecuente(
+      idVisitante,
+      req.user.userId,
+      updateEstadoQrDto,
+    );
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.visitanteService.findOne(+id);
   }
 
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
+  @Patch(':idVisitante')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Residente')
+  @UseInterceptors(FileInterceptor('foto_visitante'))
+  async update(
+    @Param('idVisitante') idVisitante: string,
+    @Req() req: AuthenticatedRequest,
     @Body() updateVisitanteDto: UpdateVisitanteDto,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 10 }), // 10MB
+          new FileTypeValidator({ fileType: '.(png|jpeg|jpg)' }),
+        ],
+        fileIsRequired: false,
+      }),
+    ) file?: Express.Multer.File,
   ) {
-    return this.visitanteService.update(+id, updateVisitanteDto);
+    return this.visitanteService.update(
+      idVisitante, 
+      req.user.userId, 
+      updateVisitanteDto, 
+      file
+    );
   }
 
   @Delete(':id')

@@ -3,6 +3,7 @@ Aquí definimos cómo se estructuran los visitantes basándonos en el diseño de
 */
 
 export type EstatusVisitante = "Activo" | "Expirado" | "Inactivo" | "Cancelado";
+export type AccionQrVisitante = "habilitar" | "deshabilitar";
 
 // CA002: Tipos de visitante
 export type TipoVisitante =

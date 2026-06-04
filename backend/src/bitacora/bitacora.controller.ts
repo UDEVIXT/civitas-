@@ -20,7 +20,7 @@ import { Roles } from 'src/auth/decorators/roles/roles.decorator';
 import { map } from 'rxjs/operators';
 import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
 import { AuthGuard } from '@nestjs/passport';
-
+import { obtenerIdDesdeUrlQr } from '../common/utils/qr-utils';
 interface AuthenticatedRequest extends Request {
   user: {
     userId: string;
@@ -46,8 +46,8 @@ interface RegistrarSalidaDto {
 }
 
 interface DesactivarQrDto {
-  id_acceso: string;
-  motivo: string;  //CA008
+  codigo_qr: string;
+  motivo: string; //CA008
 }
 
 const bitacoraUpdates$ = new Subject<BitacoraSseEvent>();
@@ -289,24 +289,40 @@ export class BitacoraController {
     @Body() dto: DesactivarQrDto,
     @Req() req: AuthenticatedRequest,
   ) {
-    const { id_acceso, motivo } = dto;
-    const id_usuario = req.user.userId; // El ID de usuario del guardia que escanea
+    const { codigo_qr, motivo } = dto;
+    const id_usuario = req.user.userId;
 
-    if (!id_acceso) {
+    if (!codigo_qr) {
       throw new BadRequestException(
-        'El ID de acceso es requerido para desactivar el QR.', //CA004
+        'El código QR es requerido para desactivarlo.',
       );
     }
-    const resultado = await this.bitacoraService.desactivarQr(
-      id_acceso,
-      id_usuario,
-      motivo,
-    );
 
-    return {
-      success: true,
-      message: 'El código QR ha sido desactivado e historiado correctamente.',
-      data: resultado,
-    };
+    try {
+      let idLimpioQr = codigo_qr;
+
+      // Si parece una URL, intentamos extraer el ID; si no, asumimos que es el UUID directo.
+      if (codigo_qr.startsWith('http') || codigo_qr.includes('%3A%2F%2F')) {
+        idLimpioQr = await obtenerIdDesdeUrlQr(codigo_qr);
+      }
+
+      //console.log(`Recibida solicitud para desactivar QR Real: ${idLimpioQr} con motivo: ${motivo}`);
+
+      const resultado = await this.bitacoraService.desactivarQr(
+        idLimpioQr,
+        id_usuario,
+        motivo,
+      );
+
+      return {
+        success: true,
+        message: 'El código QR ha sido desactivado e historiado correctamente.',
+        data: resultado,
+      };
+    } catch (error) {
+      throw new BadRequestException(
+        error || 'No se pudo procesar el QR para su desactivación.',
+      );
+    }
   }
 }
