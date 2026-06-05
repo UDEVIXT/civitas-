@@ -6,6 +6,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateVisitanteDto } from './dto/create-visitante.dto';
 import { UpdateVisitanteDto } from './dto/update-visitante.dto';
@@ -13,6 +14,46 @@ import { UpdateEstadoQrDto } from './dto/update-estado-qr.dto';
 import 'multer';
 import { ArchivosService } from '../r2-module/archivos.service';
 import { randomBytes } from 'crypto';
+
+type AccesoLigero = {
+  id_acceso: string;
+  codigo_qr: string | null;
+  fecha_creacion: Date;
+  fecha_visita_programada: Date | null;
+  fecha_salida_programada: Date | null;
+  fecha_expiracion: Date;
+  estatus: 'Activo' | 'Inactivo';
+};
+
+type VisitanteConAccesos = {
+  id_visitante: string;
+  nombre: string;
+  tipo_visitante?: string | null;
+  motivo?: string | null;
+  telefono: string | null;
+  tipo_vehiculo: string | null;
+  es_frecuente: boolean;
+  url_imagen: string | null;
+  notas_adicionales: string | null;
+  residente: { id_usuario: string; vivienda: { numero_vivienda: string } };
+  accesos: AccesoLigero[];
+};
+
+type VisitanteListadoConAccesos = Omit<VisitanteConAccesos, 'residente'>;
+
+type AccesoDetalle = AccesoLigero & {
+  id_visitante: string | null;
+  visitante: {
+    nombre: string;
+    telefono: string | null;
+    tipo_visitante?: string | null;
+    motivo?: string | null;
+    tipo_vehiculo: string | null;
+    es_frecuente: boolean;
+    url_imagen: string | null;
+    residente: { vivienda: { numero_vivienda: string } };
+  };
+};
 
 @Injectable()
 export class VisitanteService {
@@ -25,7 +66,9 @@ export class VisitanteService {
     return `qr_${randomBytes(32).toString('base64url')}`;
   }
 
-  private async generarCodigoQrUnico(prisma: any = this.prisma) {
+  private async generarCodigoQrUnico(
+    prisma: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
     for (let intento = 0; intento < 5; intento += 1) {
       const codigoQr = this.generarTokenQr();
       const existe = await prisma.acceso.findUnique({
@@ -63,6 +106,38 @@ export class VisitanteService {
     return { inicio, fin };
   }
 
+  private formatearFechaLocal(fecha?: Date | string | null) {
+    if (!fecha) return '';
+
+    const date = new Date(fecha);
+    if (Number.isNaN(date.getTime())) return '';
+
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Mexico_City',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+
+    return formatter.format(date);
+  }
+
+  private formatearHoraLocal(fecha?: Date | string | null) {
+    if (!fecha) return '';
+
+    const date = new Date(fecha);
+    if (Number.isNaN(date.getTime())) return '';
+
+    const formatter = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'America/Mexico_City',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+
+    return formatter.format(date);
+  }
+
   private calcularEstadoQr(acceso: {
     codigo_qr: string | null;
     fecha_expiracion: Date;
@@ -80,6 +155,22 @@ export class VisitanteService {
   ) {
     const dataVisitante = createVisitanteDto;
 
+    // Normalize incoming date/time: prefer `fecha_inicio`; if absent, combine `fecha_visita` + `hora_estimada`
+    let fechaInicioDate: Date | null = null;
+    if (dataVisitante.fecha_inicio) {
+      fechaInicioDate = new Date(dataVisitante.fecha_inicio);
+    } else if (dataVisitante.fecha_visita && dataVisitante.hora_estimada) {
+      // Combine local date + time into a single Date (interpreted as local time)
+      const combined = `${dataVisitante.fecha_visita}T${dataVisitante.hora_estimada}`;
+      fechaInicioDate = new Date(combined);
+    }
+
+    if (!fechaInicioDate || Number.isNaN(fechaInicioDate.getTime())) {
+      throw new BadRequestException(
+        'La fecha de inicio de la visita es requerida y debe ser válida.',
+      );
+    }
+
     //Obtenemos el ID del residente asociado al usuario que hace la petición
     const residente = await this.prisma.residente.findFirst({
       where: { id_usuario: id_usuario },
@@ -91,8 +182,9 @@ export class VisitanteService {
     }
 
     //Validamos si fecha_fin es undefined, entonces será igual a la fecha de inicio (acceso de una sola ocasión)
-    const fechaExpiracion =
-      dataVisitante.fecha_fin || dataVisitante.fecha_inicio;
+    const fechaExpiracion = dataVisitante.fecha_fin
+      ? new Date(dataVisitante.fecha_fin)
+      : fechaInicioDate;
 
     //Subimos la imagen a R2 y obtenemos la URL (si se mandó la imagen desde el front)
     const urlImagen = file
@@ -100,50 +192,66 @@ export class VisitanteService {
       : null;
 
     // Registramos al visitante con su primer acceso QR para mostrarlo en el modal de exito.
-    const visitante = await this.prisma.$transaction(async (prisma) => {
-      try {
-        const codigoQr = await this.generarCodigoQrUnico(prisma);
-        const visitante = await prisma.visitante.create({
-          data: {
-            nombre: dataVisitante.nombre,
-            es_frecuente: dataVisitante.es_frecuente,
-            telefono: dataVisitante.telefono,
-            tipo_vehiculo: dataVisitante.tipo_vehiculo,
-            motivo: dataVisitante.tipo_visitante,
-            url_imagen: urlImagen,
-            residente: {
-              connect: { id_residente: residente.id_residente },
-            },
-            accesos: {
-              create: {
-                id_usuario: id_usuario,
-                estatus: 'Activo',
-                codigo_qr: codigoQr,
-                fecha_creacion: dataVisitante.fecha_inicio,
-                fecha_expiracion: fechaExpiracion,
+    const visitante = await this.prisma.$transaction(
+      async (prisma: Prisma.TransactionClient) => {
+        try {
+          const codigoQr = await this.generarCodigoQrUnico(prisma);
+          const visitante = await prisma.visitante.create({
+            data: {
+              nombre: dataVisitante.nombre,
+              es_frecuente: dataVisitante.es_frecuente,
+              telefono: dataVisitante.telefono,
+              tipo_vehiculo: dataVisitante.tipo_vehiculo,
+              tipo_visitante: dataVisitante.tipo_visitante,
+              motivo: dataVisitante.motivo,
+              notas_adicionales: dataVisitante.notas_adicionales,
+              url_imagen: urlImagen,
+              residente: {
+                connect: { id_residente: residente.id_residente },
+              },
+              accesos: {
+                create: {
+                  id_usuario: id_usuario,
+                  estatus: 'Activo',
+                  codigo_qr: codigoQr,
+                  fecha_creacion: fechaInicioDate,
+                  fecha_visita_programada: fechaInicioDate,
+                  fecha_expiracion: fechaExpiracion,
+                  fecha_salida_programada: fechaExpiracion,
+                },
               },
             },
-          },
-          include: {
-            accesos: {
-              select: {
-                id_acceso: true,
-                codigo_qr: true,
-                fecha_creacion: true,
-                fecha_expiracion: true,
-                estatus: true,
+            include: {
+              accesos: {
+                select: {
+                  id_acceso: true,
+                  codigo_qr: true,
+                  fecha_creacion: true,
+                  fecha_expiracion: true,
+                  estatus: true,
+                },
               },
             },
-          },
-        });
-        return visitante;
-      } catch (error) {
-        console.error('Error creating visitante:', error);
-        throw new InternalServerErrorException('Failed to create visitante');
-      }
-    });
+          });
+          return visitante;
+        } catch (error) {
+          console.error('Error creating visitante:', error);
+          throw new InternalServerErrorException('Failed to create visitante');
+        }
+      },
+    );
 
-    const accesoCreado = visitante.accesos[0];
+    const accesosCreado = visitante.accesos as unknown as Array<{
+      id_acceso: string;
+      fecha_creacion: Date;
+    }>;
+    const accesoCreado = accesosCreado[0];
+
+    if (!accesoCreado) {
+      throw new InternalServerErrorException(
+        'No se pudo recuperar el acceso recién creado.',
+      );
+    }
 
     const bitacoraAcceso = await this.prisma.bitacora.create({
       data: {
@@ -193,7 +301,7 @@ export class VisitanteService {
     idUsuario: string,
     fechas?: { fecha_inicio?: string; fecha_fin?: string },
   ) {
-    const visitante = await this.prisma.visitante.findUnique({
+    const visitante = (await this.prisma.visitante.findUnique({
       where: { id_visitante: idVisitante },
       include: {
         residente: {
@@ -207,7 +315,7 @@ export class VisitanteService {
           take: 1,
         },
       },
-    });
+    })) as VisitanteConAccesos | null;
 
     if (!visitante) {
       throw new NotFoundException('Visitante no encontrado.');
@@ -219,7 +327,9 @@ export class VisitanteService {
 
     const camposFaltantes: string[] = [];
     if (!visitante.nombre) camposFaltantes.push('nombre');
-    if (!visitante.motivo) camposFaltantes.push('tipo de visitante');
+    if (!visitante.tipo_visitante) {
+      camposFaltantes.push('tipo de visitante');
+    }
 
     if (camposFaltantes.length > 0) {
       throw new BadRequestException({
@@ -228,12 +338,16 @@ export class VisitanteService {
       });
     }
 
-    const ultimoAcceso = visitante.accesos[0];
+    const ultimoAcceso = visitante.accesos[0] ?? null;
     const estadoUltimoQr = ultimoAcceso
       ? this.calcularEstadoQr(ultimoAcceso)
       : 'PENDIENTE_GENERACION';
 
     if (ultimoAcceso && estadoUltimoQr === 'ACTIVO') {
+      const origenVisita =
+        ultimoAcceso.fecha_visita_programada ?? ultimoAcceso.fecha_creacion;
+      const origenSalida =
+        ultimoAcceso.fecha_salida_programada ?? ultimoAcceso.fecha_expiracion;
       return {
         success: true,
         message: 'El visitante ya tiene un QR activo.',
@@ -242,54 +356,69 @@ export class VisitanteService {
           id_visitante: visitante.id_visitante,
           codigo_qr: ultimoAcceso.codigo_qr,
           estado_qr: estadoUltimoQr,
-          fecha_visita: ultimoAcceso.fecha_creacion,
-          fecha_expiracion: ultimoAcceso.fecha_expiracion,
+          fecha_visita: this.formatearFechaLocal(origenVisita),
+          hora_estimada: this.formatearHoraLocal(origenVisita),
+          hora_salida: this.formatearHoraLocal(origenSalida),
+          fecha_expiracion: origenSalida,
         },
       };
     }
 
     try {
-      return await this.prisma.$transaction(async (prisma) => {
-        if (ultimoAcceso && estadoUltimoQr === 'EXPIRADO') {
-          await prisma.acceso.update({
-            where: { id_acceso: ultimoAcceso.id_acceso },
-            data: { estatus: 'Inactivo' },
+      return await this.prisma.$transaction(
+        async (prisma: Prisma.TransactionClient) => {
+          if (ultimoAcceso && estadoUltimoQr === 'EXPIRADO') {
+            await prisma.acceso.update({
+              where: { id_acceso: ultimoAcceso.id_acceso },
+              data: { estatus: 'Inactivo' },
+            });
+          }
+
+          const { inicio, fin } = this.obtenerFechasAcceso(
+            fechas?.fecha_inicio,
+            fechas?.fecha_fin,
+          );
+          const codigoQr = await this.generarCodigoQrUnico(prisma);
+          const nuevoAcceso = await prisma.acceso.create({
+            data: {
+              id_usuario: idUsuario,
+              id_visitante: visitante.id_visitante,
+              codigo_qr: codigoQr,
+              fecha_creacion: inicio,
+              fecha_visita_programada: inicio,
+              fecha_expiracion: fin,
+              fecha_salida_programada: fin,
+              estatus: 'Activo',
+            },
+            select: {
+              id_acceso: true,
+              id_visitante: true,
+              codigo_qr: true,
+              fecha_creacion: true,
+              fecha_expiracion: true,
+              estatus: true,
+            },
           });
-        }
 
-        const { inicio, fin } = this.obtenerFechasAcceso(
-          fechas?.fecha_inicio,
-          fechas?.fecha_fin,
-        );
-        const codigoQr = await this.generarCodigoQrUnico(prisma);
-        const nuevoAcceso = await prisma.acceso.create({
-          data: {
-            id_usuario: idUsuario,
-            id_visitante: visitante.id_visitante,
-            codigo_qr: codigoQr,
-            fecha_creacion: inicio,
-            fecha_expiracion: fin,
-            estatus: 'Activo',
-          },
-          select: {
-            id_acceso: true,
-            id_visitante: true,
-            codigo_qr: true,
-            fecha_creacion: true,
-            fecha_expiracion: true,
-            estatus: true,
-          },
-        });
-
-        return {
-          success: true,
-          message: 'QR generado correctamente.',
-          data: {
-            ...nuevoAcceso,
-            estado_qr: this.calcularEstadoQr(nuevoAcceso),
-          },
-        };
-      });
+          return {
+            success: true,
+            message: 'QR generado correctamente.',
+            data: {
+              ...nuevoAcceso,
+              fecha_visita: this.formatearFechaLocal(
+                nuevoAcceso.fecha_creacion,
+              ),
+              hora_estimada: this.formatearHoraLocal(
+                nuevoAcceso.fecha_creacion,
+              ),
+              hora_salida: this.formatearHoraLocal(
+                nuevoAcceso.fecha_expiracion,
+              ),
+              estado_qr: this.calcularEstadoQr(nuevoAcceso),
+            },
+          };
+        },
+      );
     } catch (error) {
       if (error instanceof InternalServerErrorException) throw error;
       if (
@@ -342,6 +471,12 @@ export class VisitanteService {
       });
     }
 
+    const accesoDetalle = acceso as AccesoDetalle;
+    const origenVisita =
+      accesoDetalle.fecha_visita_programada ?? accesoDetalle.fecha_creacion;
+    const origenSalida =
+      accesoDetalle.fecha_salida_programada ?? accesoDetalle.fecha_expiracion;
+
     return {
       success: true,
       data: {
@@ -350,17 +485,20 @@ export class VisitanteService {
         visitante: {
           nombre: acceso.visitante.nombre,
           telefono: acceso.visitante.telefono,
-          tipo_visitante: acceso.visitante.motivo,
-          tipo_vehiculo: acceso.visitante.tipo_vehiculo,
-          es_frecuente: acceso.visitante.es_frecuente,
-          url_imagen: acceso.visitante.url_imagen,
+          tipo_visitante: accesoDetalle.visitante.tipo_visitante,
+          motivo: accesoDetalle.visitante.motivo,
+          tipo_vehiculo: accesoDetalle.visitante.tipo_vehiculo,
+          es_frecuente: accesoDetalle.visitante.es_frecuente,
+          url_imagen: accesoDetalle.visitante.url_imagen,
         },
-        vivienda: acceso.visitante.residente.vivienda.numero_vivienda,
-        codigo_qr: acceso.codigo_qr,
+        vivienda: accesoDetalle.visitante.residente.vivienda.numero_vivienda,
+        codigo_qr: accesoDetalle.codigo_qr,
         estado_qr: estadoQr,
-        fecha_visita: acceso.fecha_creacion,
-        fecha_expiracion: acceso.fecha_expiracion,
-        estatus: estadoQr === 'EXPIRADO' ? 'Inactivo' : acceso.estatus,
+        fecha_visita: this.formatearFechaLocal(origenVisita),
+        hora_estimada: this.formatearHoraLocal(origenVisita),
+        hora_salida: this.formatearHoraLocal(origenSalida),
+        fecha_expiracion: origenSalida,
+        estatus: estadoQr === 'EXPIRADO' ? 'Inactivo' : accesoDetalle.estatus,
       },
     };
   }
@@ -385,28 +523,37 @@ export class VisitanteService {
       throw new NotFoundException('QR no encontrado.');
     }
 
-    const estadoQr = this.calcularEstadoQr(acceso);
-    if (estadoQr === 'EXPIRADO' && acceso.estatus !== 'Inactivo') {
+    const accesoDetalle = acceso as AccesoDetalle;
+    const estadoQr = this.calcularEstadoQr(accesoDetalle);
+    if (estadoQr === 'EXPIRADO' && accesoDetalle.estatus !== 'Inactivo') {
       await this.prisma.acceso.update({
-        where: { id_acceso: acceso.id_acceso },
+        where: { id_acceso: accesoDetalle.id_acceso },
         data: { estatus: 'Inactivo' },
       });
     }
+
+    const origenVisita =
+      accesoDetalle.fecha_visita_programada ?? accesoDetalle.fecha_creacion;
+    const origenSalida =
+      accesoDetalle.fecha_salida_programada ?? accesoDetalle.fecha_expiracion;
 
     return {
       success: true,
       data: {
         valido: estadoQr === 'ACTIVO',
         estado_qr: estadoQr,
-        id_acceso: acceso.id_acceso,
-        id_visitante: acceso.id_visitante,
+        id_acceso: accesoDetalle.id_acceso,
+        id_visitante: accesoDetalle.id_visitante,
         visitante: {
-          nombre: acceso.visitante.nombre,
-          tipo_visitante: acceso.visitante.motivo,
+          nombre: accesoDetalle.visitante.nombre,
+          tipo_visitante: accesoDetalle.visitante.tipo_visitante,
+          motivo: accesoDetalle.visitante.motivo,
         },
-        vivienda: acceso.visitante.residente.vivienda.numero_vivienda,
-        fecha_visita: acceso.fecha_creacion,
-        fecha_expiracion: acceso.fecha_expiracion,
+        vivienda: accesoDetalle.visitante.residente.vivienda.numero_vivienda,
+        fecha_visita: this.formatearFechaLocal(origenVisita),
+        hora_estimada: this.formatearHoraLocal(origenVisita),
+        hora_salida: this.formatearHoraLocal(origenSalida),
+        fecha_expiracion: origenSalida,
       },
     };
   }
@@ -430,7 +577,7 @@ export class VisitanteService {
       data: { estatus: 'Inactivo' },
     });
 
-    const visitantes = await this.prisma.visitante.findMany({
+    const visitantes = (await this.prisma.visitante.findMany({
       where: { id_residente: residente.id_residente },
       include: {
         accesos: {
@@ -438,7 +585,9 @@ export class VisitanteService {
             id_acceso: true,
             codigo_qr: true,
             fecha_creacion: true,
+            fecha_visita_programada: true,
             fecha_expiracion: true,
+            fecha_salida_programada: true,
             estatus: true,
           },
           orderBy: { fecha_creacion: 'desc' },
@@ -446,16 +595,28 @@ export class VisitanteService {
         },
       },
       orderBy: { id_visitante: 'desc' },
-    });
+    })) as VisitanteListadoConAccesos[];
 
     return visitantes.map((visitante) => {
-      const ultimoAcceso = visitante.accesos[0];
+      const ultimoAcceso = visitante.accesos[0] ?? null;
       const estado_qr = ultimoAcceso
         ? this.calcularEstadoQr(ultimoAcceso)
         : 'PENDIENTE_GENERACION';
+      const origenVisita = ultimoAcceso
+        ? (ultimoAcceso.fecha_visita_programada ?? ultimoAcceso.fecha_creacion)
+        : undefined;
+      const salidaProgramada = ultimoAcceso?.fecha_salida_programada;
+      const expiracionAcceso = ultimoAcceso?.fecha_expiracion;
+      const origenSalida = salidaProgramada ?? expiracionAcceso;
+      const fecha_visita = this.formatearFechaLocal(origenVisita);
+      const hora_estimada = this.formatearHoraLocal(origenVisita);
+      const hora_salida = this.formatearHoraLocal(origenSalida);
 
       return {
         ...visitante,
+        fecha_visita,
+        hora_estimada,
+        hora_salida,
         estado_qr,
         puede_generar_qr: estado_qr !== 'ACTIVO',
       };
@@ -476,7 +637,7 @@ export class VisitanteService {
       );
     }
 
-    const visitante = await this.prisma.visitante.findUnique({
+    const visitante = (await this.prisma.visitante.findUnique({
       where: { id_visitante: idVisitante },
       include: {
         residente: { select: { id_usuario: true } },
@@ -485,16 +646,14 @@ export class VisitanteService {
           take: 1,
         },
       },
-    });
+    })) as (VisitanteConAccesos & { residente: { id_usuario: string } }) | null;
 
     if (!visitante) {
       throw new NotFoundException('Visitante no encontrado.');
     }
 
     if (visitante.residente.id_usuario !== idUsuario) {
-      throw new ForbiddenException(
-        'No tienes permiso para modificar este QR.',
-      );
+      throw new ForbiddenException('No tienes permiso para modificar este QR.');
     }
 
     if (!visitante.es_frecuente) {
@@ -544,31 +703,40 @@ export class VisitanteService {
           ? 'QR habilitado por el residente.'
           : 'QR deshabilitado por el residente.');
 
-      const resultado = await this.prisma.$transaction(async (prisma) => {
-        const accesoActualizado = await prisma.acceso.update({
-          where: { id_acceso: acceso.id_acceso },
-          data: { estatus },
-          select: {
-            id_acceso: true,
-            id_visitante: true,
-            codigo_qr: true,
-            fecha_creacion: true,
-            fecha_expiracion: true,
-            estatus: true,
-          },
-        });
+      const resultado = await this.prisma.$transaction(
+        async (prisma: Prisma.TransactionClient) => {
+          const accesoActualizado = await prisma.acceso.update({
+            where: { id_acceso: acceso.id_acceso },
+            data: { estatus },
+            select: {
+              id_acceso: true,
+              id_visitante: true,
+              codigo_qr: true,
+              fecha_creacion: true,
+              fecha_expiracion: true,
+              estatus: true,
+            },
+          });
 
-        await prisma.bitacoraQrVisitante.create({
-          data: {
-            id_acceso: acceso.id_acceso,
-            id_usuario: idUsuario,
-            accion: accionBitacora,
-            motivo: motivoBitacora,
-          },
-        });
+          await prisma.$executeRaw`
+            INSERT INTO "BitacoraQrVisitante" (
+              "id_bitacora_qr",
+              "id_acceso",
+              "id_usuario",
+              "accion",
+              "motivo"
+            ) VALUES (
+              ${randomBytes(16).toString('hex')},
+              ${acceso.id_acceso},
+              ${idUsuario},
+              ${accionBitacora},
+              ${motivoBitacora}
+            )
+          `;
 
-        return accesoActualizado;
-      });
+          return accesoActualizado;
+        },
+      );
 
       return {
         success: true,
@@ -610,7 +778,7 @@ export class VisitanteService {
     file?: Express.Multer.File,
   ) {
     // 1. Validación de Propiedad (NTH002)
-    const visitante = await this.prisma.visitante.findUnique({
+    const visitante = (await this.prisma.visitante.findUnique({
       where: { id_visitante: idVisitante },
       include: {
         residente: { select: { id_usuario: true } },
@@ -619,130 +787,217 @@ export class VisitanteService {
           take: 1,
         },
       },
-    });
+    })) as (VisitanteConAccesos & { residente: { id_usuario: string } }) | null;
 
     if (!visitante) {
       throw new NotFoundException('Visitante no encontrado.');
     }
 
     if (visitante.residente.id_usuario !== idUsuario) {
-      throw new ForbiddenException('No tienes permiso para editar este registro.');
+      throw new ForbiddenException(
+        'No tienes permiso para editar este registro.',
+      );
     }
 
-    const accesoActual = visitante.accesos[0];
+    const accesoActual = visitante.accesos[0] ?? null;
 
     // 2. Límites de tiempo (CA003 y NTH001)
     const ahora = new Date();
     let esPasadoLaLlegada = false;
 
     if (accesoActual) {
-      const horaLlegada = new Date(accesoActual.fecha_creacion);
+      const horaLlegada = new Date(
+        accesoActual.fecha_visita_programada ?? accesoActual.fecha_creacion,
+      );
       if (ahora >= horaLlegada) {
         esPasadoLaLlegada = true;
       }
     }
 
     if (esPasadoLaLlegada) {
-      const keys = Object.keys(dto).filter((k) => dto[k] !== undefined && dto[k] !== null && dto[k] !== '');
+      const keys = Object.keys(dto).filter(
+        (k) => dto[k] !== undefined && dto[k] !== null && dto[k] !== '',
+      );
       // Permitimos modificar 'fecha_fin' u otros campos específicos de salida
-      const intentaEditarNoPermitido = keys.some((k) => k !== 'fecha_fin') || !!file;
-      
+      const intentaEditarNoPermitido =
+        keys.some((k) => k !== 'fecha_fin') || !!file;
+
       if (intentaEditarNoPermitido) {
-        throw new BadRequestException('La visita ya está en curso o la hora de llegada ha pasado. Solo está permitida la modificación de la hora de salida.');
+        throw new BadRequestException(
+          'La visita ya está en curso o la hora de llegada ha pasado. Solo está permitida la modificación de la hora de salida.',
+        );
       }
     }
 
     // 3. Detección de Cambios y Aborto Temprano (CA008)
-    const { fecha_inicio, fecha_fin, nombre, tipo_visitante, tipo_vehiculo, telefono, es_frecuente } = dto;
+    const {
+      fecha_inicio,
+      fecha_fin,
+      nombre,
+      tipo_visitante,
+      tipo_vehiculo,
+      telefono,
+      es_frecuente,
+      notas_adicionales,
+    } = dto;
     let hayCambiosDatos = false;
     let hayCambiosFechas = false;
 
-    if (nombre !== undefined && nombre !== visitante.nombre) hayCambiosDatos = true;
-    if (tipo_visitante !== undefined && tipo_visitante !== visitante.motivo) hayCambiosDatos = true;
-    if (tipo_vehiculo !== undefined && tipo_vehiculo !== visitante.tipo_vehiculo) hayCambiosDatos = true;
-    if (telefono !== undefined && telefono !== visitante.telefono) hayCambiosDatos = true;
-    if (es_frecuente !== undefined && es_frecuente !== visitante.es_frecuente) hayCambiosDatos = true;
+    if (nombre !== undefined && nombre !== visitante.nombre) {
+      hayCambiosDatos = true;
+    }
+    if (
+      tipo_visitante !== undefined &&
+      tipo_visitante !== visitante.tipo_visitante
+    ) {
+      hayCambiosDatos = true;
+    }
+    if (
+      tipo_vehiculo !== undefined &&
+      tipo_vehiculo !== visitante.tipo_vehiculo
+    ) {
+      hayCambiosDatos = true;
+    }
+    if (telefono !== undefined && telefono !== visitante.telefono) {
+      hayCambiosDatos = true;
+    }
+    if (es_frecuente !== undefined && es_frecuente !== visitante.es_frecuente) {
+      hayCambiosDatos = true;
+    }
+    if (
+      notas_adicionales !== undefined &&
+      notas_adicionales !== visitante.notas_adicionales
+    ) {
+      hayCambiosDatos = true;
+    }
 
     if (accesoActual) {
-      if (fecha_inicio && new Date(fecha_inicio).getTime() !== new Date(accesoActual.fecha_creacion).getTime()) hayCambiosFechas = true;
-      if (fecha_fin && new Date(fecha_fin).getTime() !== new Date(accesoActual.fecha_expiracion).getTime()) hayCambiosFechas = true;
+      if (
+        fecha_inicio &&
+        new Date(fecha_inicio).getTime() !==
+          new Date(accesoActual.fecha_creacion).getTime()
+      ) {
+        hayCambiosFechas = true;
+      }
+      if (
+        fecha_fin &&
+        new Date(fecha_fin).getTime() !==
+          new Date(accesoActual.fecha_expiracion).getTime()
+      ) {
+        hayCambiosFechas = true;
+      }
     }
 
     if (!hayCambiosDatos && !hayCambiosFechas && !file) {
-      return { success: true, message: 'Operación omitida: No se detectaron modificaciones en los campos.' };
+      return {
+        success: true,
+        message:
+          'Operación omitida: No se detectaron modificaciones en los campos.',
+      };
     }
 
     // 4. Procesamiento de Archivos Multimedia
     let nuevaUrlImagen = visitante.url_imagen;
     if (file) {
-      nuevaUrlImagen = await this.archivosService.subirImagen(file, 'visitantes');
+      nuevaUrlImagen = await this.archivosService.subirImagen(
+        file,
+        'visitantes',
+      );
     }
 
     // 5. Transacción Atómica (CA005, CA006, CA007)
     try {
-      const requiereNuevoQr = hayCambiosFechas || (nombre !== undefined && nombre !== visitante.nombre) || (tipo_visitante !== undefined && tipo_visitante !== visitante.motivo);
+      const requiereNuevoQr =
+        hayCambiosFechas ||
+        (nombre !== undefined && nombre !== visitante.nombre) ||
+        (tipo_visitante !== undefined &&
+          tipo_visitante !== visitante.tipo_visitante);
 
-      return await this.prisma.$transaction(async (prisma) => {
-        // Actualización de registro base
-        await prisma.visitante.update({
-          where: { id_visitante: idVisitante },
-          data: {
-            ...(nombre !== undefined && { nombre }),
-            ...(tipo_visitante !== undefined && { motivo: tipo_visitante }),
-            ...(tipo_vehiculo !== undefined && { tipo_vehiculo }),
-            ...(telefono !== undefined && { telefono }),
-            ...(es_frecuente !== undefined && { es_frecuente }),
-            ...(file && { url_imagen: nuevaUrlImagen }),
-          },
-        });
-
-        // Actualización de la ventana de acceso
-        if (hayCambiosFechas && accesoActual) {
-          const nuevaCreacion = fecha_inicio ? new Date(fecha_inicio) : accesoActual.fecha_creacion;
-          const nuevaExpiracion = fecha_fin ? new Date(fecha_fin) : accesoActual.fecha_expiracion;
-          
-          await prisma.acceso.update({
-            where: { id_acceso: accesoActual.id_acceso },
+      return await this.prisma.$transaction(
+        async (prisma: Prisma.TransactionClient) => {
+          // Actualización de registro base
+          await prisma.visitante.update({
+            where: { id_visitante: idVisitante },
             data: {
-              fecha_creacion: nuevaCreacion,
-              fecha_expiracion: nuevaExpiracion,
+              ...(nombre !== undefined && { nombre }),
+              ...(tipo_visitante !== undefined && { tipo_visitante }),
+              ...(tipo_vehiculo !== undefined && { tipo_vehiculo }),
+              ...(telefono !== undefined && { telefono }),
+              ...(es_frecuente !== undefined && { es_frecuente }),
+              ...(notas_adicionales !== undefined && { notas_adicionales }),
+              ...(file && { url_imagen: nuevaUrlImagen }),
             },
           });
-        }
 
-        // Invalidación y regeneración de llaves criptográficas (CA007)
-        if (requiereNuevoQr && accesoActual && accesoActual.codigo_qr) {
-          await prisma.acceso.update({
-            where: { id_acceso: accesoActual.id_acceso },
-            data: { estatus: 'Inactivo' },
-          });
+          // Actualización de la ventana de acceso
+          if (hayCambiosFechas && accesoActual) {
+            const origenInicio =
+              accesoActual.fecha_visita_programada ??
+              accesoActual.fecha_creacion;
+            const origenFin =
+              accesoActual.fecha_salida_programada ??
+              accesoActual.fecha_expiracion;
 
-          const codigoQr = await this.generarCodigoQrUnico(prisma);
-          const { inicio, fin } = this.obtenerFechasAcceso(
-            fecha_inicio || accesoActual.fecha_creacion.toISOString(),
-            fecha_fin || accesoActual.fecha_expiracion.toISOString()
-          );
-          
-          await prisma.acceso.create({
-            data: {
-              id_usuario: idUsuario,
-              id_visitante: idVisitante,
-              codigo_qr: codigoQr,
-              fecha_creacion: inicio,
-              fecha_expiracion: fin,
-              estatus: 'Activo',
-            },
-          });
-        }
+            const nuevaCreacion = fecha_inicio
+              ? new Date(fecha_inicio)
+              : origenInicio;
+            const nuevaExpiracion = fecha_fin ? new Date(fecha_fin) : origenFin;
 
-        return {
-          success: true,
-          message: 'Información del visitante actualizada con éxito.',
-        };
-      });
+            await prisma.acceso.update({
+              where: { id_acceso: accesoActual.id_acceso },
+              data: {
+                fecha_creacion: nuevaCreacion,
+                fecha_visita_programada: nuevaCreacion,
+                fecha_expiracion: nuevaExpiracion,
+                fecha_salida_programada: nuevaExpiracion,
+              },
+            });
+          }
+
+          // Invalidación y regeneración de llaves criptográficas (CA007)
+          if (requiereNuevoQr && accesoActual && accesoActual.codigo_qr) {
+            await prisma.acceso.update({
+              where: { id_acceso: accesoActual.id_acceso },
+              data: { estatus: 'Inactivo' },
+            });
+
+            const codigoQr = await this.generarCodigoQrUnico(prisma);
+            const origenInicio =
+              accesoActual.fecha_visita_programada ??
+              accesoActual.fecha_creacion;
+            const origenFin =
+              accesoActual.fecha_salida_programada ??
+              accesoActual.fecha_expiracion;
+            const { inicio, fin } = this.obtenerFechasAcceso(
+              fecha_inicio || origenInicio,
+              fecha_fin || origenFin,
+            );
+
+            await prisma.acceso.create({
+              data: {
+                id_usuario: idUsuario,
+                id_visitante: idVisitante,
+                codigo_qr: codigoQr,
+                fecha_creacion: inicio,
+                fecha_visita_programada: inicio,
+                fecha_expiracion: fin,
+                fecha_salida_programada: fin,
+                estatus: 'Activo',
+              },
+            });
+          }
+
+          return {
+            success: true,
+            message: 'Información del visitante actualizada con éxito.',
+          };
+        },
+      );
     } catch (error) {
       console.error('Error actualizando visitante:', error);
-      throw new InternalServerErrorException('Error técnico al procesar la actualización en la base de datos.');
+      throw new InternalServerErrorException(
+        'Error técnico al procesar la actualización en la base de datos.',
+      );
     }
   }
 

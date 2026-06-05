@@ -34,14 +34,21 @@ interface BackendAcceso {
   id_acceso: string;
   codigo_qr: string | null;
   fecha_creacion: string;
+  fecha_visita_programada?: string | null;
   fecha_expiracion: string;
+  fecha_salida_programada?: string | null;
   estatus: BackendEstatusAcceso;
 }
 
 interface BackendVisitante {
   id_visitante: string;
   nombre: string;
+  tipo_visitante?: string | null;
   motivo?: string | null;
+  fecha_visita?: string | null;
+  hora_estimada?: string | null;
+  hora_salida?: string | null;
+  notas_adicionales?: string | null;
   telefono?: string | null;
   es_frecuente: boolean;
   url_imagen?: string | null;
@@ -70,27 +77,41 @@ function getEstatusVisitante(
   return "Activo" as const;
 }
 
+function getFechaSinZonaHoraria(value?: string | null) {
+  if (!value) return "";
+  return value.includes("T") ? value.split("T")[0] : value;
+}
+
+function getHoraSinZonaHoraria(value?: string | null) {
+  if (!value) return "";
+  const tiempo = value.includes("T") ? value.split("T")[1] : value;
+  return tiempo.slice(0, 5);
+}
+
 function mapVisitanteFromBackend(v: BackendVisitante): Visitante {
   const ultimoAcceso = v.accesos?.[0];
   const estatus = getEstatusVisitante(ultimoAcceso, v.estado_qr);
+  const fechaVisita =
+    v.fecha_visita ??
+    getFechaSinZonaHoraria(ultimoAcceso?.fecha_visita_programada ?? ultimoAcceso?.fecha_creacion);
+  const horaEstimada =
+    v.hora_estimada ??
+    getHoraSinZonaHoraria(ultimoAcceso?.fecha_visita_programada ?? ultimoAcceso?.fecha_creacion);
+  const horaSalida =
+    v.hora_salida ??
+    getHoraSinZonaHoraria(ultimoAcceso?.fecha_salida_programada ?? ultimoAcceso?.fecha_expiracion);
 
   return {
     id_visitante: v.id_visitante,
     nombre_completo: v.nombre,
     motivo_visita: v.motivo || "Visita",
-    tipo_visitante: (v.motivo || "Otro") as Visitante["tipo_visitante"],
+    notas_adicionales: v.notas_adicionales || "",
+    tipo_visitante: ((v.tipo_visitante || v.motivo || "Otro") as Visitante["tipo_visitante"]),
     telefono: v.telefono || "",
-    fecha_visita: ultimoAcceso?.fecha_creacion
-      ? new Date(ultimoAcceso.fecha_creacion).toISOString().split("T")[0]
-      : "",
+    fecha_visita: fechaVisita,
     fecha_expiracion: ultimoAcceso?.fecha_expiracion,
-    hora_estimada: ultimoAcceso?.fecha_creacion
-      ? new Date(ultimoAcceso.fecha_creacion).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        })
-      : "",
+    hora_estimada: horaEstimada,
+    hora_salida: horaSalida,
     es_frecuente: v.es_frecuente,
     estatus,
     id_acceso: ultimoAcceso?.id_acceso,
@@ -165,29 +186,22 @@ export default function MisVisitantesPage() {
     return () => window.clearInterval(intervalId);
   }, []);
 
-  const handleSaveVisitante = async (values: VisitanteFormValues) => {
+  const handleSaveVisitante = async (values: Partial<VisitanteFormValues>) => {
     setIsSaving(true);
     try {
       if (visitanteEditando) {
         // FLUJO DE EDICIÓN (PATCH)
-        const responseBackend = await actualizarVisitante(
-          visitanteEditando.id_visitante,
-          values,
-        );
+        await actualizarVisitante(visitanteEditando.id_visitante, values);
 
-        // El backend devuelve success: true y un mensaje. Si hubo regeneración de QR (CA007),
-        // es recomendable recargar la tabla o actualizar el estado local del visitante.
         setVisitantes((prev) =>
           prev.map((v) =>
             v.id_visitante === visitanteEditando.id_visitante
               ? {
                   ...v,
-                  nombre_completo: values.nombre_completo,
-                  motivo_visita: values.motivo_visita,
-                  telefono: values.telefono,
-                  es_frecuente: values.es_frecuente,
-                  // Nota: Si el backend regeneró el QR, deberías actualizar id_acceso y codigo_acceso aquí
-                  // extrayéndolos de responseBackend.data si el servicio los devuelve.
+                  nombre_completo: values.nombre_completo ?? v.nombre_completo,
+                  motivo_visita: values.motivo_visita ?? v.motivo_visita,
+                  telefono: values.telefono ?? v.telefono,
+                  es_frecuente: values.es_frecuente ?? v.es_frecuente,
                 }
               : v,
           ),
@@ -195,21 +209,30 @@ export default function MisVisitantesPage() {
         toast.success("Información del visitante actualizada con éxito");
       } else {
         // FLUJO DE CREACIÓN (POST) - (Tu código original)
-        const responseBackend = await crearVisitante(values);
-        const ultimoAcceso = responseBackend?.accesos?.[0];
+        const fullValues = values as VisitanteFormValues;
+        const responseBackend = await crearVisitante(fullValues);
+          const ultimoAcceso = responseBackend?.accesos?.[0];
         const codigoQr = ultimoAcceso?.codigo_qr || "";
 
-        const nuevoVisitante: Visitante = {
+          const nuevoVisitante: Visitante = {
           id_visitante:
             responseBackend?.id_visitante || Math.random().toString(),
-          nombre_completo: values.nombre_completo,
-          motivo_visita: values.motivo_visita,
-          tipo_visitante: values.tipo_visitante as Visitante["tipo_visitante"],
-          fecha_visita: values.fecha_visita,
-          hora_estimada: values.hora_estimada,
-          fecha_expiracion: ultimoAcceso?.fecha_expiracion,
-          es_frecuente: values.es_frecuente,
-          telefono: values.telefono,
+          nombre_completo: fullValues.nombre_completo,
+            motivo_visita: fullValues.motivo_visita,
+          tipo_visitante: fullValues.tipo_visitante as Visitante["tipo_visitante"],
+          fecha_visita:
+            getFechaSinZonaHoraria(ultimoAcceso?.fecha_visita_programada ?? ultimoAcceso?.fecha_creacion) ||
+            fullValues.fecha_visita,
+          hora_estimada:
+            getHoraSinZonaHoraria(ultimoAcceso?.fecha_visita_programada ?? ultimoAcceso?.fecha_creacion) ||
+            fullValues.hora_estimada,
+          hora_salida:
+            getHoraSinZonaHoraria(ultimoAcceso?.fecha_salida_programada ?? ultimoAcceso?.fecha_expiracion) ||
+            fullValues.hora_salida,
+          fecha_expiracion:
+            ultimoAcceso?.fecha_salida_programada ?? ultimoAcceso?.fecha_expiracion,
+          es_frecuente: fullValues.es_frecuente,
+          telefono: fullValues.telefono,
           estatus: "Activo",
           id_acceso: ultimoAcceso?.id_acceso,
           codigo_acceso: codigoQr,
@@ -229,19 +252,32 @@ export default function MisVisitantesPage() {
       // Limpieza de estados
       setIsModalOpen(false);
       setVisitanteEditando(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error al guardar en la API:", error);
-      // CA004, CA006, NTH001: Captura de errores de negocio o formato desde el backend
-      const mensaje =
-        error.response?.data?.message ||
-        "Hubo un problema al guardar los datos.";
+      let mensaje = "Hubo un problema al guardar los datos.";
+
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof error.response === "object" &&
+        error.response !== null &&
+        "data" in error.response &&
+        typeof error.response.data === "object" &&
+        error.response.data !== null &&
+        "message" in error.response.data &&
+        typeof error.response.data.message === "string"
+      ) {
+        mensaje = error.response.data.message;
+      }
       toast.error(mensaje);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleEditarClick = () => {
+  const handleEditarClick = (visitante: Visitante) => {
+    setVisitanteEditando(visitante);
     setEditarModalOpen(true);
   };
 
@@ -453,8 +489,15 @@ export default function MisVisitantesPage() {
       )}
 
       <ModalEditarVisitante
+        key={`${visitanteEditando?.id_visitante ?? "edit"}-${editarModalOpen ? "open" : "closed"}`}
         isOpen={editarModalOpen}
-        onClose={() => setEditarModalOpen(false)}
+        visitante={visitanteEditando}
+        onClose={() => {
+          setEditarModalOpen(false);
+          setVisitanteEditando(null);
+        }}
+        onSave={handleSaveVisitante}
+        isSaving={isSaving}
       />
 
       <ModalQR

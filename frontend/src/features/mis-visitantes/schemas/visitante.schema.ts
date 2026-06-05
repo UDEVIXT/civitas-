@@ -7,7 +7,7 @@ import * as z from "zod";
 // Fecha actual para validación de que no agenden en el pasado
 const hoy = new Date().toISOString().split("T")[0];
 
-export const visitanteSchema = z.object({
+const visitanteBaseSchema = z.object({
   nombre_completo: z
     .string()
     .trim()
@@ -16,9 +16,16 @@ export const visitanteSchema = z.object({
 
   telefono: z.string().trim().min(10, "El teléfono debe tener 10 dígitos"),
 
-  tipo_visitante: z.string().min(1, "Selecciona el tipo de visitante"),
+  tipo_visitante: z.enum(
+    ["Visita Personal", "Proveedor", "Familiar", "Servicio", "Otro"],
+    {
+      required_error: "Selecciona el tipo de visitante",
+    },
+  ),
 
   motivo_visita: z.string().trim().min(1, "Especifica el motivo de la visita"),
+
+  notas_adicionales: z.string().trim().optional(),
 
   fecha_visita: z
     .string()
@@ -39,7 +46,9 @@ export const visitanteSchema = z.object({
   foto: z.any().optional(),
 
   es_frecuente: z.boolean(),
-}).superRefine((data, ctx) => {
+});
+
+export const visitanteSchema = visitanteBaseSchema.superRefine((data, ctx) => {
   if (
     data.fecha_visita &&
     data.hora_estimada &&
@@ -54,4 +63,9 @@ export const visitanteSchema = z.object({
   }
 });
 
+export const editarVisitanteSchema = visitanteBaseSchema.omit({
+  vehiculo: true,
+});
+
 export type VisitanteFormValues = z.infer<typeof visitanteSchema>;
+export type EditarVisitanteFormValues = z.infer<typeof editarVisitanteSchema>;

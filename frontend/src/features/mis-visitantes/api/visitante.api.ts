@@ -2,14 +2,52 @@ import apiClient from "@/api/axios";
 import type { VisitanteFormValues } from "../schemas/visitante.schema";
 import type { AccionQrVisitante } from "../types";
 
+function normalizeTime(value: string) {
+  const raw = value.trim();
+
+  const ampmMatch = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)$/i);
+  if (ampmMatch) {
+    let hours = Number(ampmMatch[1]);
+    const minutes = ampmMatch[2];
+    const period = ampmMatch[3].toUpperCase();
+
+    if (period === "PM" && hours < 12) hours += 12;
+    if (period === "AM" && hours === 12) hours = 0;
+
+    return `${String(hours).padStart(2, "0")}:${minutes}`;
+  }
+
+  const h24Match = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (h24Match) {
+    return `${String(Number(h24Match[1])).padStart(2, "0")}:${h24Match[2]}`;
+  }
+
+  return raw;
+}
+
+function buildLocalDateIso(dateValue: string, timeValue: string) {
+  const [year, month, day] = dateValue.split("-").map(Number);
+  const [hours, minutes] = normalizeTime(timeValue).split(":").map(Number);
+
+  const date = new Date(year, month - 1, day, hours, minutes, 0, 0);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new RangeError("invalid date");
+  }
+
+  return date.toISOString();
+}
+
+function normalizePhone(value: string) {
+  return value.replace(/\D/g, "").trim();
+}
+
 export const crearVisitante = async (data: VisitanteFormValues) => {
   // 1. Unimos tu campo de fecha y hora para crear la fecha_inicio en formato ISO
-  const fechaInicio = new Date(`${data.fecha_visita}T${data.hora_estimada}:00`);
-  const fechaInicioISO = fechaInicio.toISOString();
+  const fechaInicioISO = buildLocalDateIso(data.fecha_visita, data.hora_estimada);
 
   // 2. Calculamos la fecha_fin dándole 4 horas de margen a la visita (para el QR)
-  const fechaFin = new Date(`${data.fecha_visita}T${data.hora_salida}:00`);
-  const fechaFinISO = fechaFin.toISOString();
+  const fechaFinISO = buildLocalDateIso(data.fecha_visita, data.hora_salida);
 
   const formDataToSend = new FormData();
 
@@ -19,9 +57,10 @@ export const crearVisitante = async (data: VisitanteFormValues) => {
     fecha_inicio: fechaInicioISO,
     fecha_fin: fechaFinISO,
     tipo_visitante: data.tipo_visitante,
-    telefono: data.telefono,
+    telefono: normalizePhone(data.telefono),
     tipo_vehiculo: data.vehiculo || "Particular",
     motivo: data.motivo_visita,
+    notas_adicionales: data.notas_adicionales,
     es_frecuente: data.es_frecuente,
   };
 
@@ -76,27 +115,32 @@ export const actualizarEstadoQrVisitante = async (
 
 export const actualizarVisitante = async (
   idVisitante: string,
-  data: VisitanteFormValues
+  data: Partial<VisitanteFormValues>
 ) => {
   const formDataToSend = new FormData();
 
   // 1. Reconstrucción de fechas (si aplican)
   if (data.fecha_visita && data.hora_estimada) {
-    const fechaInicio = new Date(`${data.fecha_visita}T${data.hora_estimada}:00`);
-    formDataToSend.append('fecha_inicio', fechaInicio.toISOString());
+    formDataToSend.append(
+      'fecha_inicio',
+      buildLocalDateIso(data.fecha_visita, data.hora_estimada),
+    );
   }
 
   if (data.fecha_visita && data.hora_salida) {
-    const fechaFin = new Date(`${data.fecha_visita}T${data.hora_salida}:00`);
-    formDataToSend.append('fecha_fin', fechaFin.toISOString());
+    formDataToSend.append(
+      'fecha_fin',
+      buildLocalDateIso(data.fecha_visita, data.hora_salida),
+    );
   }
 
   // 2. Empaquetado de datos de texto y booleanos
   if (data.nombre_completo) formDataToSend.append('nombre', data.nombre_completo);
   if (data.tipo_visitante) formDataToSend.append('tipo_visitante', data.tipo_visitante);
-  if (data.telefono) formDataToSend.append('telefono', data.telefono);
+  if (data.telefono) formDataToSend.append('telefono', normalizePhone(data.telefono));
   if (data.vehiculo) formDataToSend.append('tipo_vehiculo', data.vehiculo);
   if (data.motivo_visita) formDataToSend.append('motivo', data.motivo_visita);
+  if (data.notas_adicionales) formDataToSend.append('notas_adicionales', data.notas_adicionales);
   if (data.es_frecuente !== undefined) formDataToSend.append('es_frecuente', String(data.es_frecuente));
 
   // 3. Empaquetado de archivo multimedia
