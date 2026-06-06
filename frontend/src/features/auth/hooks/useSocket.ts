@@ -9,12 +9,12 @@ function getSocketUrl(): string {
   const apiUrl =
     process.env.NEXT_PUBLIC_API_URL ||
     process.env.REACT_APP_API_URL ||
-    "http://localhost:3002/api/";
+    "http://localhost:3001/api/";
   try {
     const url = new URL(apiUrl);
     return url.origin;
   } catch {
-    return "http://localhost:3002";
+    return "http://localhost:3001";
   }
 }
 
