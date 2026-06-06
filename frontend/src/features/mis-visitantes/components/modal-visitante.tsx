@@ -29,6 +29,14 @@ import {
   type VisitanteFormValues,
 } from "../schemas/visitante.schema";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 interface ModalVisitanteProps {
   isOpen: boolean;
   onClose: () => void;
@@ -47,7 +55,7 @@ export function ModalVisitante({
     defaultValues: {
       nombre_completo: "",
       telefono: "",
-      tipo_visitante: "",
+        tipo_visitante: "Otro",
       motivo_visita: "",
       fecha_visita: "",
       hora_estimada: "",
@@ -61,11 +69,12 @@ export function ModalVisitante({
     await onSave(values);
   };
 
-  const hoyStr = new Date().toISOString().split("T")[0];
+  const hoy = new Date();
+  const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] sm:max-w-[500px] p-6 rounded-2xl bg-white border-none shadow-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] sm:max-w-125 p-6 rounded-2xl bg-white border-none shadow-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader className="flex flex-col items-center text-center space-y-3 pb-2">
           <div className="bg-amber-50 text-amber-500 p-3 rounded-full">
             <HelpCircle className="h-6 w-6" />
@@ -226,11 +235,18 @@ export function ModalVisitante({
                     Tipo de visitante:
                   </FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="ej. Familiar, Proveedor en camioneta..."
-                      className="bg-white border-gray-200 focus-visible:ring-amber-500"
-                      {...field}
-                    />
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger className="bg-white border-gray-200 focus-visible:ring-amber-500">
+                          <SelectValue placeholder="Selecciona un tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Visita Personal">Visita Personal</SelectItem>
+                          <SelectItem value="Familiar">Familiar</SelectItem>
+                          <SelectItem value="Proveedor">Proveedor</SelectItem>
+                          <SelectItem value="Servicio">Servicio</SelectItem>
+                          <SelectItem value="Otro">Otro</SelectItem>
+                        </SelectContent>
+                      </Select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -1,12 +1,8 @@
 import {
-  IsArray,
   IsNotEmpty,
   IsOptional,
   IsPhoneNumber,
   IsString,
-  ValidateNested,
-  IsUUID,
-  IsEnum,
   IsBoolean,
 } from 'class-validator';
 
@@ -14,32 +10,46 @@ import { Transform } from 'class-transformer';
 export class CreateVisitanteDto {
   @IsString()
   @IsNotEmpty()
-  nombre: string;
+    nombre!: string;
 
   @IsNotEmpty()
-  @Transform(({ value }) => new Date(value))
-  fecha_inicio: Date;
+  @Transform(({ value }) => new Date(String(value)))
+    fecha_inicio?: Date;
+
+  // Frontend may send separate date + time fields instead of a combined fecha_inicio
+  @IsOptional()
+  @IsString()
+    fecha_visita?: string;
+
+  @IsOptional()
+  @IsString()
+    hora_estimada?: string;
 
   @IsOptional()
   @Transform(({ value }) => {
-    if (value !== undefined) return new Date(value);
+    if (value !== undefined) return new Date(String(value));
+    return undefined;
   })
-  fecha_fin: Date | undefined;
+    fecha_fin?: Date;
 
   @IsNotEmpty()
-  tipo_visitante: string;
+    tipo_visitante!: string;
 
   @IsNotEmpty()
   @IsPhoneNumber('MX')
-  telefono: string;
+    telefono!: string;
 
   @IsNotEmpty()
   @IsString()
-  tipo_vehiculo: string;
+    tipo_vehiculo!: string;
 
   @IsOptional()
   @IsString()
-  motivo: string;
+    motivo?: string;
+
+  @IsOptional()
+  @IsString()
+    notas_adicionales?: string;
 
   @IsBoolean()
   @Transform(({ value }): boolean => {
@@ -47,8 +57,8 @@ export class CreateVisitanteDto {
     if (value === 'false') return false;
     return value;
   })
-  es_frecuente: boolean;
+    es_frecuente!: boolean;
 
   @IsOptional()
-  foto_visitante?: any;
+    foto_visitante?: any;
 }

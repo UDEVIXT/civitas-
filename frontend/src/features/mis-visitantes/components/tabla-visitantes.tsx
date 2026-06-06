@@ -14,7 +14,7 @@ import type { Visitante } from "../types";
 interface TablaVisitantesProps {
   visitantes: Visitante[];
   onCodigoAccesoClick?: (visitante: Visitante) => void;
-  onEditarClick?: () => void;
+  onEditarClick?: (visitante: Visitante) => void;
 }
 
 export function TablaVisitantes({
@@ -29,6 +29,9 @@ export function TablaVisitantes({
           <TableRow>
             <TableHead className="font-semibold text-gray-600 pl-6">
               Nombre
+            </TableHead>
+            <TableHead className="font-semibold text-gray-600">
+              Tipo
             </TableHead>
             <TableHead className="font-semibold text-gray-600">
               Motivo
@@ -65,6 +68,10 @@ export function TablaVisitantes({
                     {visitante.nombre_completo}
                   </span>
                 </div>
+              </TableCell>
+
+              <TableCell className="text-gray-600 text-sm">
+                {visitante.tipo_visitante}
               </TableCell>
 
               <TableCell className="text-gray-600 text-sm">
@@ -123,7 +130,7 @@ export function TablaVisitantes({
                   </button>
                   <button
                     className="p-1.5 hover:text-blue-500 transition-colors"
-                    onClick={onEditarClick}
+                    onClick={() => onEditarClick?.(visitante)}
                   >
                     <Edit2 className="h-4 w-4" />
                   </button>
