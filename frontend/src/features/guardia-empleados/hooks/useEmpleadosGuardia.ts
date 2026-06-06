@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { obtenerEmpleadosGuardia, EmpleadoGuardia } from "../api/empleados-guardia";
 import { FiltrosEmpleadosValues } from "../components/FiltrosEmpleados";
 
@@ -12,8 +12,11 @@ export function useEmpleadosGuardia() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalEmpleados, setTotalEmpleados] = useState(0);
   const [filtros, setFiltrosState] = useState<FiltrosEmpleadosValues>({});
+  const requestIdRef = useRef(0);
 
   const fetchEmpleados = useCallback(async (page: number, search?: string, idVivienda?: string) => {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
     setLoading(true);
     setError(null);
     try {
@@ -23,15 +26,18 @@ export function useEmpleadosGuardia() {
         search: search?.trim() || undefined,
         idVivienda: idVivienda || undefined,
       });
+      if (requestId !== requestIdRef.current) return;
       setEmpleados(result.data);
       setTotalPages(result.meta.total_pages || 1);
       setTotalEmpleados(result.meta.total);
     } catch {
-      setError(
-        "No se pudo cargar la lista de empleados domésticos. Intenta de nuevo."
-      );
+      if (requestId !== requestIdRef.current) return;
+      setError("No se pudo cargar la lista de empleados domésticos. Intenta de nuevo.");
       setEmpleados([]);
+      setTotalEmpleados(0);
+      setTotalPages(1);
     } finally {
+      if (requestId !== requestIdRef.current) return;
       setLoading(false);
     }
   }, []);

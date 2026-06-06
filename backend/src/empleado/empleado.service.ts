@@ -593,6 +593,7 @@ export class EmpleadoService {
             id_visitante: true,
             nombre: true,
             telefono: true,
+            url_imagen: true,
             servicio: {
               select: {
                 id_servicio: true,
@@ -647,6 +648,7 @@ export class EmpleadoService {
           id_visitante: v.id_visitante,
           id_servicio: serv?.id_servicio || null,
           nombre_completo: v.nombre,
+          url_imagen: v.url_imagen || null,
           propiedad_asociada: v.residente?.vivienda?.numero_vivienda || 'Sin asignar',
           id_vivienda: v.residente?.vivienda?.id_vivienda || null,
           residente_asociado: v.residente?.usuario?.persona?.nombre || 'Desconocido',

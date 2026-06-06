@@ -11,7 +11,17 @@ import {
   LogIn,
   UserX,
   Lock,
+  AlertTriangle,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +41,11 @@ type EstadoVis = "ACTIVO" | "INACTIVO" | "BLOQUEADO";
 const DIA_LABELS: Record<string, string> = {
   LUNES: "Lun", MARTES: "Mar", MIERCOLES: "Mié",
   JUEVES: "Jue", VIERNES: "Vie", SABADO: "Sáb", DOMINGO: "Dom",
+};
+
+const DIA_COMPLETO_LABELS: Record<string, string> = {
+  LUNES: "Lunes", MARTES: "Martes", MIERCOLES: "Miércoles",
+  JUEVES: "Jueves", VIERNES: "Viernes", SABADO: "Sábado", DOMINGO: "Domingo",
 };
 
 function getEstado(emp: EmpleadoGuardia): EstadoVis {
@@ -62,6 +77,39 @@ function formatHorario(horarios: string[]): string {
   return horarios[0] ?? "—";
 }
 
+const DIA_HOY: Record<number, string> = {
+  0: "DOMINGO", 1: "LUNES", 2: "MARTES", 3: "MIERCOLES",
+  4: "JUEVES", 5: "VIERNES", 6: "SABADO",
+};
+
+function parseMinutos(hora: string): number {
+  const [h, m] = hora.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function checkHorario(emp: EmpleadoGuardia): { fueraDeHorario: boolean; razon: string } {
+  const now = new Date();
+  const diaHoy = DIA_HOY[now.getDay()];
+  const minutosAhora = now.getHours() * 60 + now.getMinutes();
+
+  if (!emp.dias_autorizados.includes(diaHoy)) {
+    return { fueraDeHorario: true, razon: `${DIA_COMPLETO_LABELS[diaHoy] ?? diaHoy} no es un día autorizado para este empleado.` };
+  }
+
+  if (emp.horarios_autorizados.length > 0) {
+    const dentro = emp.horarios_autorizados.some((h) => {
+      const partes = h.split(" - ");
+      if (partes.length !== 2) return false;
+      return minutosAhora >= parseMinutos(partes[0]) && minutosAhora <= parseMinutos(partes[1]);
+    });
+    if (!dentro) {
+      return { fueraDeHorario: true, razon: `Fuera del horario autorizado: ${emp.horarios_autorizados.join(", ")}.` };
+    }
+  }
+
+  return { fueraDeHorario: false, razon: "" };
+}
+
 const estadoBadge: Record<EstadoVis, { label: string; className: string }> = {
   ACTIVO: { label: "Activo", className: "bg-green-100 text-green-800 hover:bg-green-100 border-0" },
   INACTIVO: { label: "Inactivo", className: "bg-gray-100 text-gray-700 hover:bg-gray-100 border-0" },
@@ -85,6 +133,8 @@ export function EmpleadosDomesticosPage() {
   const [pageInput, setPageInput] = useState(String(currentPage));
   const [pageError, setPageError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [justModal, setJustModal] = useState<EmpleadoGuardia | null>(null);
+  const [justTexto, setJustTexto] = useState("");
 
   useEffect(() => {
     setPageInput(String(currentPage));
@@ -121,7 +171,8 @@ export function EmpleadosDomesticosPage() {
   };
 
   return (
-    <div className="p-6 space-y-5">
+    <>
+    <div className="p-4 sm:p-6 space-y-5">
       <div>
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Empleados domésticos</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -148,12 +199,12 @@ export function EmpleadosDomesticosPage() {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="min-w-45">Empleado</TableHead>
+              <TableHead className="w-[72%] sm:w-auto sm:min-w-45">Empleado</TableHead>
               <TableHead className="hidden sm:table-cell">Propiedad</TableHead>
               <TableHead className="hidden md:table-cell">Tipo</TableHead>
               <TableHead className="hidden md:table-cell">Días autorizados</TableHead>
               <TableHead className="hidden lg:table-cell">Horario</TableHead>
-              <TableHead>Estado</TableHead>
+              <TableHead className="w-[28%] sm:w-auto px-2 sm:px-4">Estado</TableHead>
               <TableHead className="hidden sm:table-cell text-right">Acción</TableHead>
             </TableRow>
           </TableHeader>
@@ -185,6 +236,9 @@ export function EmpleadosDomesticosPage() {
                 const colorAvatar = getColorAvatar(emp.id_visitante);
 
                 const isExpanded = expandedId === emp.id_visitante;
+                const { fueraDeHorario, razon: razonHorario } = !isBloqueado && !isInactivo
+                  ? checkHorario(emp)
+                  : { fueraDeHorario: false, razon: "" };
 
                 return (
                   <React.Fragment key={emp.id_visitante}>
@@ -192,19 +246,35 @@ export function EmpleadosDomesticosPage() {
                     className={`align-top cursor-pointer sm:cursor-default ${isBloqueado ? "bg-red-50 hover:bg-red-100" : ""}`}
                     onClick={() => setExpandedId(isExpanded ? null : emp.id_visitante)}
                   >
-                    <TableCell className="min-w-45">
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={`h-9 w-9 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0 ${colorAvatar}`}
-                        >
-                          {iniciales}
-                        </div>
-                        <div>
+                    <TableCell className="w-[72%] max-w-0 pr-2 sm:w-auto sm:max-w-none sm:min-w-45 sm:pr-4">
+                      <div className="flex items-start gap-2 sm:gap-3">
+                        {emp.url_imagen ? (
+                          <div className={`relative h-9 w-9 rounded-full shrink-0 overflow-hidden ${colorAvatar}`}>
+                            <div className="absolute inset-0 flex items-center justify-center text-white text-xs font-semibold">
+                              {iniciales}
+                            </div>
+                            <img
+                              src={emp.url_imagen}
+                              alt={emp.nombre_completo}
+                              className="absolute inset-0 h-full w-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <div
+                            className={`h-9 w-9 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0 ${colorAvatar}`}
+                          >
+                            {iniciales}
+                          </div>
+                        )}
+                        <div className="min-w-0">
                           <p className="font-medium text-sm leading-tight flex items-center gap-1.5">
                             {isBloqueado && (
                               <Lock className="h-3.5 w-3.5 text-red-600 shrink-0" />
                             )}
-                            {emp.nombre_completo}
+                            <span className="break-words">{emp.nombre_completo}</span>
                           </p>
                           {isBloqueado && (
                             <p className="text-xs font-semibold text-red-600 mt-0.5 flex items-center gap-1">
@@ -239,8 +309,10 @@ export function EmpleadosDomesticosPage() {
                       {formatHorario(emp.horarios_autorizados)}
                     </TableCell>
 
-                    <TableCell>
-                      <Badge className={badge.className}>{badge.label}</Badge>
+                    <TableCell className="w-[28%] sm:w-auto px-2 sm:px-4">
+                      <Badge className={`${badge.className} text-[11px] sm:text-xs px-2`}>
+                        {badge.label}
+                      </Badge>
                     </TableCell>
 
                     <TableCell className="hidden sm:table-cell text-right">
@@ -257,6 +329,15 @@ export function EmpleadosDomesticosPage() {
                         <Button size="sm" disabled variant="outline" className="cursor-not-allowed">
                           <UserX className="h-3.5 w-3.5 mr-1" />
                           Dado de baja
+                        </Button>
+                      ) : fueraDeHorario ? (
+                        <Button
+                          size="sm"
+                          className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                          onClick={() => { setJustModal(emp); setJustTexto(""); }}
+                        >
+                          <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                          Fuera de horario
                         </Button>
                       ) : (
                         <Button
@@ -295,6 +376,15 @@ export function EmpleadosDomesticosPage() {
                               <Button size="sm" disabled variant="outline" className="w-full cursor-not-allowed">
                                 <UserX className="h-3.5 w-3.5 mr-1" />
                                 Dado de baja
+                              </Button>
+                            ) : fueraDeHorario ? (
+                              <Button
+                                size="sm"
+                                className="w-full bg-yellow-500 hover:bg-yellow-600 text-white"
+                                onClick={() => { setJustModal(emp); setJustTexto(""); }}
+                              >
+                                <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                                Fuera de horario
                               </Button>
                             ) : (
                               <Button size="sm" className="w-full bg-amber-500 hover:bg-amber-600 text-white">
@@ -367,5 +457,43 @@ export function EmpleadosDomesticosPage() {
         </div>
       </div>
     </div>
+
+      <Dialog open={!!justModal} onOpenChange={(open) => { if (!open) setJustModal(null); }}>
+        <DialogContent className="sm:max-w-md p-7">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              Acceso fuera de horario
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-2 text-sm pt-2">
+                <p><strong>{justModal?.nombre_completo}</strong> intenta acceder fuera de su horario autorizado.</p>
+                <p className="text-yellow-700 font-medium">{justModal ? checkHorario(justModal).razon : ""}</p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-3">
+            <p className="text-sm font-medium">Justificación del acceso *</p>
+            <Textarea
+              placeholder="Describe el motivo por el que se permite el acceso..."
+              value={justTexto}
+              onChange={(e) => setJustTexto(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setJustModal(null)}>Cancelar</Button>
+            <Button
+              disabled={!justTexto.trim()}
+              className="bg-amber-500 hover:bg-amber-600 text-white"
+              onClick={() => { setJustModal(null); setJustTexto(""); }}
+            >
+              <LogIn className="h-3.5 w-3.5 mr-1" />
+              Confirmar paso
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
