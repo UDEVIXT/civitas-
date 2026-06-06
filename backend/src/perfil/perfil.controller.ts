@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Req, Put, UseGuards, Query } from '@nestjs/common';
+import { Body, Controller, Get, Req, Put, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
 import { Roles } from 'src/auth/decorators/roles/roles.decorator';
@@ -42,29 +42,6 @@ export class PerfilController {
 
     return this.perfilService.cambiarContrasena(id_usuario, body);
   }
- 
-  @Put('cambiar-correo')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Residente', 'Guardia', 'Administrador')
-  async cambiarCorreo(
-    @Req() req: AuthenticatedRequest,
-    @Body() body: { nuevoCorreo: string },
-  ) {
-    const id_usuario = req.user.userId;
-
-    return this.perfilService.solicitarCambioCorreo(
-      id_usuario,
-      body,
-    );
-  }
-
-  @Get('confirmar-correo')
-async confirmarCambioCorreo(
-  @Query('token') token: string,
-) {
-  console.log('TOKEN QUERY:', token);
-
-  return this.perfilService.confirmarCambioCorreo(token);
-}
+  
 }
 

@@ -7,14 +7,10 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdatePerfilDto } from './dto/update-perfil.dto';
 import * as bcrypt from 'bcrypt';
-import { MailerService } from '@nestjs-modules/mailer';
-import * as crypto from 'crypto';
 
 @Injectable()
 export class PerfilService {
-  constructor(
-    private readonly prisma: PrismaService, 
-    private readonly mailerService: MailerService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async obtenerMiPerfil(id_usuario: string) {
     try {
@@ -229,150 +225,6 @@ export class PerfilService {
 
       throw new InternalServerErrorException(
         'Ocurrió un error al cambiar la contraseña.',
-      );
-    }
-  }
-
-  async solicitarCambioCorreo(
-    id_usuario: string,
-    body: { nuevoCorreo: string },
-  ) {
-    try {
-      const { nuevoCorreo } = body;
-
-      const usuario = await this.prisma.usuario.findUnique({
-        where: {
-          id_usuario,
-        },
-      });
-
-      if (!usuario) {
-        throw new NotFoundException(
-          'Usuario no encontrado.',
-        );
-      }
-
-      if (
-        usuario.correo.toLowerCase() ===
-        nuevoCorreo.toLowerCase()
-      ) {
-        throw new BadRequestException(
-          'Debes ingresar un correo diferente al actual.',
-        );
-      }
-
-      const correoExistente =
-        await this.prisma.usuario.findUnique({
-          where: {
-            correo: nuevoCorreo,
-          },
-        });
-
-      if (correoExistente) {
-        throw new BadRequestException(
-          'Ese correo ya está registrado.',
-        );
-      }
-
-      const token = crypto.randomUUID();
-
-      await this.prisma.usuario.update({
-        where: {
-          id_usuario,
-        },
-        data: {
-          correo_pendiente: nuevoCorreo,
-          token_cambio_correo: token,
-        },
-      });
-
-      const url = `http://localhost:3001/perfil/confirmar-correo?token=${token}`;
-
-      await this.mailerService.sendMail({
-        to: nuevoCorreo,
-        subject: 'Confirmación de cambio de correo',
-        template: 'cambio-correo',
-        context: {
-          nombre:
-            usuario.nombre_usuario ??
-            'Usuario',
-          url,
-        },
-      });
-
-      return {
-        success: true,
-        message:
-          'Se envió un correo de confirmación.',
-      };
-    } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof BadRequestException
-      ) {
-        throw error;
-      }
-
-      console.error(
-        'Error en solicitarCambioCorreo:',
-        error,
-      );
-
-      throw new InternalServerErrorException(
-        'Error al solicitar el cambio de correo.',
-      );
-    }
-  }
-
-  async confirmarCambioCorreo(token: string) {
-    try {
-      const usuario = await this.prisma.usuario.findFirst({
-        where: {
-          token_cambio_correo: token,
-        },
-        select: {
-          id_usuario: true,
-          correo_pendiente: true,
-          token_cambio_correo: true,
-        },
-      });
-      console.log('Token recibido:', token);
-      console.log('Usuario encontrado:', usuario);
-
-      if (!usuario) {
-        throw new BadRequestException(
-          'Token inválido.',
-        );
-      }
-
-      await this.prisma.usuario.update({
-        where: {
-          id_usuario: usuario.id_usuario,
-        },
-        data: {
-          correo: usuario.correo_pendiente!,
-          correo_pendiente: null,
-          token_cambio_correo: null,
-          correo_verificado: true,
-        },
-      });
-
-      return {
-        success: true,
-        message: 'Correo actualizado correctamente.',
-      };
-    } catch (error) {
-      console.error(
-        'Error en confirmarCambioCorreo:',
-        error,
-      );
-
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-
-      throw new InternalServerErrorException(
-        'Error al confirmar cambio de correo.',
       );
     }
   }
