@@ -67,7 +67,7 @@ export function ModalQR({
 
         context.fillStyle = "#ffffff";
         context.fillRect(0, 0, canvas.width, canvas.height);
-        context.drawImage(image, 0, 0);
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
 
         canvas.toBlob((blob) => {
           if (!blob) {
