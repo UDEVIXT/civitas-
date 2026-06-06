@@ -4,6 +4,15 @@ import React, { useState, useEffect } from "react";
 import { Search, UserPlus, Filter, Star, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { actualizarVisitante } from "@/features/mis-visitantes/api/visitante.api";
 // Componentes
 import { ModalVisitante } from "@/features/mis-visitantes/components/modal-visitante";
@@ -21,6 +30,7 @@ import { toast } from "sonner";
 
 // Importamos la API
 import {
+  actualizarEstadoQrVisitantesMasivo,
   actualizarEstadoQrVisitante,
   crearVisitante,
   generarQrVisitante,
@@ -54,6 +64,15 @@ interface BackendVisitante {
   url_imagen?: string | null;
   estado_qr?: BackendEstadoQr;
   accesos?: BackendAcceso[];
+}
+
+interface BackendAccesoQrActualizado {
+  id_acceso: string;
+  id_visitante: string | null;
+  codigo_qr: string | null;
+  fecha_expiracion: string;
+  estatus: BackendEstatusAcceso;
+  estado_qr: BackendEstadoQr;
 }
 
 function getEstatusVisitante(
@@ -137,12 +156,49 @@ export default function MisVisitantesPage() {
     useState<Visitante | null>(null);
   const [isUpdatingQr, setIsUpdatingQr] = useState(false);
   const [editarModalOpen, setEditarModalOpen] = useState(false);
+  const [selectedVisitanteIds, setSelectedVisitanteIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [accionMasiva, setAccionMasiva] =
+    useState<AccionQrVisitante | null>(null);
+  const [motivoMasivo, setMotivoMasivo] = useState("");
+  const [isBulkUpdatingQr, setIsBulkUpdatingQr] = useState(false);
 
   // Empezamos sin visitantes para ver el Empty State de Figma
   const [visitantes, setVisitantes] = useState<Visitante[]>([]);
   const visitantesFiltrados = mostrarFrecuentes
     ? visitantes.filter((visitante) => visitante.es_frecuente)
     : visitantes;
+  const selectableIds = React.useMemo(() => {
+    const visibles = mostrarFrecuentes
+      ? visitantes.filter((visitante) => visitante.es_frecuente)
+      : visitantes;
+
+    return new Set(
+      visibles
+        .filter(
+          (visitante) =>
+            visitante.es_frecuente &&
+            Boolean(visitante.codigo_acceso) &&
+            visitante.estatus !== "Expirado",
+        )
+        .map((visitante) => visitante.id_visitante),
+    );
+  }, [mostrarFrecuentes, visitantes]);
+  const visitantesSeleccionados = visitantes.filter((visitante) =>
+    selectedVisitanteIds.has(visitante.id_visitante),
+  );
+  const totalSeleccionados = visitantesSeleccionados.length;
+  const puedeHabilitarMasivo =
+    totalSeleccionados > 0 &&
+    visitantesSeleccionados.every(
+      (visitante) => visitante.estatus === "Inactivo",
+    );
+  const puedeDeshabilitarMasivo =
+    totalSeleccionados > 0 &&
+    visitantesSeleccionados.every(
+      (visitante) => visitante.estatus === "Activo",
+    );
 
   useEffect(() => {
     const fetchVisitantes = async () => {
@@ -185,6 +241,136 @@ export default function MisVisitantesPage() {
 
     return () => window.clearInterval(intervalId);
   }, []);
+
+  useEffect(() => {
+    setSelectedVisitanteIds((prev) => {
+      const next = new Set(
+        [...prev].filter((idVisitante) => selectableIds.has(idVisitante)),
+      );
+
+      return next.size === prev.size ? prev : next;
+    });
+  }, [selectableIds]);
+
+  const handleToggleSelection = (idVisitante: string) => {
+    if (!selectableIds.has(idVisitante)) return;
+
+    setSelectedVisitanteIds((prev) => {
+      const next = new Set(prev);
+
+      if (next.has(idVisitante)) {
+        next.delete(idVisitante);
+      } else {
+        next.add(idVisitante);
+      }
+
+      return next;
+    });
+  };
+
+  const handleToggleAll = () => {
+    const idsVisibles = visitantesFiltrados
+      .filter((visitante) => selectableIds.has(visitante.id_visitante))
+      .map((visitante) => visitante.id_visitante);
+    const todosSeleccionados =
+      idsVisibles.length > 0 &&
+      idsVisibles.every((idVisitante) =>
+        selectedVisitanteIds.has(idVisitante),
+      );
+
+    setSelectedVisitanteIds((prev) => {
+      const next = new Set(prev);
+
+      idsVisibles.forEach((idVisitante) => {
+        if (todosSeleccionados) {
+          next.delete(idVisitante);
+        } else {
+          next.add(idVisitante);
+        }
+      });
+
+      return next;
+    });
+  };
+
+  const abrirAccionMasiva = (accion: AccionQrVisitante) => {
+    if (totalSeleccionados === 0) return;
+    setAccionMasiva(accion);
+  };
+
+  const cerrarAccionMasiva = () => {
+    if (isBulkUpdatingQr) return;
+    setAccionMasiva(null);
+    setMotivoMasivo("");
+  };
+
+  const handleActualizarEstadoQrMasivo = async () => {
+    if (!accionMasiva) return;
+
+    const motivo = motivoMasivo.trim();
+
+    if (accionMasiva === "deshabilitar" && !motivo) {
+      toast.error("Agrega el motivo para deshabilitar los QR seleccionados.");
+      return;
+    }
+
+    setIsBulkUpdatingQr(true);
+    try {
+      const response = await actualizarEstadoQrVisitantesMasivo({
+        ids_visitante: [...selectedVisitanteIds],
+        accion: accionMasiva,
+        motivo: motivo || undefined,
+      });
+      const accesosActualizados = (response?.data?.accesos ??
+        []) as BackendAccesoQrActualizado[];
+
+      setVisitantes((prev) =>
+        prev.map((visitante) => {
+          const accesoActualizado = accesosActualizados.find(
+            (acceso) => acceso.id_visitante === visitante.id_visitante,
+          );
+
+          if (!accesoActualizado) return visitante;
+
+          const estatus = getEstatusVisitante(
+            {
+              fecha_expiracion: accesoActualizado.fecha_expiracion,
+              estatus: accesoActualizado.estatus,
+            },
+            accesoActualizado.estado_qr,
+          );
+
+          return {
+            ...visitante,
+            id_acceso: accesoActualizado.id_acceso,
+            codigo_acceso: accesoActualizado.codigo_qr ?? undefined,
+            fecha_expiracion: accesoActualizado.fecha_expiracion,
+            estado_qr: accesoActualizado.estado_qr,
+            estatus,
+            puede_generar_qr: estatus !== "Activo",
+          };
+        }),
+      );
+
+      toast.success(response?.message || "QR seleccionados actualizados.");
+      setSelectedVisitanteIds(new Set());
+      setAccionMasiva(null);
+      setMotivoMasivo("");
+    } catch (error: any) {
+      console.error("Error al actualizar QR seleccionados:", error);
+      const backendMessage = error.response?.data?.message;
+      const detalles = error.response?.data?.detalles;
+      const mensaje = Array.isArray(backendMessage)
+        ? backendMessage.join(" | ")
+        : backendMessage ||
+          (Array.isArray(detalles) ? detalles.join(" | ") : undefined) ||
+          "Hubo un problema al actualizar los QR seleccionados.";
+
+      toast.error(mensaje);
+    } finally {
+      setIsBulkUpdatingQr(false);
+    }
+  };
 
   const handleSaveVisitante = async (values: Partial<VisitanteFormValues>) => {
     setIsSaving(true);
@@ -456,6 +642,43 @@ export default function MisVisitantesPage() {
         </Button>
       </div>
 
+      {totalSeleccionados > 0 && (
+        <div className="flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+          <span className="font-medium">
+            {totalSeleccionados === 1
+              ? "1 visitante frecuente seleccionado"
+              : `${totalSeleccionados} visitantes frecuentes seleccionados`}
+          </span>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="bg-white"
+              disabled={!puedeHabilitarMasivo}
+              onClick={() => abrirAccionMasiva("habilitar")}
+            >
+              Habilitar QR
+            </Button>
+            <Button
+              type="button"
+              className="bg-amber-500 text-white hover:bg-amber-600"
+              disabled={!puedeDeshabilitarMasivo}
+              onClick={() => abrirAccionMasiva("deshabilitar")}
+            >
+              Deshabilitar QR
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="text-amber-900 hover:bg-amber-100"
+              onClick={() => setSelectedVisitanteIds(new Set())}
+            >
+              Limpiar
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Si está cargando mostra un spinner, si es 0 muestra Empty State, si no, dibuja la tabla */}
       {isLoading ? (
         <div className="flex justify-center items-center py-20">
@@ -468,6 +691,10 @@ export default function MisVisitantesPage() {
           visitantes={visitantesFiltrados}
           onCodigoAccesoClick={handleCodigoAccesoClick}
           onEditarClick={handleEditarClick}
+          selectedIds={selectedVisitanteIds}
+          selectableIds={selectableIds}
+          onToggleSelection={handleToggleSelection}
+          onToggleAll={handleToggleAll}
         />
       )}
 
@@ -508,6 +735,63 @@ export default function MisVisitantesPage() {
         }}
         onConfirmAction={handleActualizarEstadoQr}
       />
+
+      <Dialog
+        open={accionMasiva !== null}
+        onOpenChange={(open) => {
+          if (!open) cerrarAccionMasiva();
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-amber-600">
+              {accionMasiva === "habilitar"
+                ? "Habilitar codigos QR"
+                : "Deshabilitar codigos QR"}
+            </DialogTitle>
+            <DialogDescription>
+              {accionMasiva === "habilitar"
+                ? `Se habilitaran ${totalSeleccionados} QR seleccionados para validacion de acceso.`
+                : totalSeleccionados === 1
+                  ? "Indica el motivo por el cual se deshabilitara este codigo QR."
+                  : `Este motivo se aplicara a los ${totalSeleccionados} visitantes seleccionados.`}
+            </DialogDescription>
+          </DialogHeader>
+
+          {accionMasiva === "deshabilitar" && (
+            <Textarea
+              value={motivoMasivo}
+              onChange={(event) => setMotivoMasivo(event.target.value)}
+              placeholder="Ej. Se revoca temporalmente el acceso."
+              className="min-h-28"
+              disabled={isBulkUpdatingQr}
+            />
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={cerrarAccionMasiva}
+              disabled={isBulkUpdatingQr}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleActualizarEstadoQrMasivo}
+              disabled={isBulkUpdatingQr}
+              className="bg-amber-500 text-white hover:bg-amber-600"
+            >
+              {isBulkUpdatingQr ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Confirmar"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
