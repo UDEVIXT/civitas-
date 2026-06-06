@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Req, Put, UseGuards, Query } from '@nestjs/common';
+import { Body, Controller, Get, Req, Put, UseGuards, Query, Res } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
 import { Roles } from 'src/auth/decorators/roles/roles.decorator';
 import { UpdatePerfilDto } from './dto/update-perfil.dto';
 import type { AuthenticatedRequest } from 'src/request/AuthenticatedRequest';
 import { PerfilService } from './perfil.service';
+import type { Response } from 'express';
 
 @Controller('perfil')
 export class PerfilController {
@@ -59,12 +60,51 @@ export class PerfilController {
   }
 
   @Get('confirmar-correo')
-async confirmarCambioCorreo(
-  @Query('token') token: string,
-) {
-  console.log('TOKEN QUERY:', token);
+  async confirmarCambioCorreo(
+    @Query('token') token: string,
+    @Res() res: Response,
+  ) {
+    try {
+      await this.perfilService.confirmarCambioCorreo(token);
 
-  return this.perfilService.confirmarCambioCorreo(token);
-}
+      return res.send(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Correo verificado</title>
+            <style>
+              body {
+                font-family: Arial;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                background: #f5f5f5;
+              }
+              .box {
+                text-align: center;
+                padding: 30px;
+                background: white;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+              }
+            </style>
+          </head>
+          <body>
+            <div class="box">
+              <h1>Correo verificado ✅</h1>
+              <p>Su correo ha sido verificado correctamente.</p>
+              <p>Puede cerrar esta página.</p>
+            </div>
+          </body>
+        </html>
+      `);
+    } catch (error) {
+      return res.status(400).send(`
+        <h1>Error al verificar el correo</h1>
+        <p>${error.message}</p>
+      `);
+    }
+  }
 }
 

@@ -286,7 +286,7 @@ export class PerfilService {
         },
       });
 
-      const url = `http://localhost:3001/perfil/confirmar-correo?token=${token}`;
+      const url = `http://localhost:3001/api/perfil/confirmar-correo?token=${token}`;
 
       await this.mailerService.sendMail({
         to: nuevoCorreo,
@@ -336,8 +336,8 @@ export class PerfilService {
           token_cambio_correo: true,
         },
       });
-      console.log('Token recibido:', token);
-      console.log('Usuario encontrado:', usuario);
+      /*console.log('Token recibido:', token);
+      console.log('Usuario encontrado:', usuario);*/
 
       if (!usuario) {
         throw new BadRequestException(
