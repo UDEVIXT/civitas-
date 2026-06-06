@@ -75,21 +75,21 @@ export function FiltrosEmpleados({ filters, onFilterChange }: FiltrosEmpleadosPr
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="relative w-full">
+    <div className="flex flex-col lg:flex-row lg:items-center gap-2">
+      <div className="relative w-full lg:w-80">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         <input
           type="search"
           placeholder="Buscar por nombre del empleado..."
           value={filters.busqueda || ""}
           onChange={(e) => handleBusquedaChange(e.target.value)}
-          className="flex h-9 w-full md:w-72 rounded-md border border-input bg-background pl-9 pr-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="flex h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
         <Select value={filters.idVivienda || "TODAS"} onValueChange={handleViviendaChange}>
-          <SelectTrigger className="w-[calc(50%-4px)] md:w-44 h-9">
+          <SelectTrigger className="h-9 w-full sm:w-44">
             <SelectValue placeholder="Propiedad" />
           </SelectTrigger>
           <SelectContent>
@@ -103,7 +103,7 @@ export function FiltrosEmpleados({ filters, onFilterChange }: FiltrosEmpleadosPr
         </Select>
 
         <Select value={filters.estado || "TODOS"} onValueChange={handleEstadoChange}>
-          <SelectTrigger className="w-[calc(50%-4px)] md:w-44 h-9">
+          <SelectTrigger className="h-9 w-full sm:w-44">
             <SelectValue placeholder="Estado" />
           </SelectTrigger>
           <SelectContent>
@@ -115,30 +115,32 @@ export function FiltrosEmpleados({ filters, onFilterChange }: FiltrosEmpleadosPr
           </SelectContent>
         </Select>
 
-        <Select value={filters.tipo || "TODOS"} onValueChange={handleTipoChange}>
-          <SelectTrigger className="w-[calc(50%-4px)] md:w-44 h-9">
-            <SelectValue placeholder="Tipo" />
-          </SelectTrigger>
-          <SelectContent>
-            {tipos.map((t) => (
-              <SelectItem key={t.value} value={t.value}>
-                {t.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="col-span-2 sm:col-span-1 flex items-center gap-2">
+          <Select value={filters.tipo || "TODOS"} onValueChange={handleTipoChange}>
+            <SelectTrigger className="h-9 w-full sm:w-44">
+              <SelectValue placeholder="Tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              {tipos.map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        {hayFiltrosActivos && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLimpiar}
-            className="h-9 px-3 text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4 mr-1" />
-            Limpiar
-          </Button>
-        )}
+          {hayFiltrosActivos && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLimpiar}
+              className="h-9 px-3 text-muted-foreground hover:text-foreground shrink-0"
+            >
+              <X className="h-4 w-4 mr-1" />
+              Limpiar
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

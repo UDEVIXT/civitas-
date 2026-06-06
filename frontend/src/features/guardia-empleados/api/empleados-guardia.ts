@@ -4,6 +4,7 @@ export interface EmpleadoGuardia {
   id_visitante: string;
   id_servicio: string | null;
   nombre_completo: string;
+  url_imagen?: string | null;
   propiedad_asociada: string;
   id_vivienda: string | null;
   residente_asociado: string;
