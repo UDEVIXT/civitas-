@@ -52,16 +52,18 @@ export const crearVisitante = async (data: VisitanteFormValues) => {
   const formDataToSend = new FormData();
 
   // 3. Mapeamos los campos del formulario al JSON  que espera el backend, usando FormData para incluir la foto
+  // Dentro de tu visitante.api.ts
   const payload = {
     nombre: data.nombre_completo,
     fecha_inicio: fechaInicioISO,
     fecha_fin: fechaFinISO,
     tipo_visitante: data.tipo_visitante,
-    telefono: normalizePhone(data.telefono),
+    telefono: data.telefono,
     tipo_vehiculo: data.vehiculo || "Particular",
     motivo: data.motivo_visita,
-    notas_adicionales: data.notas_adicionales,
     es_frecuente: data.es_frecuente,
+    // ✅ CORRECCIÓN: Ahora sí enviamos las notas al backend
+    notas_adicionales: data.notas_adicionales, 
   };
 
   // Agregamos cada campo del payload a FormData
@@ -120,18 +122,17 @@ export const actualizarVisitante = async (
   const formDataToSend = new FormData();
 
   // 1. Reconstrucción de fechas (si aplican)
+  // En tu función actualizarVisitante (y en crearVisitante si aplica)
   if (data.fecha_visita && data.hora_estimada) {
-    formDataToSend.append(
-      'fecha_inicio',
-      buildLocalDateIso(data.fecha_visita, data.hora_estimada),
-    );
+    const horaLimpia = data.hora_estimada.substring(0, 5); // Garantiza formato "HH:mm"
+    const fechaInicio = new Date(`${data.fecha_visita}T${horaLimpia}:00`);
+    formDataToSend.append('fecha_inicio', fechaInicio.toISOString());
   }
 
   if (data.fecha_visita && data.hora_salida) {
-    formDataToSend.append(
-      'fecha_fin',
-      buildLocalDateIso(data.fecha_visita, data.hora_salida),
-    );
+    const salidaLimpia = data.hora_salida.substring(0, 5);
+    const fechaFin = new Date(`${data.fecha_visita}T${salidaLimpia}:00`);
+    formDataToSend.append('fecha_fin', fechaFin.toISOString());
   }
 
   // 2. Empaquetado de datos de texto y booleanos

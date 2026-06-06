@@ -61,7 +61,8 @@ export function ModalVisitante({
     await onSave(values);
   };
 
-  const hoyStr = new Date().toISOString().split("T")[0];
+  const hoy = new Date();
+  const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

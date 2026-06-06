@@ -59,6 +59,11 @@ function normalizeTimeLocal(value: string) {
 
 function isVisitInProgress(visitante?: Visitante | null) {
   if (!visitante?.fecha_visita || !visitante?.hora_estimada) return false;
+  
+  // Si el estatus del visitante ya no es "Activo" (es Expirado o Inactivo),
+  // significa que no está en curso y liberamos todos los campos del formulario.
+  if (visitante.estatus !== "Activo") return false;
+
   try {
     const [y, m, d] = visitante.fecha_visita.split("-").map(Number);
     const [hh, mm] = normalizeTimeLocal(visitante.hora_estimada).split(":").map(Number);
@@ -113,6 +118,8 @@ export function ModalEditarVisitante({
       tipo_visitante: "Otro",
       motivo_visita: "",
       notas_adicionales: "",
+      // ✅ CORRECCIÓN 1: Zod exige este campo, lo inicializamos en falso
+      es_frecuente: false, 
     },
   })
 
@@ -121,7 +128,7 @@ export function ModalEditarVisitante({
 
     reset({
       nombre_completo: visitante?.nombre_completo ?? "",
-      telefono: visitante?.telefono ?? "",
+      telefono: (visitante?.telefono ?? "").replace(/\D/g, ""), 
       fecha_visita: visitante?.fecha_visita ?? "",
       hora_estimada: visitante?.hora_estimada ?? "",
       hora_salida: visitante?.hora_salida ?? "",
@@ -129,7 +136,10 @@ export function ModalEditarVisitante({
       motivo_visita: visitante?.motivo_visita ?? "",
       notas_adicionales: visitante?.notas_adicionales ?? "",
       foto: undefined,
+      // ✅ CORRECCIÓN 2: Extraemos el valor real que viene de la base de datos
+      es_frecuente: visitante?.es_frecuente ?? false,
     })
+    
     if (fotoObjectUrlRef.current) {
       URL.revokeObjectURL(fotoObjectUrlRef.current)
       fotoObjectUrlRef.current = null
@@ -240,25 +250,21 @@ export function ModalEditarVisitante({
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="telefono">
-              Número telefónico:
-            </FieldLabel>
+            <FieldLabel htmlFor="telefono">Número telefónico:</FieldLabel>
             <Input
               id="telefono"
               type="tel"
               maxLength={10}
               className="bg-white"
-              {...register("telefono", {
-                onChange: (e) => {
-                  e.target.value = e.target.value.replace(/\D/g, "")
-                },
-              })}
+              {...register("telefono")}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, "");
+                setValue("telefono", val, { shouldValidate: true, shouldDirty: true });
+              }}
               disabled={visitaEnCurso}
             />
             {errors.telefono && (
-              <p className="text-sm text-destructive">
-                {errors.telefono.message}
-              </p>
+              <p className="text-sm text-destructive">{errors.telefono.message}</p>
             )}
           </Field>
 
@@ -317,7 +323,7 @@ export function ModalEditarVisitante({
               <Input
                 type="time"
                 id="time-picker-fecha"
-                step="1"
+                
                 className="appearance-none bg-background [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
                 {...register("hora_estimada")}
                 disabled={visitaEnCurso}
@@ -336,7 +342,7 @@ export function ModalEditarVisitante({
               <Input
                 type="time"
                 id="time-picker-salida"
-                step="1"
+
                 className="appearance-none bg-background [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
                 {...register("hora_salida")}
                 disabled={false}

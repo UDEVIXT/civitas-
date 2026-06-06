@@ -809,7 +809,16 @@ export class VisitanteService {
       const horaLlegada = new Date(
         accesoActual.fecha_visita_programada ?? accesoActual.fecha_creacion,
       );
-      if (ahora >= horaLlegada) {
+      
+      // ✅ CORRECCIÓN: Evaluamos matemáticamente el estado real del QR actual
+      const estadoQr = this.calcularEstadoQr({
+        codigo_qr: accesoActual.codigo_qr,
+        fecha_expiracion: accesoActual.fecha_expiracion,
+        estatus: accesoActual.estatus,
+      });
+
+      // Solo bloqueamos la edición general si la hora ya pasó Y la visita sigue 'ACTIVA'
+      if (ahora >= horaLlegada && estadoQr === 'ACTIVO') {
         esPasadoLaLlegada = true;
       }
     }
@@ -824,7 +833,7 @@ export class VisitanteService {
 
       if (intentaEditarNoPermitido) {
         throw new BadRequestException(
-          'La visita ya está en curso o la hora de llegada ha pasado. Solo está permitida la modificación de la hora de salida.',
+          'La visita ya está en curso. Solo está permitida la modificación de la hora de salida.',
         );
       }
     }

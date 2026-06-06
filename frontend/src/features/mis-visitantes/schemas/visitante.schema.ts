@@ -1,11 +1,13 @@
-/**
- * Aquí cumplimos estrictamente con el CA002 (datos obligatorios) y el CA008 (mensajes de error si está incompleto o inválido).
- */
-
 import * as z from "zod";
 
-// Fecha actual para validación de que no agenden en el pasado
-const hoy = new Date().toISOString().split("T")[0];
+// ✅ CORRECCIÓN 1: Obtenemos el "hoy" basado en tu zona horaria local, no en UTC.
+const getFechaLocalLimpia = () => {
+  const hoy = new Date();
+  const offset = hoy.getTimezoneOffset() * 60000;
+  return new Date(hoy.getTime() - offset).toISOString().split("T")[0];
+};
+
+const hoy = getFechaLocalLimpia();
 
 const visitanteBaseSchema = z.object({
   nombre_completo: z
@@ -38,9 +40,8 @@ const visitanteBaseSchema = z.object({
 
   hora_salida: z
     .string()
-    .min(1, "Indica hasta quÃ© hora serÃ¡ vÃ¡lido el QR"),
+    .min(1, "Indica hasta qué hora será válido el QR"),
 
-  // Vehículo opcional
   vehiculo: z.string().trim().optional(),
 
   foto: z.any().optional(),
@@ -48,7 +49,15 @@ const visitanteBaseSchema = z.object({
   es_frecuente: z.boolean(),
 });
 
-export const visitanteSchema = visitanteBaseSchema.superRefine((data, ctx) => {
+// ✅ CORRECCIÓN 2: Aplicamos el superRefine a una constante intermedia.
+// De esta forma, cualquier esquema que herede de aquí obligará a cumplir los tiempos.
+// ... (arriba se queda tu visitanteBaseSchema intacto)
+
+// ✅ CORRECCIÓN: Separamos la lógica de la validación en una función reutilizable
+const validarTiempos = (
+  data: { fecha_visita?: string; hora_estimada?: string; hora_salida?: string },
+  ctx: z.RefinementCtx
+) => {
   if (
     data.fecha_visita &&
     data.hora_estimada &&
@@ -58,14 +67,18 @@ export const visitanteSchema = visitanteBaseSchema.superRefine((data, ctx) => {
     ctx.addIssue({
       code: "custom",
       path: ["hora_salida"],
-      message: "La vigencia del QR debe terminar despuÃ©s de la hora de llegada",
+      message: "La vigencia del QR debe terminar después de la hora de llegada",
     });
   }
-});
+};
 
-export const editarVisitanteSchema = visitanteBaseSchema.omit({
-  vehiculo: true,
-});
+// 1. Esquema de Creación: Toma la base y le aplica la validación
+export const visitanteSchema = visitanteBaseSchema.superRefine(validarTiempos);
+
+// 2. Esquema de Edición: Toma la base, PRIMERO omite el vehículo, y LUEGO le aplica la validación
+export const editarVisitanteSchema = visitanteBaseSchema
+  .omit({ vehiculo: true })
+  .superRefine(validarTiempos);
 
 export type VisitanteFormValues = z.infer<typeof visitanteSchema>;
 export type EditarVisitanteFormValues = z.infer<typeof editarVisitanteSchema>;

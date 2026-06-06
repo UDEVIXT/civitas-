@@ -202,35 +202,32 @@ export default function MisVisitantesPage() {
                   motivo_visita: values.motivo_visita ?? v.motivo_visita,
                   telefono: values.telefono ?? v.telefono,
                   es_frecuente: values.es_frecuente ?? v.es_frecuente,
+                  // ✅ CORRECCIÓN: Reflejamos los cambios en el estado local
+                  tipo_visitante: (values.tipo_visitante ?? v.tipo_visitante) as Visitante["tipo_visitante"],
+                  notas_adicionales: values.notas_adicionales ?? v.notas_adicionales,
                 }
               : v,
           ),
         );
         toast.success("Información del visitante actualizada con éxito");
       } else {
-        // FLUJO DE CREACIÓN (POST) - (Tu código original)
+        // FLUJO DE CREACIÓN (POST)
         const fullValues = values as VisitanteFormValues;
         const responseBackend = await crearVisitante(fullValues);
-          const ultimoAcceso = responseBackend?.accesos?.[0];
+        const ultimoAcceso = responseBackend?.accesos?.[0];
         const codigoQr = ultimoAcceso?.codigo_qr || "";
 
-          const nuevoVisitante: Visitante = {
-          id_visitante:
-            responseBackend?.id_visitante || Math.random().toString(),
+        const nuevoVisitante: Visitante = {
+          id_visitante: responseBackend?.id_visitante || Math.random().toString(),
           nombre_completo: fullValues.nombre_completo,
-            motivo_visita: fullValues.motivo_visita,
+          motivo_visita: fullValues.motivo_visita,
           tipo_visitante: fullValues.tipo_visitante as Visitante["tipo_visitante"],
-          fecha_visita:
-            getFechaSinZonaHoraria(ultimoAcceso?.fecha_visita_programada ?? ultimoAcceso?.fecha_creacion) ||
-            fullValues.fecha_visita,
-          hora_estimada:
-            getHoraSinZonaHoraria(ultimoAcceso?.fecha_visita_programada ?? ultimoAcceso?.fecha_creacion) ||
-            fullValues.hora_estimada,
-          hora_salida:
-            getHoraSinZonaHoraria(ultimoAcceso?.fecha_salida_programada ?? ultimoAcceso?.fecha_expiracion) ||
-            fullValues.hora_salida,
-          fecha_expiracion:
-            ultimoAcceso?.fecha_salida_programada ?? ultimoAcceso?.fecha_expiracion,
+          // ✅ CORRECCIÓN: Guardamos las notas localmente al crear
+          notas_adicionales: fullValues.notas_adicionales, 
+          fecha_visita: getFechaSinZonaHoraria(ultimoAcceso?.fecha_visita_programada ?? ultimoAcceso?.fecha_creacion) || fullValues.fecha_visita,
+          hora_estimada: getHoraSinZonaHoraria(ultimoAcceso?.fecha_visita_programada ?? ultimoAcceso?.fecha_creacion) || fullValues.hora_estimada,
+          hora_salida: getHoraSinZonaHoraria(ultimoAcceso?.fecha_salida_programada ?? ultimoAcceso?.fecha_expiracion) || fullValues.hora_salida,
+          fecha_expiracion: ultimoAcceso?.fecha_salida_programada ?? ultimoAcceso?.fecha_expiracion,
           es_frecuente: fullValues.es_frecuente,
           telefono: fullValues.telefono,
           estatus: "Activo",
@@ -250,26 +247,21 @@ export default function MisVisitantesPage() {
       }
 
       // Limpieza de estados
-      setIsModalOpen(false);
-      setVisitanteEditando(null);
-    } catch (error: unknown) {
+      setIsModalOpen(false); // Cierra el modal de creación
+      setEditarModalOpen(false); // ✅ CORRECCIÓN: Cierra el modal de edición
+      setVisitanteEditando(null); // Limpia la memoria
+    }catch (error: any) {
       console.error("Error al guardar en la API:", error);
       let mensaje = "Hubo un problema al guardar los datos.";
 
-      if (
-        typeof error === "object" &&
-        error !== null &&
-        "response" in error &&
-        typeof error.response === "object" &&
-        error.response !== null &&
-        "data" in error.response &&
-        typeof error.response.data === "object" &&
-        error.response.data !== null &&
-        "message" in error.response.data &&
-        typeof error.response.data.message === "string"
-      ) {
-        mensaje = error.response.data.message;
+      // ✅ CORRECCIÓN: Ahora leemos los arrays de NestJS y los mostramos en el toast
+      const backendMessage = error.response?.data?.message;
+      if (backendMessage) {
+        mensaje = Array.isArray(backendMessage) 
+            ? backendMessage.join(" | ") 
+            : String(backendMessage);
       }
+      
       toast.error(mensaje);
     } finally {
       setIsSaving(false);
