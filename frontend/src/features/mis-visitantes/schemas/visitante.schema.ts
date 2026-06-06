@@ -21,8 +21,9 @@ const visitanteBaseSchema = z.object({
   tipo_visitante: z.enum(
     ["Visita Personal", "Proveedor", "Familiar", "Servicio", "Otro"],
     {
-      required_error: "Selecciona el tipo de visitante",
-    },
+      // ✅ CORRECCIÓN: Zod espera 'message' o 'error' para los enums, no 'required_error'
+      message: "Selecciona el tipo de visitante",
+    }
   ),
 
   motivo_visita: z.string().trim().min(1, "Especifica el motivo de la visita"),
