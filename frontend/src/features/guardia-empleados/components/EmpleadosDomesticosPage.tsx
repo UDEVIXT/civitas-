@@ -21,262 +21,86 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FiltrosEmpleados, FiltrosEmpleadosValues } from "./FiltrosEmpleados";
+import { FiltrosEmpleados } from "./FiltrosEmpleados";
+import { useEmpleadosGuardia } from "../hooks/useEmpleadosGuardia";
+import { EmpleadoGuardia } from "../api/empleados-guardia";
 
-type TipoEmpleado = "LIMPIEZA" | "CHOFER" | "CUIDADOR" | "JARDINERO" | "COCINERO" | "OTRO";
-type EstadoEmpleado = "ACTIVO" | "INACTIVO" | "BLOQUEADO";
+type EstadoVis = "ACTIVO" | "INACTIVO" | "BLOQUEADO";
 
-interface EmpleadoDomestico {
-  id: string;
-  nombre: string;
-  iniciales: string;
-  colorAvatar: string;
-  tipo: TipoEmpleado;
-  residente: string;
-  propiedad: string;
-  diasAutorizados: string;
-  horarioAutorizado: string;
-  estado: EstadoEmpleado;
-  bloqueadoPorAdmin: boolean;
-  vinculosActivos: number;
-  notaExtra?: string;
+const DIA_LABELS: Record<string, string> = {
+  LUNES: "Lun", MARTES: "Mar", MIERCOLES: "Mié",
+  JUEVES: "Jue", VIERNES: "Vie", SABADO: "Sáb", DOMINGO: "Dom",
+};
+
+function getEstado(emp: EmpleadoGuardia): EstadoVis {
+  if (emp.bloqueo_global) return "BLOQUEADO";
+  if (emp.estado_acceso === "Activo") return "ACTIVO";
+  return "INACTIVO";
 }
 
-const MOCK_EMPLEADOS: EmpleadoDomestico[] = [
-  {
-    id: "1",
-    nombre: "María García López",
-    iniciales: "MG",
-    colorAvatar: "bg-pink-500",
-    tipo: "LIMPIEZA",
-    residente: "Juan Pérez",
-    propiedad: "Casa #15",
-    diasAutorizados: "Lun-Vie",
-    horarioAutorizado: "8am–4pm",
-    estado: "ACTIVO",
-    bloqueadoPorAdmin: false,
-    vinculosActivos: 1,
-  },
-  {
-    id: "2",
-    nombre: "Carlos López Ruiz",
-    iniciales: "CL",
-    colorAvatar: "bg-blue-500",
-    tipo: "CHOFER",
-    residente: "Ana Martínez",
-    propiedad: "Casa #8",
-    diasAutorizados: "Miércoles",
-    horarioAutorizado: "10am–2pm",
-    estado: "ACTIVO",
-    bloqueadoPorAdmin: false,
-    vinculosActivos: 1,
-  },
-  {
-    id: "3",
-    nombre: "Rosa Mendoza Torres",
-    iniciales: "RM",
-    colorAvatar: "bg-purple-500",
-    tipo: "CUIDADOR",
-    residente: "Luis Torres",
-    propiedad: "Casa #23",
-    diasAutorizados: "Domingo",
-    horarioAutorizado: "9am–12pm",
-    estado: "INACTIVO",
-    bloqueadoPorAdmin: false,
-    vinculosActivos: 0,
-  },
-  {
-    id: "4",
-    nombre: "Pedro Ramírez Vega",
-    iniciales: "PR",
-    colorAvatar: "bg-green-600",
-    tipo: "JARDINERO",
-    residente: "Carmen Vega",
-    propiedad: "Casa #742",
-    diasAutorizados: "Lunes",
-    horarioAutorizado: "10am–12pm",
-    estado: "ACTIVO",
-    bloqueadoPorAdmin: false,
-    vinculosActivos: 1,
-  },
-  {
-    id: "5",
-    nombre: "Elena Vásquez Mora",
-    iniciales: "EV",
-    colorAvatar: "bg-orange-500",
-    tipo: "COCINERO",
-    residente: "Roberto Díaz",
-    propiedad: "Casa #4A",
-    diasAutorizados: "Lun-Vie",
-    horarioAutorizado: "8am–4pm",
-    estado: "ACTIVO",
-    bloqueadoPorAdmin: false,
-    vinculosActivos: 1,
-  },
-  {
-    id: "6",
-    nombre: "Miguel Santos Cruz",
-    iniciales: "MS",
-    colorAvatar: "bg-red-600",
-    tipo: "LIMPIEZA",
-    residente: "Sofía Ruiz",
-    propiedad: "Casa #71",
-    diasAutorizados: "Lun-Vie",
-    horarioAutorizado: "9am–6pm",
-    estado: "BLOQUEADO",
-    bloqueadoPorAdmin: true,
-    vinculosActivos: 0,
-    notaExtra: "Bloqueado por Administración",
-  },
-  {
-    id: "7",
-    nombre: "Lucía Hernández Paz",
-    iniciales: "LH",
-    colorAvatar: "bg-teal-500",
-    tipo: "CUIDADOR",
-    residente: "Sofía Ruiz",
-    propiedad: "Casa #3",
-    diasAutorizados: "Mar-Jue",
-    horarioAutorizado: "7am–3pm",
-    estado: "ACTIVO",
-    bloqueadoPorAdmin: false,
-    vinculosActivos: 1,
-  },
-  {
-    id: "8",
-    nombre: "Antonio Flores Soto",
-    iniciales: "AF",
-    colorAvatar: "bg-yellow-600",
-    tipo: "CHOFER",
-    residente: "Manuel Castro",
-    propiedad: "Casa #120",
-    diasAutorizados: "Lun-Vie",
-    horarioAutorizado: "8am–4pm",
-    estado: "INACTIVO",
-    bloqueadoPorAdmin: false,
-    vinculosActivos: 0,
-  },
-  {
-    id: "9",
-    nombre: "Isabel Moreno Reyes",
-    iniciales: "IM",
-    colorAvatar: "bg-indigo-500",
-    tipo: "LIMPIEZA",
-    residente: "Ana García / Luis Pérez",
-    propiedad: "Casa #2B",
-    diasAutorizados: "Sábado",
-    horarioAutorizado: "9am–1pm",
-    estado: "ACTIVO",
-    bloqueadoPorAdmin: false,
-    vinculosActivos: 2,
-    notaExtra: "Vinculada a 2 residentes",
-  },
-  {
-    id: "10",
-    nombre: "Fernando Cruz Medina",
-    iniciales: "FC",
-    colorAvatar: "bg-red-700",
-    tipo: "JARDINERO",
-    residente: "Daniela Herrera",
-    propiedad: "Casa #55",
-    diasAutorizados: "Mié-Vie",
-    horarioAutorizado: "8am–12pm",
-    estado: "BLOQUEADO",
-    bloqueadoPorAdmin: true,
-    vinculosActivos: 0,
-    notaExtra: "Bloqueado por Administración",
-  },
-  {
-    id: "11",
-    nombre: "Patricia Gómez Luna",
-    iniciales: "PG",
-    colorAvatar: "bg-rose-500",
-    tipo: "COCINERO",
-    residente: "Diana López",
-    propiedad: "Casa #7",
-    diasAutorizados: "Lun-Vie",
-    horarioAutorizado: "8am–5pm",
-    estado: "ACTIVO",
-    bloqueadoPorAdmin: false,
-    vinculosActivos: 1,
-  },
-  {
-    id: "12",
-    nombre: "Roberto Sánchez Vera",
-    iniciales: "RS",
-    colorAvatar: "bg-cyan-600",
-    tipo: "OTRO",
-    residente: "Andrés Vargas",
-    propiedad: "Casa #31",
-    diasAutorizados: "Jueves",
-    horarioAutorizado: "10am–4pm",
-    estado: "ACTIVO",
-    bloqueadoPorAdmin: false,
-    vinculosActivos: 1,
-  },
-];
+function getIniciales(nombre: string): string {
+  return nombre.split(" ").slice(0, 2).map((n) => n[0] ?? "").join("").toUpperCase();
+}
 
-const PAGE_SIZE = 8;
+function getColorAvatar(id: string): string {
+  const colors = [
+    "bg-pink-500", "bg-blue-500", "bg-purple-500", "bg-green-600",
+    "bg-orange-500", "bg-teal-500", "bg-indigo-500", "bg-rose-500",
+    "bg-cyan-600", "bg-amber-600",
+  ];
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) % colors.length;
+  return colors[Math.abs(hash)];
+}
 
-const estadoBadge: Record<EstadoEmpleado, { label: string; className: string }> = {
+function formatDias(dias: string[]): string {
+  return dias.map((d) => DIA_LABELS[d] ?? d).join(", ") || "—";
+}
+
+function formatHorario(horarios: string[]): string {
+  return horarios[0] ?? "—";
+}
+
+const estadoBadge: Record<EstadoVis, { label: string; className: string }> = {
   ACTIVO: { label: "Activo", className: "bg-green-100 text-green-800 hover:bg-green-100 border-0" },
   INACTIVO: { label: "Inactivo", className: "bg-gray-100 text-gray-700 hover:bg-gray-100 border-0" },
   BLOQUEADO: { label: "Bloqueado", className: "bg-red-100 text-red-800 hover:bg-red-100 border-0" },
 };
 
-const tipoLabel: Record<TipoEmpleado, string> = {
-  LIMPIEZA: "Limpieza",
-  CHOFER: "Chofer",
-  CUIDADOR: "Cuidador",
-  JARDINERO: "Jardinero",
-  COCINERO: "Cocinero",
-  OTRO: "Otro",
-};
-
 export function EmpleadosDomesticosPage() {
-  const [filtros, setFiltros] = useState<FiltrosEmpleadosValues>({});
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageInput, setPageInput] = useState("1");
+  const {
+    empleados,
+    loading,
+    error,
+    currentPage,
+    totalPages,
+    totalEmpleados,
+    filtros,
+    setFiltros,
+    setCurrentPage,
+    refetch,
+  } = useEmpleadosGuardia();
+
+  const [pageInput, setPageInput] = useState(String(currentPage));
   const [pageError, setPageError] = useState<string | null>(null);
-  const [error] = useState<string | null>(null);
-
-  const filtered = useMemo(() => {
-    let result = [...MOCK_EMPLEADOS];
-
-    if (filtros.busqueda?.trim()) {
-      const q = filtros.busqueda.toLowerCase();
-      result = result.filter(
-        (e) =>
-          e.nombre.toLowerCase().includes(q) ||
-          e.residente.toLowerCase().includes(q)
-      );
-    }
-
-    if (filtros.estado) {
-      result = result.filter((e) => e.estado === filtros.estado);
-    }
-
-    if (filtros.tipo) {
-      result = result.filter((e) => e.tipo === filtros.tipo);
-    }
-
-    return result;
-  }, [filtros]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-
-  useEffect(() => {
-    setCurrentPage(1);
-    setPageInput("1");
-    setPageError(null);
-  }, [filtros]);
 
   useEffect(() => {
     setPageInput(String(currentPage));
     setPageError(null);
   }, [currentPage]);
 
-  const paginados = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paginados = useMemo(() => {
+    let result = empleados;
+    if (filtros.estado) {
+      result = result.filter((e) => getEstado(e) === filtros.estado);
+    }
+    if (filtros.tipo) {
+      result = result.filter(
+        (e) => e.tipo_empleado?.toLowerCase() === filtros.tipo?.toLowerCase()
+      );
+    }
+    return result;
+  }, [empleados, filtros.estado, filtros.tipo]);
 
   const handlePageSubmit = () => {
     const num = parseInt(pageInput, 10);
@@ -299,7 +123,7 @@ export function EmpleadosDomesticosPage() {
       <div>
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Empleados domésticos</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {`${filtered.length} empleado${filtered.length !== 1 ? "s" : ""} registrado${filtered.length !== 1 ? "s" : ""}`}
+          {loading ? "Cargando..." : `${totalEmpleados} empleado${totalEmpleados !== 1 ? "s" : ""} registrado${totalEmpleados !== 1 ? "s" : ""}`}
         </p>
       </div>
 
@@ -309,7 +133,7 @@ export function EmpleadosDomesticosPage() {
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
-          <Button variant="outline" size="sm" className="ml-4 shrink-0">
+          <Button variant="outline" size="sm" onClick={refetch} className="ml-4 shrink-0">
             <RefreshCw className="h-4 w-4 mr-1" />
             Reintentar
           </Button>
@@ -332,7 +156,16 @@ export function EmpleadosDomesticosPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginados.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <div className="flex items-center justify-center gap-2">
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span>Cargando empleados...</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : paginados.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                   {filtros.busqueda?.trim()
@@ -342,28 +175,31 @@ export function EmpleadosDomesticosPage() {
               </TableRow>
             ) : (
               paginados.map((emp) => {
-                const isBloqueado = emp.estado === "BLOQUEADO";
-                const isInactivo = emp.estado === "INACTIVO";
-                const badge = estadoBadge[emp.estado];
+                const estado = getEstado(emp);
+                const isBloqueado = estado === "BLOQUEADO";
+                const isInactivo = estado === "INACTIVO";
+                const badge = estadoBadge[estado];
+                const iniciales = getIniciales(emp.nombre_completo);
+                const colorAvatar = getColorAvatar(emp.id_visitante);
 
                 return (
                   <TableRow
-                    key={emp.id}
+                    key={emp.id_visitante}
                     className={`align-top ${isBloqueado ? "bg-red-50 hover:bg-red-100" : ""}`}
                   >
                     <TableCell className="min-w-45">
                       <div className="flex items-start gap-3">
                         <div
-                          className={`h-9 w-9 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0 ${emp.colorAvatar}`}
+                          className={`h-9 w-9 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0 ${colorAvatar}`}
                         >
-                          {emp.iniciales}
+                          {iniciales}
                         </div>
                         <div>
                           <p className="font-medium text-sm leading-tight flex items-center gap-1.5">
                             {isBloqueado && (
                               <Lock className="h-3.5 w-3.5 text-red-600 shrink-0" />
                             )}
-                            {emp.nombre}
+                            {emp.nombre_completo}
                           </p>
                           {isBloqueado && (
                             <p className="text-xs font-semibold text-red-600 mt-0.5 flex items-center gap-1">
@@ -371,36 +207,28 @@ export function EmpleadosDomesticosPage() {
                               Bloqueado por Administración
                             </p>
                           )}
-                          {emp.notaExtra && !isBloqueado && (
-                            <p className="text-xs text-blue-600 mt-0.5">{emp.notaExtra}</p>
-                          )}
                           <p className="text-xs text-muted-foreground mt-0.5 sm:hidden">
-                            {emp.propiedad} · {emp.residente}
+                            {emp.propiedad_asociada} · {emp.residente_asociado}
                           </p>
                         </div>
                       </div>
                     </TableCell>
 
                     <TableCell className="hidden sm:table-cell text-sm">
-                      <p className="font-medium">{emp.propiedad}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{emp.residente}</p>
-                      {emp.vinculosActivos > 1 && (
-                        <p className="text-xs text-blue-600 mt-0.5">
-                          {emp.vinculosActivos} vínculos activos
-                        </p>
-                      )}
+                      <p className="font-medium">{emp.propiedad_asociada}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{emp.residente_asociado}</p>
                     </TableCell>
 
                     <TableCell className="hidden md:table-cell text-sm">
-                      {tipoLabel[emp.tipo]}
+                      {emp.tipo_empleado || "—"}
                     </TableCell>
 
                     <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                      {emp.diasAutorizados}
+                      {formatDias(emp.dias_autorizados)}
                     </TableCell>
 
                     <TableCell className="hidden lg:table-cell text-sm text-muted-foreground whitespace-nowrap">
-                      {emp.horarioAutorizado}
+                      {formatHorario(emp.horarios_autorizados)}
                     </TableCell>
 
                     <TableCell>
@@ -442,7 +270,7 @@ export function EmpleadosDomesticosPage() {
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-muted-foreground">
         <span className="text-center sm:text-left">
-          {`Mostrando ${filtered.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, filtered.length)} de ${filtered.length} empleados`}
+          {loading ? "Cargando..." : `Mostrando ${totalEmpleados === 0 ? 0 : (currentPage - 1) * 8 + 1}–${Math.min(currentPage * 8, totalEmpleados)} de ${totalEmpleados} empleados`}
         </span>
 
         <div className="flex flex-col items-center sm:items-end gap-1">
@@ -450,8 +278,8 @@ export function EmpleadosDomesticosPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage((p) => p - 1)}
-              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1 || loading}
             >
               <ChevronLeft className="h-4 w-4" />
               <span className="hidden xs:inline">Anterior</span>
@@ -475,8 +303,8 @@ export function EmpleadosDomesticosPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage((p) => p + 1)}
-              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage === totalPages || loading}
             >
               <span className="hidden xs:inline">Siguiente</span>
               <ChevronRight className="h-4 w-4" />
