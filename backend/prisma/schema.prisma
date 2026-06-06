@@ -101,6 +101,9 @@ model Usuario {
   //Nuevos atributos cambio de correo
   correo_pendiente   String?
   token_cambio_correo String?       @unique
+  solicitudes_admin_guardia Solicitud_administrador_guardia[]
+  desactivaciones_qr        BitacoraDesactivacionQr[]
+  bitacora_qr_visitantes    BitacoraQrVisitante[]
 }
 
 model Residente {
@@ -122,6 +125,7 @@ model Visitante {
   url_imagen   String?
   tipo_vehiculo String?
   motivo       String?
+  notas_adicionales String? @db.Text
   id_residente String
   id_servicio  String?
   accesos      Acceso[]
@@ -141,6 +145,8 @@ model Acceso {
   usuario          Usuario       @relation(fields: [id_usuario], references: [id_usuario])
   visitante        Visitante?    @relation(fields: [id_visitante], references: [id_visitante], onDelete: Cascade)
   bitacora         Bitacora[]
+  bitacora_desactivaciones BitacoraDesactivacionQr[]
+  bitacora_qr_visitantes    BitacoraQrVisitante[]
 }
 
 model Bitacora {
@@ -268,13 +274,45 @@ enum Estatus_Solicitud {
   Rechazada
 }
 
-model Solicitud_cambio_rol {
+model Solicitud_administrador_guardia {
   id_solicitud      String            @id @default(uuid())
-  id_usuario        String
-  rol_solicitado    Rol                
-  razon             String            @db.Text
+  id_usuario        String          @unique
+  rol_solicitado    Rol         
+  nombre           String
+  genero           String
+  fecha_nacimiento DateTime
+  telefono         String?
+  correo             String         @unique
   estatus_solicitud Estatus_Solicitud @default(Pendiente) 
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   usuario           Usuario           @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+}
+
+model BitacoraDesactivacionQr {
+  id_desactivacion String   @id @default(uuid())
+  id_acceso        String
+  id_usuario       String 
+  motivo           String?  @db.Text
+  fecha_hora       DateTime @default(now())
+
+  acceso           Acceso   @relation(fields: [id_acceso], references: [id_acceso], onDelete: Cascade)
+  usuario          Usuario  @relation(fields: [id_usuario], references: [id_usuario])
+  @@index([id_acceso])
+}
+
+model BitacoraQrVisitante {
+  id_bitacora_qr String   @id @default(uuid())
+  id_acceso      String
+  id_usuario     String
+  accion         String   @db.VarChar(32)
+  motivo         String?  @db.Text
+  fecha_hora     DateTime @default(now())
+
+  acceso         Acceso   @relation(fields: [id_acceso], references: [id_acceso], onDelete: Cascade)
+  usuario        Usuario  @relation(fields: [id_usuario], references: [id_usuario])
+
+  @@index([id_acceso])
+  @@index([id_usuario])
+  @@index([accion])
 }

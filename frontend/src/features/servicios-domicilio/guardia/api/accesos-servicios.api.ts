@@ -9,13 +9,21 @@ export interface ActividadReciente {
 }
 
 export interface DetalleServicio {
-  id: string;
+  id_acceso: string;
+  id_servicio: string | null;
+  id_visitante: string | null;
   nombre_repartidor: string;
   empresa: string;
   residente_vinculado: string;
   vivienda: string;
-  fecha_programada: string;
   tipo_servicio: string;
+  fecha_expiracion: string;
+  estado: string;
+  motivo_invalido: string;
+  detalles_adicionales: {
+    placas?: string;
+    motivo?: string;
+  };
 }
 
 export const accesosServiciosApi = {
@@ -25,19 +33,26 @@ export const accesosServiciosApi = {
   },
 
   obtenerDetalleServicio: async (codigoQr: string): Promise<DetalleServicio> => {
-    const { data } = await api.get(`/accesos-servicios/escanear/${codigoQr}`);
-    return data.data;
+    //console.log('Código QR enviado al backend para obtener detalles:', codigoQr);
+      const { data } = await api.get(`/accesos-servicios/escanear/${codigoQr}`); 
+      return data.data;
   },
 
   validarAcceso: async (codigoQr: string): Promise<void> => {
-    await api.get(`/accesos-servicios/validar/${codigoQr}`);
+    const urlCodificada = encodeURIComponent(codigoQr);
+    await api.get(`/accesos-servicios/validar/${urlCodificada}`);
   },
 
   denegarAcceso: async (codigoQr: string, motivo: string): Promise<void> => {
-    await api.post(`/accesos-servicios/denegar/${codigoQr}`, { motivo });
+    await api.patch("/bitacora/desactivar-qr", { codigo_qr: codigoQr, motivo });
   },
 
-  registrarIngresoManual: async (datosManuales: { nombre: string; empresa: string; motivo: string; vivienda: string }): Promise<void> => {
+  registrarIngresoManual: async (datosManuales: {
+    nombre: string;
+    empresa: string;
+    motivo: string;
+    vivienda: string;
+  }): Promise<void> => {
     await api.post("/accesos-servicios/registro-manual", datosManuales);
-  }
+  },
 };

@@ -20,7 +20,7 @@ import { Roles } from 'src/auth/decorators/roles/roles.decorator';
 import { map } from 'rxjs/operators';
 import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
 import { AuthGuard } from '@nestjs/passport';
-
+import { obtenerIdDesdeUrlQr } from '../common/utils/qr-utils';
 interface AuthenticatedRequest extends Request {
   user: {
     userId: string;
@@ -43,6 +43,11 @@ interface BitacoraSseEvent {
 interface RegistrarSalidaDto {
   id_bitacora?: string | string[];
   comentario_salida?: string;
+}
+
+interface DesactivarQrDto {
+  codigo_qr: string;
+  motivo: string; //CA008
 }
 
 const bitacoraUpdates$ = new Subject<BitacoraSseEvent>();
@@ -272,5 +277,46 @@ export class BitacoraController {
       message: 'Salida registrada correctamente',
       data: resultado,
     };
+  }
+
+  // ---------------------------------------------------------
+  // DESACTIVAR CÓDIGO QR (SÓLO GUARDIA)
+  // ---------------------------------------------------------
+  @Patch('desactivar-qr')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Guardia')
+  async desactivarQr(
+    @Body() dto: DesactivarQrDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const { codigo_qr, motivo } = dto;
+    const id_usuario = req.user.userId;
+
+    if (!codigo_qr) {
+      throw new BadRequestException(
+        'El código QR es requerido para desactivarlo.',
+      );
+    }
+
+    try {
+      //const idLimpioQr = await obtenerIdDesdeUrlQr(codigo_qr);
+      //console.log(`Recibida solicitud para desactivar QR Real: ${idLimpioQr} con motivo: ${motivo}`);
+
+      const resultado = await this.bitacoraService.desactivarQr(
+        codigo_qr,
+        id_usuario,
+        motivo,
+      );
+
+      return {
+        success: true,
+        message: 'El código QR ha sido desactivado e historiado correctamente.',
+        data: resultado,
+      };
+    } catch (error) {
+      throw new BadRequestException(
+        error || 'No se pudo procesar el QR para su desactivación.',
+      );
+    }
   }
 }
