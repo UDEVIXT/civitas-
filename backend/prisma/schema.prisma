@@ -97,10 +97,6 @@ model Usuario {
   persona            Persona        @relation(fields: [id_persona], references: [id_persona])
   sesiones Sesion[]
   reportes             Reporte[]
-  solicitudes_cambio Solicitud_cambio_rol[]
-  //Nuevos atributos cambio de correo
-  correo_pendiente   String?
-  token_cambio_correo String?       @unique
   solicitudes_admin_guardia Solicitud_administrador_guardia[]
   desactivaciones_qr        BitacoraDesactivacionQr[]
   bitacora_qr_visitantes    BitacoraQrVisitante[]

@@ -1,13 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { getMiPerfil, updateDatosPersonales } from "../api/perfil";
 
 import {
-  getMiPerfil,
-  updateDatosPersonales,
-  updatePassword,
-  updateGmail,
-} from "../api/perfil";
-
+  changePassword,
+  requestEmailChange,
+} from "../api/perfil.mock";
 import {
   UpdatePerfilPayload,
   ChangePasswordPayload,
@@ -25,23 +23,16 @@ export const useUpdatePerfil = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: UpdatePerfilPayload) =>
-      updateDatosPersonales(data),
-
+    mutationFn: (data: UpdatePerfilPayload) => updateDatosPersonales(data),
     onSuccess: (data) => {
       toast.success("Perfil actualizado correctamente");
       queryClient.setQueryData(["perfil"], data);
     },
-
     onError: (error: any) => {
       const serverMsg = error.response?.data?.message;
-
       const finalMsg = serverMsg
-        ? Array.isArray(serverMsg)
-          ? serverMsg.join(", ")
-          : serverMsg
-        : "Ocurrió un problema temporal al guardar tus cambios.";
-
+        ? (Array.isArray(serverMsg) ? serverMsg.join(", ") : serverMsg)
+        : "Ocurrió un problema temporal al guardar tus cambios. Por favor, intenta nuevamente en unos momentos. Tus datos no se perderán.";
       toast.error(finalMsg);
     },
   });
@@ -49,53 +40,28 @@ export const useUpdatePerfil = () => {
 
 export const useChangePassword = () => {
   return useMutation({
-    mutationFn: (data: ChangePasswordPayload) =>
-      updatePassword(
-        data.passwordActual,
-        data.passwordNuevo
-      ),
-
-    onSuccess: (response: any) => {
-      toast.success(
-        response?.message ||
-          "Contraseña actualizada correctamente."
-      );
+    mutationFn: (data: ChangePasswordPayload) => changePassword(data),
+    onSuccess: () => {
+      // CA002: el sistema actualiza la credencial y le confirma el cambio exitoso.
+      toast.success("Contraseña actualizada con éxito.");
     },
-
     onError: (error: any) => {
-      const serverMsg = error.response?.data?.message;
-
-      toast.error(
-        Array.isArray(serverMsg)
-          ? serverMsg.join(", ")
-          : serverMsg ||
-              "Error al cambiar la contraseña."
-      );
+      toast.error(error.message || "Error al cambiar la contraseña.");
     },
   });
 };
 
 export const useChangeEmail = () => {
   return useMutation({
-    mutationFn: (data: ChangeEmailPayload) =>
-      updateGmail(data.nuevoCorreo),
-
-    onSuccess: (response: any) => {
+    mutationFn: (data: ChangeEmailPayload) => requestEmailChange(data),
+    onSuccess: () => {
+      // CA003: el sistema envía un enlace de verificación
       toast.success(
-        response?.message ??
-          "Se envió un enlace de confirmación a tu nuevo correo."
+        "Se ha enviado un enlace de verificación a tu nuevo correo."
       );
     },
-
     onError: (error: any) => {
-      const msg = error.response?.data?.message;
-
-      toast.error(
-        Array.isArray(msg)
-          ? msg.join(", ")
-          : msg ||
-              "Error al procesar el cambio de correo."
-      );
+      toast.error(error.message || "Error al procesar el cambio de correo.");
     },
   });
 };
