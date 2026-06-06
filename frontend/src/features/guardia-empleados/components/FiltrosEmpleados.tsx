@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { useEffect, useState } from "react";
 import { Search, X } from "lucide-react";
+import apiClient from "@/api/axios";
 import {
   Select,
   SelectContent,
@@ -28,10 +30,16 @@ const tipos = [
   { value: "OTRO", label: "Otro" },
 ];
 
+interface ViviendaItem {
+  id_vivienda: string;
+  numero_vivienda: string;
+}
+
 export interface FiltrosEmpleadosValues {
   busqueda?: string;
   estado?: string;
   tipo?: string;
+  idVivienda?: string;
 }
 
 interface FiltrosEmpleadosProps {
@@ -40,10 +48,20 @@ interface FiltrosEmpleadosProps {
 }
 
 export function FiltrosEmpleados({ filters, onFilterChange }: FiltrosEmpleadosProps) {
+  const [viviendas, setViviendas] = useState<ViviendaItem[]>([]);
+
+  useEffect(() => {
+    apiClient
+      .get<{ data: ViviendaItem[] }>("/vivienda")
+      .then((res) => setViviendas(res.data.data ?? []))
+      .catch(() => setViviendas([]));
+  }, []);
+
   const hayFiltrosActivos =
     !!filters.busqueda ||
     (!!filters.estado && filters.estado !== "TODOS") ||
-    (!!filters.tipo && filters.tipo !== "TODOS");
+    (!!filters.tipo && filters.tipo !== "TODOS") ||
+    !!filters.idVivienda;
 
   const handleBusquedaChange = (value: string) => {
     onFilterChange({ ...filters, busqueda: value });
@@ -57,8 +75,12 @@ export function FiltrosEmpleados({ filters, onFilterChange }: FiltrosEmpleadosPr
     onFilterChange({ ...filters, tipo: value === "TODOS" ? undefined : value });
   };
 
+  const handleViviendaChange = (value: string) => {
+    onFilterChange({ ...filters, idVivienda: value === "TODAS" ? undefined : value });
+  };
+
   const handleLimpiar = () => {
-    onFilterChange({ busqueda: "", estado: undefined, tipo: undefined });
+    onFilterChange({ busqueda: "", estado: undefined, tipo: undefined, idVivienda: undefined });
   };
 
   return (
@@ -75,6 +97,20 @@ export function FiltrosEmpleados({ filters, onFilterChange }: FiltrosEmpleadosPr
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
+        <Select value={filters.idVivienda || "TODAS"} onValueChange={handleViviendaChange}>
+          <SelectTrigger className="w-[calc(50%-4px)] md:w-44 h-9">
+            <SelectValue placeholder="Propiedad" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="TODAS">Todas las propiedades</SelectItem>
+            {viviendas.map((v) => (
+              <SelectItem key={v.id_vivienda} value={v.id_vivienda}>
+                {v.numero_vivienda}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         <Select value={filters.estado || "TODOS"} onValueChange={handleEstadoChange}>
           <SelectTrigger className="w-[calc(50%-4px)] md:w-44 h-9">
             <SelectValue placeholder="Estado" />

@@ -599,6 +599,7 @@ export class EmpleadoService {
                 activo: true,
                 bloqueo_global: true,
                 cargo: true,
+                tipo_servicio: { select: { nombre: true } },
                 horarios: {
                   where: { activo: true },
                   select: { dia_semana: true, hora_inicio: true, hora_fin: true },
@@ -649,7 +650,7 @@ export class EmpleadoService {
           propiedad_asociada: v.residente?.vivienda?.numero_vivienda || 'Sin asignar',
           id_vivienda: v.residente?.vivienda?.id_vivienda || null,
           residente_asociado: v.residente?.usuario?.persona?.nombre || 'Desconocido',
-          tipo_empleado: serv?.cargo || 'General',
+          tipo_empleado: serv?.tipo_servicio?.nombre || serv?.cargo || 'General',
           dias_autorizados: [...new Set(diasAutorizados)], // Evita duplicados de días
           horarios_autorizados: horariosAutorizados,
           estado_acceso: estadoAcceso,

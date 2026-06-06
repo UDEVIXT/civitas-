@@ -13,7 +13,7 @@ export function useEmpleadosGuardia() {
   const [totalEmpleados, setTotalEmpleados] = useState(0);
   const [filtros, setFiltrosState] = useState<FiltrosEmpleadosValues>({});
 
-  const fetchEmpleados = useCallback(async (page: number, search?: string) => {
+  const fetchEmpleados = useCallback(async (page: number, search?: string, idVivienda?: string) => {
     setLoading(true);
     setError(null);
     try {
@@ -21,6 +21,7 @@ export function useEmpleadosGuardia() {
         page,
         limit: PAGE_SIZE,
         search: search?.trim() || undefined,
+        idVivienda: idVivienda || undefined,
       });
       setEmpleados(result.data);
       setTotalPages(result.meta.total_pages || 1);
@@ -37,13 +38,16 @@ export function useEmpleadosGuardia() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchEmpleados(currentPage, filtros.busqueda);
+      fetchEmpleados(currentPage, filtros.busqueda, filtros.idVivienda);
     }, 300);
     return () => clearTimeout(timer);
-  }, [currentPage, filtros.busqueda, fetchEmpleados]);
+  }, [currentPage, filtros.busqueda, filtros.idVivienda, fetchEmpleados]);
 
   const setFiltros = (newFiltros: FiltrosEmpleadosValues) => {
-    if (newFiltros.busqueda !== filtros.busqueda) {
+    if (
+      newFiltros.busqueda !== filtros.busqueda ||
+      newFiltros.idVivienda !== filtros.idVivienda
+    ) {
       setCurrentPage(1);
     }
     setFiltrosState(newFiltros);
@@ -59,6 +63,6 @@ export function useEmpleadosGuardia() {
     filtros,
     setFiltros,
     setCurrentPage,
-    refetch: () => fetchEmpleados(currentPage, filtros.busqueda),
+    refetch: () => fetchEmpleados(currentPage, filtros.busqueda, filtros.idVivienda),
   };
 }
