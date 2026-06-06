@@ -681,15 +681,9 @@ export class EmpleadoService {
     try {
       const viviendas = await this.prisma.vivienda.findMany({
         where: {
-          residentes: {
+          servicios: {
             some: {
-              visitantes: {
-                some: {
-                  servicio: {
-                    tipo_servicio: { categoria: 'Empleado' },
-                  },
-                },
-              },
+              tipo_servicio: { categoria: 'Empleado' },
             },
           },
         },
