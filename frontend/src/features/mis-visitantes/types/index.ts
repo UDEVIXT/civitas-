@@ -16,20 +16,19 @@ export type TipoVisitante =
 export interface Visitante {
   id_visitante: string;
   nombre_completo: string;
-  tipo_visita?: string;
   motivo_visita: string;
-  notas_adicionales?: string;
-  tipo_visitante: TipoVisitante;
+  tipo_visitante: "Visita Personal" | "Familiar" | "Proveedor" | "Servicio" | "Otro";
   telefono: string;
-  fecha_visita: string; // Formato YYYY-MM-DD
-  hora_estimada: string; // Formato HH:MM
-  hora_salida?: string; // Formato HH:MM
-  fecha_expiracion?: string;
-  es_frecuente: boolean; // Para la estrellita de favoritos
+  fecha_visita: string;
+  hora_estimada: string;
+  hora_salida: string;
+  es_frecuente: boolean;
+  estatus: "Activo" | "Inactivo" | "Expirado";
+  url_foto?: string;
+  notas_adicionales?: string;
+  fecha_expiracion?: Date | string | null;
   id_acceso?: string;
-  codigo_acceso?: string; // QR o token
-  estado_qr?: "ACTIVO" | "EXPIRADO" | "INACTIVO" | "PENDIENTE_GENERACION";
+  codigo_acceso?: string;
+  estado_qr?: string;
   puede_generar_qr?: boolean;
-  estatus: EstatusVisitante;
-  url_foto?: string; // Avatar
 }

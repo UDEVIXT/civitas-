@@ -190,9 +190,20 @@ export default function MisVisitantesPage() {
     setIsSaving(true);
     try {
       if (visitanteEditando) {
-        // FLUJO DE EDICIÓN (PATCH)
-        await actualizarVisitante(visitanteEditando.id_visitante, values);
+        // FLUJO DE EDICIÓN (PATCH) - FRONTEND
+        const response = await actualizarVisitante(visitanteEditando.id_visitante, values);
+        
+        // 🔍 DIAGNÓSTICO: Esto nos dirá exactamente qué está escupiendo tu backend
+        console.log("Respuesta completa de NestJS al guardar:", response);
 
+        // ✅ CORRECCIÓN: Dependiendo de tu Axios, los datos pueden venir envueltos en .data o directos
+        const accesoActualizado = response?.data?.codigo_qr 
+            ? response.data 
+            : response?.codigo_qr 
+                ? response 
+                : null;
+
+        // 2. Actualizamos la tabla localmente
         setVisitantes((prev) =>
           prev.map((v) =>
             v.id_visitante === visitanteEditando.id_visitante
@@ -202,15 +213,29 @@ export default function MisVisitantesPage() {
                   motivo_visita: values.motivo_visita ?? v.motivo_visita,
                   telefono: values.telefono ?? v.telefono,
                   es_frecuente: values.es_frecuente ?? v.es_frecuente,
-                  // ✅ CORRECCIÓN: Reflejamos los cambios en el estado local
                   tipo_visitante: (values.tipo_visitante ?? v.tipo_visitante) as Visitante["tipo_visitante"],
                   notas_adicionales: values.notas_adicionales ?? v.notas_adicionales,
+                  hora_salida: values.hora_salida ?? v.hora_salida,
+                  fecha_visita: values.fecha_visita ?? v.fecha_visita,
+                  hora_estimada: values.hora_estimada ?? v.hora_estimada,
+                  fecha_expiracion: values.hora_salida && values.fecha_visita
+                    ? `${values.fecha_visita}T${values.hora_salida}:00`
+                    : v.fecha_expiracion,
+                  // Inyectamos el nuevo QR usando la variable inteligente
+                  ...(accesoActualizado && {
+                    id_acceso: accesoActualizado.id_acceso,
+                    codigo_acceso: accesoActualizado.codigo_qr,
+                    estatus: "Activo",
+                    estado_qr: "ACTIVO",
+                    puede_generar_qr: false,
+                  }),
                 }
-              : v,
-          ),
+              : v
+          )
         );
+
         toast.success("Información del visitante actualizada con éxito");
-      } else {
+      }else {
         // FLUJO DE CREACIÓN (POST)
         const fullValues = values as VisitanteFormValues;
         const responseBackend = await crearVisitante(fullValues);
@@ -222,11 +247,16 @@ export default function MisVisitantesPage() {
           nombre_completo: fullValues.nombre_completo,
           motivo_visita: fullValues.motivo_visita,
           tipo_visitante: fullValues.tipo_visitante as Visitante["tipo_visitante"],
-          // ✅ CORRECCIÓN: Guardamos las notas localmente al crear
-          notas_adicionales: fullValues.notas_adicionales, 
-          fecha_visita: getFechaSinZonaHoraria(ultimoAcceso?.fecha_visita_programada ?? ultimoAcceso?.fecha_creacion) || fullValues.fecha_visita,
-          hora_estimada: getHoraSinZonaHoraria(ultimoAcceso?.fecha_visita_programada ?? ultimoAcceso?.fecha_creacion) || fullValues.hora_estimada,
-          hora_salida: getHoraSinZonaHoraria(ultimoAcceso?.fecha_salida_programada ?? ultimoAcceso?.fecha_expiracion) || fullValues.hora_salida,
+          notas_adicionales: fullValues.notas_adicionales,
+          fecha_visita:
+            getFechaSinZonaHoraria(ultimoAcceso?.fecha_visita_programada ?? ultimoAcceso?.fecha_creacion) ||
+            fullValues.fecha_visita,
+          hora_estimada:
+            getHoraSinZonaHoraria(ultimoAcceso?.fecha_visita_programada ?? ultimoAcceso?.fecha_creacion) ||
+            fullValues.hora_estimada,
+          hora_salida:
+            getHoraSinZonaHoraria(ultimoAcceso?.fecha_salida_programada ?? ultimoAcceso?.fecha_expiracion) ||
+            fullValues.hora_salida,
           fecha_expiracion: ultimoAcceso?.fecha_salida_programada ?? ultimoAcceso?.fecha_expiracion,
           es_frecuente: fullValues.es_frecuente,
           telefono: fullValues.telefono,
@@ -247,21 +277,17 @@ export default function MisVisitantesPage() {
       }
 
       // Limpieza de estados
-      setIsModalOpen(false); // Cierra el modal de creación
-      setEditarModalOpen(false); // ✅ CORRECCIÓN: Cierra el modal de edición
-      setVisitanteEditando(null); // Limpia la memoria
-    }catch (error: any) {
+      setIsModalOpen(false);
+      setEditarModalOpen(false);
+      setVisitanteEditando(null);
+    } catch (error: any) {
       console.error("Error al guardar en la API:", error);
       let mensaje = "Hubo un problema al guardar los datos.";
 
-      // ✅ CORRECCIÓN: Ahora leemos los arrays de NestJS y los mostramos en el toast
       const backendMessage = error.response?.data?.message;
       if (backendMessage) {
-        mensaje = Array.isArray(backendMessage) 
-            ? backendMessage.join(" | ") 
-            : String(backendMessage);
+        mensaje = Array.isArray(backendMessage) ? backendMessage.join(" | ") : String(backendMessage);
       }
-      
       toast.error(mensaje);
     } finally {
       setIsSaving(false);
@@ -480,17 +506,18 @@ export default function MisVisitantesPage() {
         />
       )}
 
-      <ModalEditarVisitante
-        key={`${visitanteEditando?.id_visitante ?? "edit"}-${editarModalOpen ? "open" : "closed"}`}
-        isOpen={editarModalOpen}
-        visitante={visitanteEditando}
-        onClose={() => {
-          setEditarModalOpen(false);
-          setVisitanteEditando(null);
-        }}
-        onSave={handleSaveVisitante}
-        isSaving={isSaving}
-      />
+      {editarModalOpen && visitanteEditando && (
+        <ModalEditarVisitante
+          isOpen={editarModalOpen}
+          visitante={visitanteEditando}
+          onClose={() => {
+            setEditarModalOpen(false);
+            setVisitanteEditando(null);
+          }}
+          onSave={handleSaveVisitante}
+          isSaving={isSaving}
+        />
+      )}
 
       <ModalQR
         isOpen={isQrModalOpen}

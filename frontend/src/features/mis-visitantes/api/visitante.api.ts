@@ -121,38 +121,40 @@ export const actualizarVisitante = async (
 ) => {
   const formDataToSend = new FormData();
 
-  // 1. Reconstrucción de fechas (si aplican)
-  // En tu función actualizarVisitante (y en crearVisitante si aplica)
+  // ✅ USAMOS LA FUNCIÓN SEGURA: Esto garantiza consistencia con la creación
+  // Asegúrate de validar que existen los valores antes de construir
   if (data.fecha_visita && data.hora_estimada) {
-    const horaLimpia = data.hora_estimada.substring(0, 5); // Garantiza formato "HH:mm"
-    const fechaInicio = new Date(`${data.fecha_visita}T${horaLimpia}:00`);
-    formDataToSend.append('fecha_inicio', fechaInicio.toISOString());
+    const fechaInicioISO = buildLocalDateIso(data.fecha_visita, data.hora_estimada);
+    formDataToSend.append('fecha_inicio', fechaInicioISO);
   }
 
   if (data.fecha_visita && data.hora_salida) {
-    const salidaLimpia = data.hora_salida.substring(0, 5);
-    const fechaFin = new Date(`${data.fecha_visita}T${salidaLimpia}:00`);
-    formDataToSend.append('fecha_fin', fechaFin.toISOString());
+    const fechaFinISO = buildLocalDateIso(data.fecha_visita, data.hora_salida);
+    formDataToSend.append('fecha_fin', fechaFinISO);
   }
 
-  // 2. Empaquetado de datos de texto y booleanos
-  if (data.nombre_completo) formDataToSend.append('nombre', data.nombre_completo);
-  if (data.tipo_visitante) formDataToSend.append('tipo_visitante', data.tipo_visitante);
-  if (data.telefono) formDataToSend.append('telefono', normalizePhone(data.telefono));
-  if (data.vehiculo) formDataToSend.append('tipo_vehiculo', data.vehiculo);
-  if (data.motivo_visita) formDataToSend.append('motivo', data.motivo_visita);
-  if (data.notas_adicionales) formDataToSend.append('notas_adicionales', data.notas_adicionales);
-  if (data.es_frecuente !== undefined) formDataToSend.append('es_frecuente', String(data.es_frecuente));
+  // Mapeo al payload
+  const payload = {
+    nombre: data.nombre_completo,
+    tipo_visitante: data.tipo_visitante,
+    telefono: data.telefono,
+    motivo: data.motivo_visita,
+    es_frecuente: data.es_frecuente,
+    notas_adicionales: data.notas_adicionales,
+  };
 
-  // 3. Empaquetado de archivo multimedia
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      formDataToSend.append(key, String(value));
+    }
+  });
+
   if (data.foto) {
     formDataToSend.append("foto_visitante", data.foto);
   }
 
   const response = await apiClient.patch(`/visitante/${idVisitante}`, formDataToSend, {
-    headers: {
-      "Content-Type": undefined, // Necesario para que Axios genere el boundary de FormData
-    },
+    headers: { "Content-Type": undefined },
   });
 
   return response.data;
