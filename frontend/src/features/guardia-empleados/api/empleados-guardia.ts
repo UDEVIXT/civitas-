@@ -32,6 +32,18 @@ export interface FiltrosEmpleadosGuardia {
   idVivienda?: string;
 }
 
+export interface ViviendaConEmpleados {
+  id_vivienda: string;
+  numero_vivienda: string;
+}
+
+export async function obtenerViviendasConEmpleados(): Promise<ViviendaConEmpleados[]> {
+  const response = await apiClient.get<{ success: boolean; data: ViviendaConEmpleados[] }>(
+    "/empleado/viviendas-con-empleados"
+  );
+  return response.data.data ?? [];
+}
+
 export async function obtenerEmpleadosGuardia(
   filtros: FiltrosEmpleadosGuardia = {}
 ): Promise<EmpleadosGuardiaRespuesta> {

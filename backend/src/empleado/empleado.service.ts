@@ -676,4 +676,30 @@ export class EmpleadoService {
       );
     }
   }
+
+  async obtenerViviendasConEmpleados() {
+    try {
+      const viviendas = await this.prisma.vivienda.findMany({
+        where: {
+          residentes: {
+            some: {
+              visitantes: {
+                some: {
+                  servicio: {
+                    tipo_servicio: { categoria: 'Empleado' },
+                  },
+                },
+              },
+            },
+          },
+        },
+        select: { id_vivienda: true, numero_vivienda: true },
+        orderBy: { numero_vivienda: 'asc' },
+      });
+      return { success: true, data: viviendas };
+    } catch (error: any) {
+      this.logger.error(`Error en obtenerViviendasConEmpleados: ${error.message}`);
+      throw new InternalServerErrorException('No se pudo obtener la lista de propiedades.');
+    }
+  }
 }

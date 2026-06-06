@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
 import { Search, X } from "lucide-react";
-import apiClient from "@/api/axios";
+import { obtenerViviendasConEmpleados, ViviendaConEmpleados } from "../api/empleados-guardia";
 import {
   Select,
   SelectContent,
@@ -22,18 +22,10 @@ const estados = [
 
 const tipos = [
   { value: "TODOS", label: "Todos los tipos" },
-  { value: "LIMPIEZA", label: "Limpieza" },
-  { value: "CHOFER", label: "Chofer" },
-  { value: "CUIDADOR", label: "Cuidador" },
-  { value: "JARDINERO", label: "Jardinero" },
-  { value: "COCINERO", label: "Cocinero" },
-  { value: "OTRO", label: "Otro" },
+  { value: "Limpieza Doméstica", label: "Limpieza Doméstica" },
+  { value: "Empleado Administrativo", label: "Empleado Administrativo" },
 ];
 
-interface ViviendaItem {
-  id_vivienda: string;
-  numero_vivienda: string;
-}
 
 export interface FiltrosEmpleadosValues {
   busqueda?: string;
@@ -48,12 +40,11 @@ interface FiltrosEmpleadosProps {
 }
 
 export function FiltrosEmpleados({ filters, onFilterChange }: FiltrosEmpleadosProps) {
-  const [viviendas, setViviendas] = useState<ViviendaItem[]>([]);
+  const [viviendas, setViviendas] = useState<ViviendaConEmpleados[]>([]);
 
   useEffect(() => {
-    apiClient
-      .get<{ data: ViviendaItem[] }>("/vivienda")
-      .then((res) => setViviendas(res.data.data ?? []))
+    obtenerViviendasConEmpleados()
+      .then(setViviendas)
       .catch(() => setViviendas([]));
   }, []);
 
