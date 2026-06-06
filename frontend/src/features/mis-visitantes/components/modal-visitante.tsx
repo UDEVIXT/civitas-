@@ -29,6 +29,14 @@ import {
   type VisitanteFormValues,
 } from "../schemas/visitante.schema";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 interface ModalVisitanteProps {
   isOpen: boolean;
   onClose: () => void;
