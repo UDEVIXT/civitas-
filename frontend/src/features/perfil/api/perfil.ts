@@ -12,3 +12,24 @@ export const updateDatosPersonales = async (
   const response = await apiClient.put<PerfilData>("perfil", payload);
   return response.data;
 };
+
+export const updatePassword = async (
+  currentPassword: string,
+  newPassword: string
+) => {
+  const response = await apiClient.put("perfil/cambiar-contrasena", {
+    contrasena_actual: currentPassword,
+    nueva_contrasena: newPassword,
+  });
+  return response.data;
+};
+
+export const updateGmail = async (nuevoCorreo: string) => {
+  const response = await apiClient.put("perfil/cambiar-correo",
+    {
+      nuevoCorreo,
+    }
+  );
+
+  return response.data;
+};
