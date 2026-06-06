@@ -117,6 +117,7 @@ model Visitante {
   id_visitante String    @id @default(uuid())
   nombre       String
   es_frecuente Boolean   @default(false)
+  tipo_visitante String?
   telefono     String?
   url_imagen   String?
   tipo_vehiculo String?
@@ -135,6 +136,8 @@ model Acceso {
   id_visitante     String?
   codigo_qr        String?       @unique
   fecha_creacion   DateTime      @default(now())
+  fecha_visita_programada DateTime?
+  fecha_salida_programada DateTime?
   fecha_expiracion DateTime
   estatus          EstatusAcceso @default(Activo)
   comentario_admin String?
@@ -273,13 +276,13 @@ enum Estatus_Solicitud {
 model Solicitud_administrador_guardia {
   id_solicitud      String            @id @default(uuid())
   id_usuario        String          @unique
-  rol_solicitado    Rol         
+  rol_solicitado    Rol
   nombre           String
   genero           String
   fecha_nacimiento DateTime
   telefono         String?
   correo             String         @unique
-  estatus_solicitud Estatus_Solicitud @default(Pendiente) 
+  estatus_solicitud Estatus_Solicitud @default(Pendiente)
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   usuario           Usuario           @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
@@ -288,7 +291,7 @@ model Solicitud_administrador_guardia {
 model BitacoraDesactivacionQr {
   id_desactivacion String   @id @default(uuid())
   id_acceso        String
-  id_usuario       String 
+  id_usuario       String
   motivo           String?  @db.Text
   fecha_hora       DateTime @default(now())
 

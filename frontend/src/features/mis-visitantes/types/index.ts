@@ -16,11 +16,14 @@ export type TipoVisitante =
 export interface Visitante {
   id_visitante: string;
   nombre_completo: string;
+  tipo_visita?: string;
   motivo_visita: string;
+  notas_adicionales?: string;
   tipo_visitante: TipoVisitante;
   telefono: string;
   fecha_visita: string; // Formato YYYY-MM-DD
   hora_estimada: string; // Formato HH:MM
+  hora_salida?: string; // Formato HH:MM
   fecha_expiracion?: string;
   es_frecuente: boolean; // Para la estrellita de favoritos
   id_acceso?: string;
