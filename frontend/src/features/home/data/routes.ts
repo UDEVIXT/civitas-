@@ -10,6 +10,7 @@ import {
   UserCheck,
   Scan,
   HardHat,
+  ListChecks,
 } from "lucide-react";
 
 export interface Route {
@@ -90,5 +91,12 @@ export const routes: Route[] = [
     description: "Gestiona los visitantes registrados en civitas.",
     icon: Users,
     roles: [ROLES.RESIDENTE],
+  },
+  {
+    path: "/solicitudes-cuentas",
+    label: "Solicitudes de Cuentas",
+    description: "Gestiona las solicitudes de creación de cuentas para guardia o administrador.",
+    icon: ListChecks,
+    roles: [ROLES.ADMINISTRADOR],
   },
 ];
