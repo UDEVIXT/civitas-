@@ -732,11 +732,26 @@ export class BitacoraService {
   async desactivarQr(codigo_qr: string, id_usuario: string, motivo: string) {
     const accesoActual = await this.prisma.acceso.findUnique({
       where: { codigo_qr: codigo_qr },
+      include: {
+        bitacora: {
+          orderBy: {
+            fecha_hora_entrada: 'desc',
+          },
+          take: 1,
+        },
+      },
     });
 
     // NTH001: Si el código QR escaneado no existe en el sistema
     if (!accesoActual) {
       throw new NotFoundException('El código de acceso escaneado no existe.');
+    }
+
+    const ultimoMovimiento = accesoActual.bitacora[0];
+    if (ultimoMovimiento && !ultimoMovimiento.fecha_hora_salida) {
+      throw new BadRequestException(
+        'No se puede desactivar el código QR porque el visitante se encuentra actualmente dentro del residencial. Registre su salida primero.',
+      );
     }
 
     // CA004: Si el QR ya expiró o fue desactivado previamente
