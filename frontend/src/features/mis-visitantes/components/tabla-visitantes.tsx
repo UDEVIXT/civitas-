@@ -10,23 +10,47 @@ import {
 import { Star, QrCode, Trash2, Edit2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Visitante } from "../types";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface TablaVisitantesProps {
   visitantes: Visitante[];
   onCodigoAccesoClick?: (visitante: Visitante) => void;
   onEditarClick?: (visitante: Visitante) => void;
+  selectedIds?: Set<string>;
+  onToggleSelection?: (idVisitante: string) => void;
+  onToggleAll?: () => void;
+  selectableIds?: Set<string>;
 }
 
 export function TablaVisitantes({
   visitantes,
   onCodigoAccesoClick,
   onEditarClick,
+  selectedIds = new Set(),
+  onToggleSelection,
+  onToggleAll,
+  selectableIds = new Set(),
 }: TablaVisitantesProps) {
+  const selectableRows = visitantes.filter((visitante) =>
+    selectableIds.has(visitante.id_visitante),
+  );
+  const allSelected =
+    selectableRows.length > 0 &&
+    selectableRows.every((visitante) => selectedIds.has(visitante.id_visitante));
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <Table>
         <TableHeader className="bg-gray-50/50">
           <TableRow>
+            <TableHead className="w-12 pl-6 text-center">
+              <Checkbox
+                checked={allSelected}
+                disabled={!onToggleAll || selectableRows.length === 0}
+                onCheckedChange={onToggleAll}
+                aria-label="Seleccionar visitantes frecuentes"
+              />
+            </TableHead>
             <TableHead className="font-semibold text-gray-600 pl-6">
               Nombre
             </TableHead>
@@ -56,6 +80,16 @@ export function TablaVisitantes({
               key={visitante.id_visitante}
               className="hover:bg-gray-50/50 transition-colors"
             >
+              <TableCell className="pl-6 text-center">
+                <Checkbox
+                  checked={selectedIds.has(visitante.id_visitante)}
+                  disabled={!selectableIds.has(visitante.id_visitante)}
+                  onCheckedChange={() =>
+                    onToggleSelection?.(visitante.id_visitante)
+                  }
+                  aria-label={`Seleccionar ${visitante.nombre_completo}`}
+                />
+              </TableCell>
               <TableCell className="pl-6">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-8 w-8">

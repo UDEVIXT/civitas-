@@ -1,4 +1,11 @@
-import { IsIn, IsOptional, IsString } from 'class-validator';
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 
 export class UpdateEstadoQrDto {
   @IsIn(['habilitar', 'deshabilitar'])
@@ -7,4 +14,11 @@ export class UpdateEstadoQrDto {
   @IsOptional()
   @IsString()
   motivo?: string;
+}
+
+export class UpdateEstadoQrMasivoDto extends UpdateEstadoQrDto {
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsUUID('4', { each: true })
+  ids_visitante: string[];
 }
