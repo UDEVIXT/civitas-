@@ -35,6 +35,16 @@ export const FormCambioCorreo = () => {
   });
 
   const onSubmit = (values: FormValues) => {
+    if (
+      perfil?.correo?.toLowerCase() ===
+      values.nuevoCorreo.toLowerCase()
+    ) {
+      form.setError("nuevoCorreo", {
+        message: "Debes ingresar un correo diferente al actual",
+      });
+      return;
+    }
+
     mutation.mutate(values, {
       onSuccess: () => {
         form.reset();
