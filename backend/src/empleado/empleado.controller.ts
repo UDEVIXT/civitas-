@@ -90,7 +90,14 @@ export class EmpleadoController {
       idVivienda,
     });
   }
-  
+
+  @Get('viviendas-con-empleados')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Guardia')
+  async getViviendasConEmpleados() {
+    return this.empleadoService.obtenerViviendasConEmpleados();
+  }
+
   @Get(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Administrador')

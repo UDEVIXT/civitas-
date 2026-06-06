@@ -7,6 +7,7 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   LogIn,
   UserX,
   Lock,
@@ -83,6 +84,7 @@ export function EmpleadosDomesticosPage() {
 
   const [pageInput, setPageInput] = useState(String(currentPage));
   const [pageError, setPageError] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     setPageInput(String(currentPage));
@@ -182,10 +184,13 @@ export function EmpleadosDomesticosPage() {
                 const iniciales = getIniciales(emp.nombre_completo);
                 const colorAvatar = getColorAvatar(emp.id_visitante);
 
+                const isExpanded = expandedId === emp.id_visitante;
+
                 return (
+                  <React.Fragment key={emp.id_visitante}>
                   <TableRow
-                    key={emp.id_visitante}
-                    className={`align-top ${isBloqueado ? "bg-red-50 hover:bg-red-100" : ""}`}
+                    className={`align-top cursor-pointer sm:cursor-default ${isBloqueado ? "bg-red-50 hover:bg-red-100" : ""}`}
+                    onClick={() => setExpandedId(isExpanded ? null : emp.id_visitante)}
                   >
                     <TableCell className="min-w-45">
                       <div className="flex items-start gap-3">
@@ -211,6 +216,9 @@ export function EmpleadosDomesticosPage() {
                             {emp.propiedad_asociada} · {emp.residente_asociado}
                           </p>
                         </div>
+                        <ChevronDown
+                          className={`h-4 w-4 text-muted-foreground shrink-0 sm:hidden transition-transform ml-auto ${isExpanded ? "rotate-180" : ""}`}
+                        />
                       </div>
                     </TableCell>
 
@@ -261,6 +269,45 @@ export function EmpleadosDomesticosPage() {
                       )}
                     </TableCell>
                   </TableRow>
+                  {isExpanded && (
+                    <TableRow className={`sm:hidden ${isBloqueado ? "bg-red-50" : "bg-muted/30"}`}>
+                      <TableCell colSpan={7} className="px-4 pb-3 pt-0">
+                        <div className="flex flex-col gap-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Tipo</span>
+                            <span>{emp.tipo_empleado || "—"}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Días</span>
+                            <span>{formatDias(emp.dias_autorizados)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Horario</span>
+                            <span>{formatHorario(emp.horarios_autorizados)}</span>
+                          </div>
+                          <div className="pt-1">
+                            {isBloqueado ? (
+                              <Button size="sm" disabled className="w-full bg-red-200 text-red-700 cursor-not-allowed hover:bg-red-200">
+                                <Lock className="h-3.5 w-3.5 mr-1" />
+                                Bloqueado
+                              </Button>
+                            ) : isInactivo ? (
+                              <Button size="sm" disabled variant="outline" className="w-full cursor-not-allowed">
+                                <UserX className="h-3.5 w-3.5 mr-1" />
+                                Dado de baja
+                              </Button>
+                            ) : (
+                              <Button size="sm" className="w-full bg-amber-500 hover:bg-amber-600 text-white">
+                                <LogIn className="h-3.5 w-3.5 mr-1" />
+                                Registrar entrada
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  </React.Fragment>
                 );
               })
             )}
