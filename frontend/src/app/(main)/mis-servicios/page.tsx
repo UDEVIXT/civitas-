@@ -5,26 +5,29 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { ModalServicio } from "@/features/servicios-domicilio/components/modal-servicio";
-import { TablaServicios, type ServicioMock } from "@/features/servicios-domicilio/components/tabla-servicios";
+import { TablaServicios } from "@/features/servicios-domicilio/components/tabla-servicios";
 import type { ServicioDomicilioFormValues } from "@/features/servicios-domicilio/schemas/servicio.schema";
-
-// Datos de prueba limpios (sin íconos)
-const SERVICIOS_MOCK: ServicioMock[] = [
-  { id: "1", empresa: "Gas Sur", tipo: "Gas", frecuencia: "RECURRENTE", fecha: "2026-05-18", estatus: "Activo" },
-  { id: "2", empresa: "Amazon", tipo: "Paquetería", frecuencia: "UNICA_VEZ", fecha: "2026-05-16", estatus: "Pendiente" },
-  { id: "3", empresa: "Telmex", tipo: "Internet", frecuencia: "PROGRAMADO", fecha: "2026-05-20", estatus: "Pendiente" },
-];
+import { useResidenteServicios } from "@/features/servicios-domicilio/hooks/useResidenteServicios";
 
 export default function MisServiciosPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  const { servicios, isLoading, isError, refetch } = useResidenteServicios();
+
   const handleSaveServicio = async (values: ServicioDomicilioFormValues) => {
     setIsSaving(true);
+
     try {
       console.log("Datos listos para enviar al backend:", values);
+
+      // Aquí después conectamos el POST.
       await new Promise((resolve) => setTimeout(resolve, 1000));
+
       setIsModalOpen(false);
+
+      // Recarga el GET después de guardar.
+      await refetch();
     } catch (error) {
       console.error("Error al guardar:", error);
     } finally {
@@ -34,8 +37,6 @@ export default function MisServiciosPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      
-      {/* Header limpio, sin bordes ni sombras, idéntico a "Mis Empleados" */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-2">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
@@ -45,7 +46,8 @@ export default function MisServiciosPage() {
             Gestiona los accesos de proveedores, paquetería y mantenimiento.
           </p>
         </div>
-        <Button 
+
+        <Button
           onClick={() => setIsModalOpen(true)}
           className="bg-amber-500 hover:bg-amber-600 text-white font-bold transition-all"
         >
@@ -54,7 +56,19 @@ export default function MisServiciosPage() {
         </Button>
       </div>
 
-      <TablaServicios servicios={SERVICIOS_MOCK} />
+      {isLoading && (
+        <div className="bg-white rounded-2xl border border-gray-100 p-6 text-gray-500">
+          Cargando servicios...
+        </div>
+      )}
+
+      {!isLoading && isError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl p-6">
+          No se pudieron cargar los servicios a domicilio.
+        </div>
+      )}
+
+      {!isLoading && !isError && <TablaServicios servicios={servicios} />}
 
       {isModalOpen && (
         <ModalServicio

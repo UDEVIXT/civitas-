@@ -3,22 +3,25 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useDebounce } from "@/hooks/use-debounce";
-import { obtenerMisServicios } from "../api/servicios.api"; 
-import type { ServicioDomicilio } from "../types/index"; // Usamos solo el tipo real
+import { obtenerMisServicios } from "../api/servicios-api"; 
+import type { ServicioMock } from "../components/tabla-servicios";
 
 export function useResidenteServicios() {
   const [search, setSearch] = useState("");
-  const debouncedSearch = useDebounce(search, 300);
+  const [debouncedSearch] = useDebounce(search, 300);
 
-  const { data, isLoading } = useQuery<ServicioDomicilio[]>({
+  const { data, isLoading, isError, error, refetch } = useQuery<ServicioMock[]>({
     queryKey: ["residente-servicios", debouncedSearch],
-    queryFn: () => obtenerMisServicios(), 
+    queryFn: () => obtenerMisServicios(),
   });
-  
+
   return {
-    servicios: data || [], // Mandamos el arreglo crudo y real de tu Postgres
+    servicios: data || [],
     isLoading,
+    isError,
+    error,
     search,
     setSearch,
+    refetch,
   };
 }
