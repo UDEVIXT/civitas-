@@ -1,50 +1,68 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+type FrecuenciaServicio = 'UNICA_VEZ' | 'RECURRENTE' | 'PROGRAMADO';
+
 @Injectable()
 export class MisServiciosService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async obtenerMisServicios(idUsuario: string) {
-    // 1. Buscamos el id_residente ligado al usuario autenticado
     const residente = await this.prisma.residente.findFirst({
-      where: { id_usuario: idUsuario },
+      where: {
+        id_usuario: idUsuario,
+      },
+      select: {
+        id_residente: true,
+        id_vivienda: true,
+      },
     });
 
     if (!residente) {
       throw new NotFoundException('El usuario no está registrado como residente.');
     }
 
-    // 2. Traemos los visitantes de ese residente que tengan un servicio colgado
-    const visitantesConServicio = await this.prisma.visitante.findMany({
+    const servicios = await this.prisma.servicio.findMany({
       where: {
         id_residente: residente.id_residente,
-        id_servicio: { not: null },
+        id_vivienda: residente.id_vivienda,
+      },
+      orderBy: {
+        fecha_registro: 'desc',
       },
       select: {
-        id_visitante: true,
-        // Usamos la fecha de creación del acceso o del servicio como fallback si no hay accesos programados
-        accesos: {
-          orderBy: { fecha_creacion: 'desc' },
-          take: 1,
+        id_servicio: true,
+        nombre_servicio: true,
+        nombre_empresa: true,
+        activo: true,
+        fecha_registro: true,
+        tipo_servicio: {
           select: {
-            fecha_expiracion: true,
-            estatus: true,
+            nombre: true,
           },
         },
-        servicio: {
-          select: {
-            nombre_empresa: true,
-            nombre_servicio: true,
+        horarios: {
+          where: {
             activo: true,
-            tipo_servicio: {
-              select: {
-                nombre: true,
+          },
+          select: {
+            dia_semana: true,
+            hora_inicio: true,
+            hora_fin: true,
+          },
+        },
+        visitantes: {
+          take: 1,
+          select: {
+            accesos: {
+              orderBy: {
+                fecha_creacion: 'desc',
               },
-            },
-            horarios: {
+              take: 1,
               select: {
-                dia_semana: true,
+                fecha_visita_programada: true,
+                fecha_expiracion: true,
+                estatus: true,
               },
             },
           },
@@ -52,37 +70,48 @@ export class MisServiciosService {
       },
     });
 
-    // 3. 🚨 EL BLINDAJE: Mapeamos los datos para transformarlos exactamente en el "ServicioMock" del frontend
-    return visitantesConServicio.map((item) => {
-      const servicioBase = item.servicio;
-      const ultimoAcceso = item.accesos?.[0];
+    return servicios.map((servicio) => {
+      const frecuencia = this.calcularFrecuencia(servicio.horarios.length);
 
-      // Lógica para determinar la Frecuencia (Mantenemos los enums del front)
-      let frecuenciaCalculada: 'UNICA_VEZ' | 'RECURRENTE' | 'PROGRAMADO' = 'UNICA_VEZ';
-      if (servicioBase?.horarios && servicioBase.horarios.length > 1) {
-        frecuenciaCalculada = 'RECURRENTE';
-      } else if (servicioBase?.horarios && servicioBase.horarios.length === 1) {
-        frecuenciaCalculada = 'PROGRAMADO';
-      }
+      const ultimoAcceso = servicio.visitantes?.[0]?.accesos?.[0];
 
-      // Formateamos la fecha esperada a YYYY-MM-DD de forma segura
-      const fechaEsperada = ultimoAcceso?.fecha_expiracion 
-        ? new Date(ultimoAcceso.fecha_expiracion).toISOString().split('T')[0]
-        : new Date().toISOString().split('T')[0]; // Fallback por si no tiene accesos aún
+      const fechaEsperada =
+        ultimoAcceso?.fecha_visita_programada ??
+        ultimoAcceso?.fecha_expiracion ??
+        servicio.fecha_registro;
+
+      const estatus =
+        servicio.activo && ultimoAcceso?.estatus !== 'Inactivo'
+          ? 'Activo'
+          : 'Pendiente';
 
       return {
-        id: item.id_visitante,
-        // Mapea a 'empresa' (CA003: Nombre del proveedor o empresa)
-        empresa: servicioBase?.nombre_empresa || servicioBase?.nombre_servicio || 'Proveedor Particular',
-        // Mapea a 'tipo' (Ej: Gas, Agua, Internet)
-        tipo: servicioBase?.tipo_servicio?.nombre || 'General',
-        // Mapea a 'frecuencia'
-        frecuencia: frecuenciaCalculada,
-        // Mapea a 'fecha'
-        fecha: fechaEsperada,
-        // Mapea a 'estatus' (Activo o Pendiente como muestra tu UI)
-        estatus: servicioBase?.activo && ultimoAcceso?.estatus === 'Activo' ? 'Activo' : 'Pendiente',
+        id: servicio.id_servicio,
+        empresa:
+          servicio.nombre_empresa ||
+          servicio.nombre_servicio ||
+          'Proveedor Particular',
+        tipo: servicio.tipo_servicio?.nombre || 'General',
+        frecuencia,
+        fecha: this.formatearFecha(fechaEsperada),
+        estatus,
       };
     });
+  }
+
+  private calcularFrecuencia(totalHorarios: number): FrecuenciaServicio {
+    if (totalHorarios > 1) {
+      return 'RECURRENTE';
+    }
+
+    if (totalHorarios === 1) {
+      return 'PROGRAMADO';
+    }
+
+    return 'UNICA_VEZ';
+  }
+
+  private formatearFecha(fecha: Date): string {
+    return fecha.toISOString().split('T')[0];
   }
 }
