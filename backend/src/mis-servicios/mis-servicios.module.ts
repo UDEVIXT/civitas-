@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MisServiciosController } from './mis-servicios.controller';
 import { MisServiciosService } from './mis-servicios.service';
-import { PrismaModule } from '../prisma/prisma.module'; // O donde tengan su módulo global de Prisma
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
   imports: [PrismaModule],
