@@ -11,6 +11,7 @@ import {
   Scan,
   HardHat,
   ListChecks,
+  BriefcaseBusiness,
 } from "lucide-react";
 
 export interface Route {
@@ -90,6 +91,13 @@ export const routes: Route[] = [
     label: "Mis Visitantes",
     description: "Gestiona los visitantes registrados en civitas.",
     icon: Users,
+    roles: [ROLES.RESIDENTE],
+  },
+  {
+    path: "/mis-servicios",
+    label: "Mis Servicios",
+    description: "Gestiona los servicios a domicilio y proveedores autorizados.",
+    icon: BriefcaseBusiness,
     roles: [ROLES.RESIDENTE],
   },
   {
