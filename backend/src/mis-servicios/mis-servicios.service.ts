@@ -92,7 +92,7 @@ export class MisServiciosService {
           servicio.nombre_empresa ||
           servicio.nombre_servicio ||
           'Proveedor Particular',
-        tipo: servicio.tipo_servicio?.nombre || 'General',
+        tipo: servicio.nombre_servicio || servicio.tipo_servicio?.nombre || 'General',
         frecuencia,
         fecha: this.formatearFecha(fechaEsperada),
         estatus,
@@ -123,7 +123,7 @@ export class MisServiciosService {
         id_residente: residente.id_residente, 
         id_vivienda: residente.id_vivienda,   
         nombre_empresa: datos.nombre_empresa,
-        nombre_servicio: datos.tipo_servicio, 
+        nombre_servicio: datos.tipo_servicio?.trim(),
         activo: true,
         
         // Descomentamos esto si tu esquema de Prisma (schema.prisma) ya los tiene
