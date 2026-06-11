@@ -3,7 +3,8 @@
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload } from "lucide-react"; // Añadí Upload
+import { toast } from "sonner"; // Ajustado para usar sonner
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -34,13 +35,23 @@ export function ModalServicio({ isOpen, onClose, onSave, isSaving }: ModalServic
       nombre_tecnico: "",
       placas: "",
       notas: "",
-      foto: "",
+      foto: undefined,
     },
   });
 
-  const onSubmit = (values: ServicioDomicilioFormValues) => {
-    // CA005
-    onSave(values);
+  const onSubmit = async (values: ServicioDomicilioFormValues) => {
+    try {
+      await onSave(values);
+      // CA005: Feedback de éxito
+      toast.success("Servicio registrado", {
+        description: "El acceso ha sido autorizado correctamente.",
+      });
+      onClose();
+    } catch (error) {
+      toast.error("Error al registrar", {
+        description: "Hubo un problema al guardar el servicio. Intenta de nuevo.",
+      });
+    }
   };
 
   // Obtenemos la fecha de hoy para bloquear los días pasados en el calendario HTML
@@ -188,11 +199,37 @@ export function ModalServicio({ isOpen, onClose, onSave, isSaving }: ModalServic
                 )} />
               </div>
 
+              {/* BLOQUE DE FOTO CORREGIDO */}
+                <FormField 
+                  control={form.control} 
+                  name="foto" 
+                  render={({ field: { onChange, value, ...field } }) => (
+                    <FormItem className="col-span-full">
+                      <FormLabel className="font-bold text-sm">Foto del Trabajador (Opcional)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="file" 
+                          accept="image/*"
+                          className="bg-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            onChange(file);
+                          }}
+                          onBlur={field.onBlur} // Mantenemos el blur para validaciones
+                          name={field.name}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} 
+                />
+
               <FormField control={form.control} name="notas" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="font-bold text-sm">Notas para la Caseta</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Ej. Dejar pasar hasta la puerta, vienen a revisar la lavadora..." className="resize-none bg-white" {...field} />
+                    <Textarea placeholder="Ej. Dejar pasar hasta la puerta..." className="resize-none bg-white" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
