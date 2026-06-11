@@ -1,6 +1,7 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Req, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
-
+  
 import { MisServiciosService } from './mis-servicios.service';
 import { Roles } from 'src/auth/decorators/roles/roles.decorator';
 import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
@@ -18,5 +19,19 @@ export class MisServiciosController {
     const idUsuario = req.user.userId;
 
     return await this.misServiciosService.obtenerMisServicios(idUsuario);
+  }
+
+  @Post()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Residente')
+  @UseInterceptors(FileInterceptor('foto'))
+  async crearServicioResidente(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: any,
+    @UploadedFile() foto?: Express.Multer.File
+  ) {
+    const idUsuario = req.user.userId;
+
+    return await this.misServiciosService.crearServicio(idUsuario, body, foto);
   }
 }
