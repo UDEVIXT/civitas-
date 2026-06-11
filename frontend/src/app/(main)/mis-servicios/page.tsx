@@ -9,6 +9,7 @@ import { ModalServicio } from "@/features/servicios-domicilio/components/modal-s
 import { TablaServicios } from "@/features/servicios-domicilio/components/tabla-servicios";
 import type { ServicioDomicilioFormValues } from "@/features/servicios-domicilio/schemas/servicio.schema";
 import { useResidenteServicios } from "@/features/servicios-domicilio/hooks/useResidenteServicios";
+import { crearMiServicio } from "@/features/servicios-domicilio/api/servicios-api";
 
 export default function MisServiciosPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -20,12 +21,35 @@ export default function MisServiciosPage() {
   const handleSaveServicio = async (values: ServicioDomicilioFormValues) => {
     setIsSaving(true);
     try {
-      console.log("Datos listos para enviar al backend:", values);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // 1. Convertimos los valores a FormData para que la foto pase bien
+      const formData = new FormData();
+      formData.append("tipo_servicio", values.tipo_servicio);
+      formData.append("nombre_empresa", values.nombre_empresa);
+      formData.append("fecha_visita", values.fecha_visita);
+      formData.append("hora_estimada", values.hora_estimada);
+      formData.append("nombre_tecnico", values.nombre_tecnico);
+      formData.append("placas", values.placas);
+      
+      if (values.frecuencia) formData.append("frecuencia", values.frecuencia);
+      if (values.notas) formData.append("notas", values.notas);
+      
+      // Adjuntamos la foto si el usuario subió una
+      if (values.foto instanceof File) {
+        formData.append("foto", values.foto);
+      }
+
+      // 2. Llamada real al backend
+      await crearMiServicio(formData);
+
       setIsModalOpen(false);
+      
+      // 3. Recargamos la tabla con los datos frescos
       await refetch();
+      
     } catch (error) {
-      console.error("Error al guardar:", error);
+      console.error("Error al guardar en BD:", error);
+      // Aquí podrías lanzar un error para que el modal sepa que falló y muestre el toast rojo
+      throw error; 
     } finally {
       setIsSaving(false);
     }

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { BadRequestException } from '@nestjs/common';
 
 type FrecuenciaServicio = 'UNICA_VEZ' | 'RECURRENTE' | 'PROGRAMADO';
 
@@ -97,6 +98,44 @@ export class MisServiciosService {
         estatus,
       };
     });
+  }
+
+  // Esta función es un ejemplo de cómo podrías crear un nuevo servicio, incluyendo la lógica para subir una foto y asociarlo al residente.
+  async crearServicio(idUsuario: string, datos: any, foto?: Express.Multer.File) {
+    const residente = await this.prisma.residente.findFirst({
+      where: { id_usuario: idUsuario },
+      select: { id_residente: true, id_vivienda: true },
+    });
+
+    if (!residente) {
+      throw new NotFoundException('El usuario no está registrado como residente.');
+    }
+
+    // Aquí en el futuro conectarás Supabase para subir 'foto.buffer'
+    let urlFoto: string | null = null;
+    if (foto) {
+       urlFoto = "https://ui-avatars.com/api/?name=" + encodeURIComponent(datos.nombre_tecnico) + "&background=random"; // Imagen temporal basada en su nombre
+    }
+
+    // CA006: Guardamos asociando al residente
+    const nuevoServicio = await this.prisma.servicio.create({
+      data: {
+        id_residente: residente.id_residente, 
+        id_vivienda: residente.id_vivienda,   
+        nombre_empresa: datos.nombre_empresa,
+        nombre_servicio: datos.tipo_servicio, 
+        activo: true,
+        
+        // Descomentamos esto si tu esquema de Prisma (schema.prisma) ya los tiene
+        //placas: datos.placas,
+        //nombre_tecnico: datos.nombre_tecnico,
+        //foto_url: urlFoto,
+        //frecuencia: datos.frecuencia,
+        //notas: datos.notas
+      },
+    });
+
+    return nuevoServicio;
   }
 
   private calcularFrecuencia(totalHorarios: number): FrecuenciaServicio {
