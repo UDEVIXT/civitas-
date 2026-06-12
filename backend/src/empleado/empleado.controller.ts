@@ -173,4 +173,53 @@ export class EmpleadoController {
   remove(@Param('id') id: string) {
     return this.empleadoService.eliminarEmpleado(id);
   }
+  // =========================================================================
+  // HU-1.11.4: Registrar la entrada permitida por el Guardia (CA003)
+  // =========================================================================
+  @Post(':id_acceso/aceptar')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Guardia') // CA001 y CA009: Solo accesible para Guardias en sesión válida
+  async aceptarAcceso(
+    @Param('id_acceso') id_acceso: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const idUsuarioGuardia = req.user?.userId;
+
+    if (!idUsuarioGuardia) {
+      throw new BadRequestException(
+        'No se pudo identificar al guardia en la sesión actual.',
+      );
+    }
+
+    return this.empleadoService.aceptarAccesoVisitante(
+      id_acceso, 
+      String(idUsuarioGuardia)
+    );
+  }
+
+  // =========================================================================
+  // HU-1.11.4: Registrar el rechazo de acceso con su motivo (CA004)
+  // =========================================================================
+  @Post(':id_acceso/rechazar')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Guardia') // CA001 y CA009: Protegido por roles
+  async rechazarAcceso(
+    @Param('id_acceso') id_acceso: string,
+    @Body('motivo') motivo: string, // Recibe el texto directo desde el JSON del body
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const idUsuarioGuardia = req.user?.userId;
+
+    if (!idUsuarioGuardia) {
+      throw new BadRequestException(
+        'No se pudo identificar al guardia en la sesión actual.',
+      );
+    }
+
+    return this.empleadoService.rechazarAccesoVisitante(
+      id_acceso,
+      String(idUsuarioGuardia),
+      motivo
+    );
+  }
 }

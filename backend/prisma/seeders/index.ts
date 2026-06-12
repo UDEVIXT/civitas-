@@ -16,6 +16,7 @@ import { seedVisitantes } from './visitantes.seeder';
 import { seedAccesos } from './accesos.seeder';
 import { seedBitacoras } from './bitacoras.seeder';
 import { seedReportes } from './reportes.seeder';
+import { seedAccesosPreautorizados } from './acceso-preautorizado.seeder';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -40,7 +41,8 @@ async function truncateAll(prismaClient: PrismaClient) {
       "Persona",
       "TipoServicio",
       "Reporte",
-      "EvidenciaReporte"
+      "EvidenciaReporte",
+      "AccesoPreautorizado"
     RESTART IDENTITY CASCADE;
   `);
 }
@@ -62,6 +64,7 @@ async function main() {
   await seedAccesos(prisma);
   await seedBitacoras(prisma);
   await seedReportes(prisma)
+  await seedAccesosPreautorizados(prisma);
 
   console.log('Seed modular ejecutado correctamente.');
 }

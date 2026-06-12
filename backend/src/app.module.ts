@@ -23,6 +23,7 @@ import { VisitanteModule } from './visitante/visitante.module';
 import { LoginThrottlerGuard } from './auth/guards/login-throttler.guard';
 import { PerfilModule } from './perfil/perfil.module';
 import { SolicitudAdministradorGuardiaModule } from './solicitud_administrador_guardia/solicitud_administrador_guardia.module';
+import { AccesoPreautorizadoModule } from './acceso-preautorizado/acceso-preautorizado.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { SolicitudAdministradorGuardiaModule } from './solicitud_administrador_g
     MailModule,
     VisitanteModule,
     SolicitudAdministradorGuardiaModule,
+    AccesoPreautorizadoModule,
   ],
   controllers: [AppController],
   providers: [
