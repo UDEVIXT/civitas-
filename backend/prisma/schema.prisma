@@ -75,31 +75,28 @@ model Vivienda {
 }
 
 model Usuario {
-  id_usuario         String         @id @default(uuid())
-  nombre_usuario     String         @unique
-  correo             String         @unique
-  rol                Rol
-  id_persona         String         @unique
-  password           String
-  estado             EstadoUsuario  @default(ACTIVO)
-  // --- Campos nuevos para recuperación de contraseña ---
-  // Almacena el código (ej. "123456") o un token generado
-  resetPasswordToken   String?
-
-  // Almacena la fecha y hora exacta en que el código dejará de ser válido
-  resetPasswordExpires DateTime?
-  correo_verificado  Boolean        @default(false)
-  token_verificacion String?        @unique
-  accesos            Acceso[]
-  administradores    Administrador?
-  guardias           Guardia?
-  residentes         Residente[]
-  persona            Persona        @relation(fields: [id_persona], references: [id_persona])
-  sesiones Sesion[]
-  reportes             Reporte[]
+  id_usuario                String          @id @default(uuid())
+  nombre_usuario            String          @unique
+  correo                    String          @unique
+  rol                       Rol
+  id_persona                String          @unique
+  password                  String
+  estado                    EstadoUsuario  @default(ACTIVO)
+  resetPasswordToken        String?
+  resetPasswordExpires      DateTime?
+  correo_verificado         Boolean        @default(false)
+  token_verificacion        String?        @unique
+  accesos                   Acceso[]
+  administradores           Administrador?
+  guardias                  Guardia?
+  residentes                Residente[]
+  persona                   Persona        @relation(fields: [id_persona], references: [id_persona])
+  sesiones                  Sesion[]
+  reportes                  Reporte[]
   solicitudes_admin_guardia Solicitud_administrador_guardia[]
   desactivaciones_qr        BitacoraDesactivacionQr[]
   bitacora_qr_visitantes    BitacoraQrVisitante[]
+  accesos_preautorizados    AccesoPreautorizado[]
 }
 
 model Residente {
@@ -146,6 +143,7 @@ model Acceso {
   bitacora         Bitacora[]
   bitacora_desactivaciones BitacoraDesactivacionQr[]
   bitacora_qr_visitantes    BitacoraQrVisitante[]
+  acceso_preautorizado  AccesoPreautorizado[]
 }
 
 model Bitacora {
@@ -314,4 +312,38 @@ model BitacoraQrVisitante {
   @@index([id_acceso])
   @@index([id_usuario])
   @@index([accion])
+}
+
+enum Tipo_Visita {
+  Visitante
+  Proveedor
+  Empleado
+}
+
+enum Estado_QR {
+  Activo
+  Expirado
+  Desactivado
+}
+
+model AccesoPreautorizado {
+  id_acceso_preautorizado String      @id @default(uuid())
+  nombre                  String
+  informacion_general     String?     @db.Text
+  propiedad               String
+  nombre_residente        String
+  fecha_llegada           DateTime?
+  fecha_salida            DateTime? 
+  fecha_expiracion        DateTime
+  tipo                    Tipo_Visita
+  tiene_nota              Boolean     @default(false)
+  
+  id_usuario              String          
+  id_acceso               String?         
+
+  usuario                 Usuario     @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+  acceso                  Acceso?     @relation(fields: [id_acceso], references: [id_acceso], onDelete: Cascade)
+  
+  createdAt               DateTime    @default(now())
+  updatedAt               DateTime    @updatedAt
 }
