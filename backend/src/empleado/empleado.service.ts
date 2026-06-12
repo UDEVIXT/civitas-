@@ -698,4 +698,131 @@ export class EmpleadoService {
       throw new InternalServerErrorException('No se pudo obtener la lista de propiedades.');
     }
   }
+  // =========================================================================
+  // HU-1.11.4: Aceptar acceso de un visitante/servicio/empleado (Guardia)
+  // =========================================================================
+  async aceptarAccesoVisitante(id_acceso: string, id_usuario_guardia: string) {
+    // 1. Validar existencia del acceso
+    const acceso = await this.prisma.acceso.findUnique({
+      where: { id_acceso },
+    });
+
+    if (!acceso) {
+      throw new NotFoundException('El registro de acceso no existe.');
+    }
+
+    // CA006: Validar que el QR no esté inactivo o expirado
+    if (acceso.estatus === 'Inactivo') {
+      throw new BadRequestException('Este pase de acceso ya se encuentra inactivo.');
+    }
+
+    if (new Date() > acceso.fecha_expiracion) {
+      throw new BadRequestException('El código de acceso ha expirado y no se puede utilizar.');
+    }
+
+    // CA009: Validar que el usuario que opera sea un Guardia registrado
+    const guardia = await this.prisma.guardia.findUnique({
+      where: { id_usuario: id_usuario_guardia },
+    });
+
+    if (!guardia) {
+      throw new BadRequestException('El usuario actual no está registrado o no cuenta con un perfil de Guardia válido.');
+    }
+
+    try {
+      // CA008: Transacción atómica para evitar corrupción de datos si falla la red
+      return await this.prisma.$transaction(async (tx) => {
+        // CA003 y CA005: Registrar la entrada física en la Bitácora general
+        const nuevaBitacora = await tx.bitacora.create({
+          data: {
+            id_acceso: id_acceso,
+            id_guardia: guardia.id_guardia, // Vincula el ID único del guardia
+            fecha_hora_entrada: new Date(),
+            estado: true,
+          },
+        });
+
+        // CA005: Registrar la acción de auditoría específica del QR
+        await tx.bitacoraQrVisitante.create({
+          data: {
+            id_acceso: id_acceso,
+            id_usuario: id_usuario_guardia,
+            accion: 'ACEPTADO',
+            motivo: 'Acceso autorizado manualmente por el guardia en caseta.',
+          },
+        });
+
+        return {
+          success: true,
+          message: 'Acceso autorizado y registrado con éxito.',
+          data: nuevaBitacora,
+        };
+      });
+    } catch (error: any) {
+      this.logger.error(`Error en aceptarAccesoVisitante: ${error.message}`);
+      // CA008: Mensaje controlado ante problemas técnicos
+      throw new InternalServerErrorException(
+        'Ocurrió un problema técnico al registrar la decisión. Intente de nuevo.',
+      );
+    }
+  }
+
+  // =========================================================================
+  // HU-1.11.4: Rechazar acceso de un visitante/servicio/empleado (Guardia)
+  // =========================================================================
+  async rechazarAccesoVisitante(id_acceso: string, id_usuario_guardia: string, motivo: string) {
+    if (!motivo || motivo.trim() === '') {
+      throw new BadRequestException('Es obligatorio proporcionar un motivo para el rechazo del acceso.');
+    }
+
+    // 1. Validar existencia del acceso
+    const acceso = await this.prisma.acceso.findUnique({
+      where: { id_acceso },
+    });
+
+    if (!acceso) {
+      throw new NotFoundException('El registro de acceso no existe.');
+    }
+
+    // CA009: Validar perfil del Guardia
+    const guardia = await this.prisma.guardia.findUnique({
+      where: { id_usuario: id_usuario_guardia },
+    });
+
+    if (!guardia) {
+      throw new BadRequestException('El usuario actual no está registrado o no cuenta con un perfil de Guardia válido.');
+    }
+
+    try {
+      // CA008: Uso de transacción
+      return await this.prisma.$transaction(async (tx) => {
+        // CA004 y CA005: Registrar el rechazo en la auditoría del QR con su motivo
+        const auditoriaRechazo = await tx.bitacoraQrVisitante.create({
+          data: {
+            id_acceso: id_acceso,
+            id_usuario: id_usuario_guardia,
+            accion: 'RECHAZADO',
+            motivo: motivo, // Guarda el criterio de seguridad incumplido
+          },
+        });
+
+        // Apagar el acceso para evitar que sigan intentando reusar el QR rechazado
+        await tx.acceso.update({
+          where: { id_acceso },
+          data: { estatus: 'Inactivo' },
+        });
+
+        return {
+          success: true,
+          message: 'Acceso rechazado y registrado correctamente.',
+          data: auditoriaRechazo,
+        };
+      });
+    } catch (error: any) {
+      this.logger.error(`Error en rechazarAccesoVisitante: ${error.message}`);
+      throw new InternalServerErrorException(
+        'Ocurrió un problema técnico al registrar el rechazo. Intente de nuevo.',
+      );
+    }
+  }
 }
