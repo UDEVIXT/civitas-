@@ -10,6 +10,9 @@ import {
   UserCheck,
   Scan,
   HardHat,
+  ListChecks,
+  ShieldCheck,
+  BriefcaseBusiness,
 } from "lucide-react";
 
 export interface Route {
@@ -33,6 +36,13 @@ export const routes: Route[] = [
     label: "Empleados Domésticos",
     description: "Lista de empleados domésticos autorizados por los residentes.",
     icon: HardHat,
+    roles: [ROLES.GUARDIA],
+  },
+  {
+    path: "/accesos-guardia",
+    label: "Autorización de accesos",
+    description: "Acepta o rechaza el acceso de visitantes, proveedores y empleados domésticos.",
+    icon: ShieldCheck,
     roles: [ROLES.GUARDIA],
   },
   {
@@ -90,5 +100,19 @@ export const routes: Route[] = [
     description: "Gestiona los visitantes registrados en civitas.",
     icon: Users,
     roles: [ROLES.RESIDENTE],
+  },
+  {
+    path: "/mis-servicios",
+    label: "Mis Servicios",
+    description: "Gestiona los servicios a domicilio y proveedores autorizados.",
+    icon: BriefcaseBusiness,
+    roles: [ROLES.RESIDENTE],
+  },
+  {
+    path: "/solicitudes-cuentas",
+    label: "Solicitudes de Cuentas",
+    description: "Gestiona las solicitudes de creación de cuentas para guardia o administrador.",
+    icon: ListChecks,
+    roles: [ROLES.ADMINISTRADOR],
   },
 ];

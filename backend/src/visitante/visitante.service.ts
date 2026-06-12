@@ -10,7 +10,10 @@ import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateVisitanteDto } from './dto/create-visitante.dto';
 import { UpdateVisitanteDto } from './dto/update-visitante.dto';
-import { UpdateEstadoQrDto } from './dto/update-estado-qr.dto';
+import {
+  UpdateEstadoQrDto,
+  UpdateEstadoQrMasivoDto,
+} from './dto/update-estado-qr.dto';
 import 'multer';
 import { ArchivosService } from '../r2-module/archivos.service';
 import { randomBytes } from 'crypto';
@@ -40,6 +43,14 @@ type VisitanteConAccesos = {
 };
 
 type VisitanteListadoConAccesos = Omit<VisitanteConAccesos, 'residente'>;
+
+type VisitanteQrMasivo = {
+  id_visitante: string;
+  nombre: string;
+  es_frecuente: boolean;
+  residente: { id_usuario: string };
+  accesos: AccesoLigero[];
+};
 
 type AccesoDetalle = AccesoLigero & {
   id_visitante: string | null;
@@ -763,6 +774,189 @@ export class VisitanteService {
 
       throw new InternalServerErrorException(
         'Error tecnico al actualizar el estado del QR.',
+      );
+    }
+  }
+
+  async actualizarEstadoQrFrecuenteMasivo(
+    idUsuario: string,
+    updateEstadoQrMasivoDto: UpdateEstadoQrMasivoDto,
+  ) {
+    const accion = updateEstadoQrMasivoDto.accion;
+    const motivo = updateEstadoQrMasivoDto.motivo?.trim();
+    const idsVisitante = [...new Set(updateEstadoQrMasivoDto.ids_visitante)];
+
+    if (idsVisitante.length === 0) {
+      throw new BadRequestException('Selecciona al menos un visitante.');
+    }
+
+    if (accion === 'deshabilitar' && !motivo) {
+      throw new BadRequestException(
+        'El motivo es obligatorio para deshabilitar los QR seleccionados.',
+      );
+    }
+
+    const visitantes = (await this.prisma.visitante.findMany({
+      where: { id_visitante: { in: idsVisitante } },
+      include: {
+        residente: { select: { id_usuario: true } },
+        accesos: {
+          orderBy: { fecha_creacion: 'desc' },
+          take: 1,
+        },
+      },
+    })) as VisitanteQrMasivo[];
+
+    const encontrados = new Set(
+      visitantes.map((visitante) => visitante.id_visitante),
+    );
+    const faltantes = idsVisitante.filter((id) => !encontrados.has(id));
+
+    if (faltantes.length > 0) {
+      throw new NotFoundException(
+        `No se encontraron ${faltantes.length} visitantes seleccionados.`,
+      );
+    }
+
+    const errores: string[] = [];
+    const accesosPorActualizar: Array<{
+      visitante: VisitanteQrMasivo;
+      acceso: AccesoLigero;
+      estadoActual: string;
+    }> = [];
+
+    for (const visitante of visitantes) {
+      if (visitante.residente.id_usuario !== idUsuario) {
+        errores.push(`${visitante.nombre}: no pertenece al residente actual`);
+        continue;
+      }
+
+      if (!visitante.es_frecuente) {
+        errores.push(`${visitante.nombre}: no es visitante frecuente`);
+        continue;
+      }
+
+      const acceso = visitante.accesos[0];
+
+      if (!acceso || !acceso.codigo_qr) {
+        errores.push(`${visitante.nombre}: no tiene QR asociado`);
+        continue;
+      }
+
+      const estadoActual = this.calcularEstadoQr(acceso);
+
+      if (estadoActual === 'EXPIRADO') {
+        errores.push(`${visitante.nombre}: el QR ya expiro`);
+        continue;
+      }
+
+      if (accion === 'deshabilitar' && estadoActual === 'INACTIVO') {
+        errores.push(`${visitante.nombre}: el QR ya esta deshabilitado`);
+        continue;
+      }
+
+      if (accion === 'habilitar' && estadoActual === 'ACTIVO') {
+        errores.push(`${visitante.nombre}: el QR ya esta habilitado`);
+        continue;
+      }
+
+      accesosPorActualizar.push({ visitante, acceso, estadoActual });
+    }
+
+    if (errores.length > 0) {
+      throw new BadRequestException({
+        message:
+          'No se pudo actualizar el estado de los QR seleccionados. Revisa la seleccion.',
+        detalles: errores,
+      });
+    }
+
+    const estatus = accion === 'habilitar' ? 'Activo' : 'Inactivo';
+    const accionBitacora =
+      accion === 'habilitar' ? 'HABILITADO' : 'DESHABILITADO';
+    const motivoBitacora =
+      motivo ||
+      (accion === 'habilitar'
+        ? 'QR habilitado masivamente por el residente.'
+        : 'QR deshabilitado masivamente por el residente.');
+
+    try {
+      const accesosActualizados = await this.prisma.$transaction(
+        async (prisma: Prisma.TransactionClient) => {
+          const resultados: Array<{
+            id_acceso: string;
+            id_visitante: string | null;
+            codigo_qr: string | null;
+            fecha_creacion: Date;
+            fecha_expiracion: Date;
+            estatus: 'Activo' | 'Inactivo';
+            estado_qr: string;
+          }> = [];
+
+          for (const item of accesosPorActualizar) {
+            const accesoActualizado = await prisma.acceso.update({
+              where: { id_acceso: item.acceso.id_acceso },
+              data: { estatus },
+              select: {
+                id_acceso: true,
+                id_visitante: true,
+                codigo_qr: true,
+                fecha_creacion: true,
+                fecha_expiracion: true,
+                estatus: true,
+              },
+            });
+
+            await prisma.$executeRaw`
+              INSERT INTO "BitacoraQrVisitante" (
+                "id_bitacora_qr",
+                "id_acceso",
+                "id_usuario",
+                "accion",
+                "motivo"
+              ) VALUES (
+                ${randomBytes(16).toString('hex')},
+                ${item.acceso.id_acceso},
+                ${idUsuario},
+                ${accionBitacora},
+                ${motivoBitacora}
+              )
+            `;
+
+            resultados.push({
+              ...accesoActualizado,
+              estado_qr: this.calcularEstadoQr(accesoActualizado),
+            });
+          }
+
+          return resultados;
+        },
+      );
+
+      return {
+        success: true,
+        message:
+          accion === 'habilitar'
+            ? `Se habilitaron ${accesosActualizados.length} QR correctamente.`
+            : `Se deshabilitaron ${accesosActualizados.length} QR correctamente.`,
+        data: {
+          accion: accionBitacora,
+          motivo: motivoBitacora,
+          total: accesosActualizados.length,
+          accesos: accesosActualizados,
+        },
+      };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'Error tecnico al actualizar los QR seleccionados.',
       );
     }
   }

@@ -115,6 +115,15 @@ export const actualizarEstadoQrVisitante = async (
   return response.data;
 };
 
+export const actualizarEstadoQrVisitantesMasivo = async (data: {
+  ids_visitante: string[];
+  accion: AccionQrVisitante;
+  motivo?: string;
+}) => {
+  const response = await apiClient.patch("/visitante/qr-estado/masivo", data);
+  return response.data;
+};
+
 export const actualizarVisitante = async (
   idVisitante: string,
   data: Partial<VisitanteFormValues>

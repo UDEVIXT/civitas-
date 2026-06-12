@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { useEffect, useState } from "react";
 import { Search, X } from "lucide-react";
+import { obtenerViviendasConEmpleados, ViviendaConEmpleados } from "../api/empleados-guardia";
 import {
   Select,
   SelectContent,
@@ -20,18 +22,16 @@ const estados = [
 
 const tipos = [
   { value: "TODOS", label: "Todos los tipos" },
-  { value: "LIMPIEZA", label: "Limpieza" },
-  { value: "CHOFER", label: "Chofer" },
-  { value: "CUIDADOR", label: "Cuidador" },
-  { value: "JARDINERO", label: "Jardinero" },
-  { value: "COCINERO", label: "Cocinero" },
-  { value: "OTRO", label: "Otro" },
+  { value: "Limpieza Doméstica", label: "Limpieza Doméstica" },
+  { value: "Empleado Administrativo", label: "Empleado Administrativo" },
 ];
+
 
 export interface FiltrosEmpleadosValues {
   busqueda?: string;
   estado?: string;
   tipo?: string;
+  idVivienda?: string;
 }
 
 interface FiltrosEmpleadosProps {
@@ -40,10 +40,19 @@ interface FiltrosEmpleadosProps {
 }
 
 export function FiltrosEmpleados({ filters, onFilterChange }: FiltrosEmpleadosProps) {
+  const [viviendas, setViviendas] = useState<ViviendaConEmpleados[]>([]);
+
+  useEffect(() => {
+    obtenerViviendasConEmpleados()
+      .then(setViviendas)
+      .catch(() => setViviendas([]));
+  }, []);
+
   const hayFiltrosActivos =
     !!filters.busqueda ||
     (!!filters.estado && filters.estado !== "TODOS") ||
-    (!!filters.tipo && filters.tipo !== "TODOS");
+    (!!filters.tipo && filters.tipo !== "TODOS") ||
+    !!filters.idVivienda;
 
   const handleBusquedaChange = (value: string) => {
     onFilterChange({ ...filters, busqueda: value });
@@ -57,26 +66,44 @@ export function FiltrosEmpleados({ filters, onFilterChange }: FiltrosEmpleadosPr
     onFilterChange({ ...filters, tipo: value === "TODOS" ? undefined : value });
   };
 
+  const handleViviendaChange = (value: string) => {
+    onFilterChange({ ...filters, idVivienda: value === "TODAS" ? undefined : value });
+  };
+
   const handleLimpiar = () => {
-    onFilterChange({ busqueda: "", estado: undefined, tipo: undefined });
+    onFilterChange({ busqueda: "", estado: undefined, tipo: undefined, idVivienda: undefined });
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="relative w-full">
+    <div className="flex flex-col lg:flex-row lg:items-center gap-2">
+      <div className="relative w-full lg:w-80">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         <input
           type="search"
           placeholder="Buscar por nombre del empleado..."
           value={filters.busqueda || ""}
           onChange={(e) => handleBusquedaChange(e.target.value)}
-          className="flex h-9 w-full md:w-72 rounded-md border border-input bg-background pl-9 pr-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="flex h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+        <Select value={filters.idVivienda || "TODAS"} onValueChange={handleViviendaChange}>
+          <SelectTrigger className="h-9 w-full sm:w-44">
+            <SelectValue placeholder="Propiedad" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="TODAS">Todas las propiedades</SelectItem>
+            {viviendas.map((v) => (
+              <SelectItem key={v.id_vivienda} value={v.id_vivienda}>
+                {v.numero_vivienda}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         <Select value={filters.estado || "TODOS"} onValueChange={handleEstadoChange}>
-          <SelectTrigger className="w-[calc(50%-4px)] md:w-44 h-9">
+          <SelectTrigger className="h-9 w-full sm:w-44">
             <SelectValue placeholder="Estado" />
           </SelectTrigger>
           <SelectContent>
@@ -88,30 +115,32 @@ export function FiltrosEmpleados({ filters, onFilterChange }: FiltrosEmpleadosPr
           </SelectContent>
         </Select>
 
-        <Select value={filters.tipo || "TODOS"} onValueChange={handleTipoChange}>
-          <SelectTrigger className="w-[calc(50%-4px)] md:w-44 h-9">
-            <SelectValue placeholder="Tipo" />
-          </SelectTrigger>
-          <SelectContent>
-            {tipos.map((t) => (
-              <SelectItem key={t.value} value={t.value}>
-                {t.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="col-span-2 sm:col-span-1 flex items-center gap-2">
+          <Select value={filters.tipo || "TODOS"} onValueChange={handleTipoChange}>
+            <SelectTrigger className="h-9 w-full sm:w-44">
+              <SelectValue placeholder="Tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              {tipos.map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        {hayFiltrosActivos && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLimpiar}
-            className="h-9 px-3 text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4 mr-1" />
-            Limpiar
-          </Button>
-        )}
+          {hayFiltrosActivos && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLimpiar}
+              className="h-9 px-3 text-muted-foreground hover:text-foreground shrink-0"
+            >
+              <X className="h-4 w-4 mr-1" />
+              Limpiar
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

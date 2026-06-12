@@ -593,12 +593,14 @@ export class EmpleadoService {
             id_visitante: true,
             nombre: true,
             telefono: true,
+            url_imagen: true,
             servicio: {
               select: {
                 id_servicio: true,
                 activo: true,
                 bloqueo_global: true,
                 cargo: true,
+                tipo_servicio: { select: { nombre: true } },
                 horarios: {
                   where: { activo: true },
                   select: { dia_semana: true, hora_inicio: true, hora_fin: true },
@@ -646,10 +648,11 @@ export class EmpleadoService {
           id_visitante: v.id_visitante,
           id_servicio: serv?.id_servicio || null,
           nombre_completo: v.nombre,
+          url_imagen: v.url_imagen || null,
           propiedad_asociada: v.residente?.vivienda?.numero_vivienda || 'Sin asignar',
           id_vivienda: v.residente?.vivienda?.id_vivienda || null,
           residente_asociado: v.residente?.usuario?.persona?.nombre || 'Desconocido',
-          tipo_empleado: serv?.cargo || 'General',
+          tipo_empleado: serv?.tipo_servicio?.nombre || serv?.cargo || 'General',
           dias_autorizados: [...new Set(diasAutorizados)], // Evita duplicados de días
           horarios_autorizados: horariosAutorizados,
           estado_acceso: estadoAcceso,
@@ -673,6 +676,26 @@ export class EmpleadoService {
       throw new InternalServerErrorException(
         'Ocurrió un problema técnico al cargar la lista de empleados domésticos.',
       );
+    }
+  }
+
+  async obtenerViviendasConEmpleados() {
+    try {
+      const viviendas = await this.prisma.vivienda.findMany({
+        where: {
+          servicios: {
+            some: {
+              tipo_servicio: { categoria: 'Empleado' },
+            },
+          },
+        },
+        select: { id_vivienda: true, numero_vivienda: true },
+        orderBy: { numero_vivienda: 'asc' },
+      });
+      return { success: true, data: viviendas };
+    } catch (error: any) {
+      this.logger.error(`Error en obtenerViviendasConEmpleados: ${error.message}`);
+      throw new InternalServerErrorException('No se pudo obtener la lista de propiedades.');
     }
   }
 }

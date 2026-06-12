@@ -7,10 +7,21 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   LogIn,
   UserX,
   Lock,
+  AlertTriangle,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,262 +32,127 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FiltrosEmpleados, FiltrosEmpleadosValues } from "./FiltrosEmpleados";
+import { FiltrosEmpleados } from "./FiltrosEmpleados";
+import { useEmpleadosGuardia } from "../hooks/useEmpleadosGuardia";
+import { EmpleadoGuardia } from "../api/empleados-guardia";
 
-type TipoEmpleado = "LIMPIEZA" | "CHOFER" | "CUIDADOR" | "JARDINERO" | "COCINERO" | "OTRO";
-type EstadoEmpleado = "ACTIVO" | "INACTIVO" | "BLOQUEADO";
+type EstadoVis = "ACTIVO" | "INACTIVO" | "BLOQUEADO";
 
-interface EmpleadoDomestico {
-  id: string;
-  nombre: string;
-  iniciales: string;
-  colorAvatar: string;
-  tipo: TipoEmpleado;
-  residente: string;
-  propiedad: string;
-  diasAutorizados: string;
-  horarioAutorizado: string;
-  estado: EstadoEmpleado;
-  bloqueadoPorAdmin: boolean;
-  vinculosActivos: number;
-  notaExtra?: string;
+const DIA_LABELS: Record<string, string> = {
+  LUNES: "Lun", MARTES: "Mar", MIERCOLES: "Mié",
+  JUEVES: "Jue", VIERNES: "Vie", SABADO: "Sáb", DOMINGO: "Dom",
+};
+
+const DIA_COMPLETO_LABELS: Record<string, string> = {
+  LUNES: "Lunes", MARTES: "Martes", MIERCOLES: "Miércoles",
+  JUEVES: "Jueves", VIERNES: "Viernes", SABADO: "Sábado", DOMINGO: "Domingo",
+};
+
+function getEstado(emp: EmpleadoGuardia): EstadoVis {
+  if (emp.bloqueo_global) return "BLOQUEADO";
+  if (emp.estado_acceso === "Activo") return "ACTIVO";
+  return "INACTIVO";
 }
 
-const MOCK_EMPLEADOS: EmpleadoDomestico[] = [
-  {
-    id: "1",
-    nombre: "María García López",
-    iniciales: "MG",
-    colorAvatar: "bg-pink-500",
-    tipo: "LIMPIEZA",
-    residente: "Juan Pérez",
-    propiedad: "Casa #15",
-    diasAutorizados: "Lun-Vie",
-    horarioAutorizado: "8am–4pm",
-    estado: "ACTIVO",
-    bloqueadoPorAdmin: false,
-    vinculosActivos: 1,
-  },
-  {
-    id: "2",
-    nombre: "Carlos López Ruiz",
-    iniciales: "CL",
-    colorAvatar: "bg-blue-500",
-    tipo: "CHOFER",
-    residente: "Ana Martínez",
-    propiedad: "Casa #8",
-    diasAutorizados: "Miércoles",
-    horarioAutorizado: "10am–2pm",
-    estado: "ACTIVO",
-    bloqueadoPorAdmin: false,
-    vinculosActivos: 1,
-  },
-  {
-    id: "3",
-    nombre: "Rosa Mendoza Torres",
-    iniciales: "RM",
-    colorAvatar: "bg-purple-500",
-    tipo: "CUIDADOR",
-    residente: "Luis Torres",
-    propiedad: "Casa #23",
-    diasAutorizados: "Domingo",
-    horarioAutorizado: "9am–12pm",
-    estado: "INACTIVO",
-    bloqueadoPorAdmin: false,
-    vinculosActivos: 0,
-  },
-  {
-    id: "4",
-    nombre: "Pedro Ramírez Vega",
-    iniciales: "PR",
-    colorAvatar: "bg-green-600",
-    tipo: "JARDINERO",
-    residente: "Carmen Vega",
-    propiedad: "Casa #742",
-    diasAutorizados: "Lunes",
-    horarioAutorizado: "10am–12pm",
-    estado: "ACTIVO",
-    bloqueadoPorAdmin: false,
-    vinculosActivos: 1,
-  },
-  {
-    id: "5",
-    nombre: "Elena Vásquez Mora",
-    iniciales: "EV",
-    colorAvatar: "bg-orange-500",
-    tipo: "COCINERO",
-    residente: "Roberto Díaz",
-    propiedad: "Casa #4A",
-    diasAutorizados: "Lun-Vie",
-    horarioAutorizado: "8am–4pm",
-    estado: "ACTIVO",
-    bloqueadoPorAdmin: false,
-    vinculosActivos: 1,
-  },
-  {
-    id: "6",
-    nombre: "Miguel Santos Cruz",
-    iniciales: "MS",
-    colorAvatar: "bg-red-600",
-    tipo: "LIMPIEZA",
-    residente: "Sofía Ruiz",
-    propiedad: "Casa #71",
-    diasAutorizados: "Lun-Vie",
-    horarioAutorizado: "9am–6pm",
-    estado: "BLOQUEADO",
-    bloqueadoPorAdmin: true,
-    vinculosActivos: 0,
-    notaExtra: "Bloqueado por Administración",
-  },
-  {
-    id: "7",
-    nombre: "Lucía Hernández Paz",
-    iniciales: "LH",
-    colorAvatar: "bg-teal-500",
-    tipo: "CUIDADOR",
-    residente: "Sofía Ruiz",
-    propiedad: "Casa #3",
-    diasAutorizados: "Mar-Jue",
-    horarioAutorizado: "7am–3pm",
-    estado: "ACTIVO",
-    bloqueadoPorAdmin: false,
-    vinculosActivos: 1,
-  },
-  {
-    id: "8",
-    nombre: "Antonio Flores Soto",
-    iniciales: "AF",
-    colorAvatar: "bg-yellow-600",
-    tipo: "CHOFER",
-    residente: "Manuel Castro",
-    propiedad: "Casa #120",
-    diasAutorizados: "Lun-Vie",
-    horarioAutorizado: "8am–4pm",
-    estado: "INACTIVO",
-    bloqueadoPorAdmin: false,
-    vinculosActivos: 0,
-  },
-  {
-    id: "9",
-    nombre: "Isabel Moreno Reyes",
-    iniciales: "IM",
-    colorAvatar: "bg-indigo-500",
-    tipo: "LIMPIEZA",
-    residente: "Ana García / Luis Pérez",
-    propiedad: "Casa #2B",
-    diasAutorizados: "Sábado",
-    horarioAutorizado: "9am–1pm",
-    estado: "ACTIVO",
-    bloqueadoPorAdmin: false,
-    vinculosActivos: 2,
-    notaExtra: "Vinculada a 2 residentes",
-  },
-  {
-    id: "10",
-    nombre: "Fernando Cruz Medina",
-    iniciales: "FC",
-    colorAvatar: "bg-red-700",
-    tipo: "JARDINERO",
-    residente: "Daniela Herrera",
-    propiedad: "Casa #55",
-    diasAutorizados: "Mié-Vie",
-    horarioAutorizado: "8am–12pm",
-    estado: "BLOQUEADO",
-    bloqueadoPorAdmin: true,
-    vinculosActivos: 0,
-    notaExtra: "Bloqueado por Administración",
-  },
-  {
-    id: "11",
-    nombre: "Patricia Gómez Luna",
-    iniciales: "PG",
-    colorAvatar: "bg-rose-500",
-    tipo: "COCINERO",
-    residente: "Diana López",
-    propiedad: "Casa #7",
-    diasAutorizados: "Lun-Vie",
-    horarioAutorizado: "8am–5pm",
-    estado: "ACTIVO",
-    bloqueadoPorAdmin: false,
-    vinculosActivos: 1,
-  },
-  {
-    id: "12",
-    nombre: "Roberto Sánchez Vera",
-    iniciales: "RS",
-    colorAvatar: "bg-cyan-600",
-    tipo: "OTRO",
-    residente: "Andrés Vargas",
-    propiedad: "Casa #31",
-    diasAutorizados: "Jueves",
-    horarioAutorizado: "10am–4pm",
-    estado: "ACTIVO",
-    bloqueadoPorAdmin: false,
-    vinculosActivos: 1,
-  },
-];
+function getIniciales(nombre: string): string {
+  return nombre.split(" ").slice(0, 2).map((n) => n[0] ?? "").join("").toUpperCase();
+}
 
-const PAGE_SIZE = 8;
+function getColorAvatar(id: string): string {
+  const colors = [
+    "bg-pink-500", "bg-blue-500", "bg-purple-500", "bg-green-600",
+    "bg-orange-500", "bg-teal-500", "bg-indigo-500", "bg-rose-500",
+    "bg-cyan-600", "bg-amber-600",
+  ];
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) % colors.length;
+  return colors[Math.abs(hash)];
+}
 
-const estadoBadge: Record<EstadoEmpleado, { label: string; className: string }> = {
+function formatDias(dias: string[]): string {
+  return dias.map((d) => DIA_LABELS[d] ?? d).join(", ") || "—";
+}
+
+function formatHorario(horarios: string[]): string {
+  return horarios[0] ?? "—";
+}
+
+const DIA_HOY: Record<number, string> = {
+  0: "DOMINGO", 1: "LUNES", 2: "MARTES", 3: "MIERCOLES",
+  4: "JUEVES", 5: "VIERNES", 6: "SABADO",
+};
+
+function parseMinutos(hora: string): number {
+  const [h, m] = hora.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function checkHorario(emp: EmpleadoGuardia): { fueraDeHorario: boolean; razon: string } {
+  const now = new Date();
+  const diaHoy = DIA_HOY[now.getDay()];
+  const minutosAhora = now.getHours() * 60 + now.getMinutes();
+
+  if (!emp.dias_autorizados.includes(diaHoy)) {
+    return { fueraDeHorario: true, razon: `${DIA_COMPLETO_LABELS[diaHoy] ?? diaHoy} no es un día autorizado para este empleado.` };
+  }
+
+  if (emp.horarios_autorizados.length > 0) {
+    const dentro = emp.horarios_autorizados.some((h) => {
+      const partes = h.split(" - ");
+      if (partes.length !== 2) return false;
+      return minutosAhora >= parseMinutos(partes[0]) && minutosAhora <= parseMinutos(partes[1]);
+    });
+    if (!dentro) {
+      return { fueraDeHorario: true, razon: `Fuera del horario autorizado: ${emp.horarios_autorizados.join(", ")}.` };
+    }
+  }
+
+  return { fueraDeHorario: false, razon: "" };
+}
+
+const estadoBadge: Record<EstadoVis, { label: string; className: string }> = {
   ACTIVO: { label: "Activo", className: "bg-green-100 text-green-800 hover:bg-green-100 border-0" },
   INACTIVO: { label: "Inactivo", className: "bg-gray-100 text-gray-700 hover:bg-gray-100 border-0" },
   BLOQUEADO: { label: "Bloqueado", className: "bg-red-100 text-red-800 hover:bg-red-100 border-0" },
 };
 
-const tipoLabel: Record<TipoEmpleado, string> = {
-  LIMPIEZA: "Limpieza",
-  CHOFER: "Chofer",
-  CUIDADOR: "Cuidador",
-  JARDINERO: "Jardinero",
-  COCINERO: "Cocinero",
-  OTRO: "Otro",
-};
-
 export function EmpleadosDomesticosPage() {
-  const [filtros, setFiltros] = useState<FiltrosEmpleadosValues>({});
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageInput, setPageInput] = useState("1");
+  const {
+    empleados,
+    loading,
+    error,
+    currentPage,
+    totalPages,
+    totalEmpleados,
+    filtros,
+    setFiltros,
+    setCurrentPage,
+    refetch,
+  } = useEmpleadosGuardia();
+
+  const [pageInput, setPageInput] = useState(String(currentPage));
   const [pageError, setPageError] = useState<string | null>(null);
-  const [error] = useState<string | null>(null);
-
-  const filtered = useMemo(() => {
-    let result = [...MOCK_EMPLEADOS];
-
-    if (filtros.busqueda?.trim()) {
-      const q = filtros.busqueda.toLowerCase();
-      result = result.filter(
-        (e) =>
-          e.nombre.toLowerCase().includes(q) ||
-          e.residente.toLowerCase().includes(q)
-      );
-    }
-
-    if (filtros.estado) {
-      result = result.filter((e) => e.estado === filtros.estado);
-    }
-
-    if (filtros.tipo) {
-      result = result.filter((e) => e.tipo === filtros.tipo);
-    }
-
-    return result;
-  }, [filtros]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-
-  useEffect(() => {
-    setCurrentPage(1);
-    setPageInput("1");
-    setPageError(null);
-  }, [filtros]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [justModal, setJustModal] = useState<EmpleadoGuardia | null>(null);
+  const [justTexto, setJustTexto] = useState("");
 
   useEffect(() => {
     setPageInput(String(currentPage));
     setPageError(null);
   }, [currentPage]);
 
-  const paginados = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paginados = useMemo(() => {
+    let result = empleados;
+    if (filtros.estado) {
+      result = result.filter((e) => getEstado(e) === filtros.estado);
+    }
+    if (filtros.tipo) {
+      result = result.filter(
+        (e) => e.tipo_empleado?.toLowerCase() === filtros.tipo?.toLowerCase()
+      );
+    }
+    return result;
+  }, [empleados, filtros.estado, filtros.tipo]);
 
   const handlePageSubmit = () => {
     const num = parseInt(pageInput, 10);
@@ -295,11 +171,12 @@ export function EmpleadosDomesticosPage() {
   };
 
   return (
-    <div className="w-full min-w-0 container mx-auto py-6 px-4 sm:px-6 space-y-5">
+    <>
+    <div className="p-4 sm:p-6 space-y-5">
       <div>
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Empleados domésticos</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {`${filtered.length} empleado${filtered.length !== 1 ? "s" : ""} registrado${filtered.length !== 1 ? "s" : ""}`}
+          {loading ? "Cargando..." : `${totalEmpleados} empleado${totalEmpleados !== 1 ? "s" : ""} registrado${totalEmpleados !== 1 ? "s" : ""}`}
         </p>
       </div>
 
@@ -309,7 +186,7 @@ export function EmpleadosDomesticosPage() {
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
-          <Button variant="outline" size="sm" className="ml-4 shrink-0">
+          <Button variant="outline" size="sm" onClick={refetch} className="ml-4 shrink-0">
             <RefreshCw className="h-4 w-4 mr-1" />
             Reintentar
           </Button>
@@ -322,17 +199,26 @@ export function EmpleadosDomesticosPage() {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="min-w-45">Empleado</TableHead>
+              <TableHead className="w-[72%] sm:w-auto sm:min-w-45">Empleado</TableHead>
               <TableHead className="hidden sm:table-cell">Propiedad</TableHead>
               <TableHead className="hidden md:table-cell">Tipo</TableHead>
               <TableHead className="hidden md:table-cell">Días autorizados</TableHead>
               <TableHead className="hidden lg:table-cell">Horario</TableHead>
-              <TableHead>Estado</TableHead>
+              <TableHead className="w-[28%] sm:w-auto px-2 sm:px-4">Estado</TableHead>
               <TableHead className="hidden sm:table-cell text-right">Acción</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginados.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <div className="flex items-center justify-center gap-2">
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span>Cargando empleados...</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : paginados.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                   {filtros.busqueda?.trim()
@@ -342,28 +228,53 @@ export function EmpleadosDomesticosPage() {
               </TableRow>
             ) : (
               paginados.map((emp) => {
-                const isBloqueado = emp.estado === "BLOQUEADO";
-                const isInactivo = emp.estado === "INACTIVO";
-                const badge = estadoBadge[emp.estado];
+                const estado = getEstado(emp);
+                const isBloqueado = estado === "BLOQUEADO";
+                const isInactivo = estado === "INACTIVO";
+                const badge = estadoBadge[estado];
+                const iniciales = getIniciales(emp.nombre_completo);
+                const colorAvatar = getColorAvatar(emp.id_visitante);
+
+                const isExpanded = expandedId === emp.id_visitante;
+                const { fueraDeHorario, razon: razonHorario } = !isBloqueado && !isInactivo
+                  ? checkHorario(emp)
+                  : { fueraDeHorario: false, razon: "" };
 
                 return (
+                  <React.Fragment key={emp.id_visitante}>
                   <TableRow
-                    key={emp.id}
-                    className={`align-top ${isBloqueado ? "bg-red-50 hover:bg-red-100" : ""}`}
+                    className={`align-top cursor-pointer sm:cursor-default ${isBloqueado ? "bg-red-50 hover:bg-red-100" : ""}`}
+                    onClick={() => setExpandedId(isExpanded ? null : emp.id_visitante)}
                   >
-                    <TableCell className="min-w-45">
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={`h-9 w-9 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0 ${emp.colorAvatar}`}
-                        >
-                          {emp.iniciales}
-                        </div>
-                        <div>
+                    <TableCell className="w-[72%] max-w-0 pr-2 sm:w-auto sm:max-w-none sm:min-w-45 sm:pr-4">
+                      <div className="flex items-start gap-2 sm:gap-3">
+                        {emp.url_imagen ? (
+                          <div className={`relative h-9 w-9 rounded-full shrink-0 overflow-hidden ${colorAvatar}`}>
+                            <div className="absolute inset-0 flex items-center justify-center text-white text-xs font-semibold">
+                              {iniciales}
+                            </div>
+                            <img
+                              src={emp.url_imagen}
+                              alt={emp.nombre_completo}
+                              className="absolute inset-0 h-full w-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <div
+                            className={`h-9 w-9 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0 ${colorAvatar}`}
+                          >
+                            {iniciales}
+                          </div>
+                        )}
+                        <div className="min-w-0">
                           <p className="font-medium text-sm leading-tight flex items-center gap-1.5">
                             {isBloqueado && (
                               <Lock className="h-3.5 w-3.5 text-red-600 shrink-0" />
                             )}
-                            {emp.nombre}
+                            <span className="break-words">{emp.nombre_completo}</span>
                           </p>
                           {isBloqueado && (
                             <p className="text-xs font-semibold text-red-600 mt-0.5 flex items-center gap-1">
@@ -371,40 +282,37 @@ export function EmpleadosDomesticosPage() {
                               Bloqueado por Administración
                             </p>
                           )}
-                          {emp.notaExtra && !isBloqueado && (
-                            <p className="text-xs text-blue-600 mt-0.5">{emp.notaExtra}</p>
-                          )}
                           <p className="text-xs text-muted-foreground mt-0.5 sm:hidden">
-                            {emp.propiedad} · {emp.residente}
+                            {emp.propiedad_asociada} · {emp.residente_asociado}
                           </p>
                         </div>
+                        <ChevronDown
+                          className={`h-4 w-4 text-muted-foreground shrink-0 sm:hidden transition-transform ml-auto ${isExpanded ? "rotate-180" : ""}`}
+                        />
                       </div>
                     </TableCell>
 
                     <TableCell className="hidden sm:table-cell text-sm">
-                      <p className="font-medium">{emp.propiedad}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{emp.residente}</p>
-                      {emp.vinculosActivos > 1 && (
-                        <p className="text-xs text-blue-600 mt-0.5">
-                          {emp.vinculosActivos} vínculos activos
-                        </p>
-                      )}
+                      <p className="font-medium">{emp.propiedad_asociada}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{emp.residente_asociado}</p>
                     </TableCell>
 
                     <TableCell className="hidden md:table-cell text-sm">
-                      {tipoLabel[emp.tipo]}
+                      {emp.tipo_empleado || "—"}
                     </TableCell>
 
                     <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                      {emp.diasAutorizados}
+                      {formatDias(emp.dias_autorizados)}
                     </TableCell>
 
                     <TableCell className="hidden lg:table-cell text-sm text-muted-foreground whitespace-nowrap">
-                      {emp.horarioAutorizado}
+                      {formatHorario(emp.horarios_autorizados)}
                     </TableCell>
 
-                    <TableCell>
-                      <Badge className={badge.className}>{badge.label}</Badge>
+                    <TableCell className="w-[28%] sm:w-auto px-2 sm:px-4">
+                      <Badge className={`${badge.className} text-[11px] sm:text-xs px-2`}>
+                        {badge.label}
+                      </Badge>
                     </TableCell>
 
                     <TableCell className="hidden sm:table-cell text-right">
@@ -422,6 +330,15 @@ export function EmpleadosDomesticosPage() {
                           <UserX className="h-3.5 w-3.5 mr-1" />
                           Dado de baja
                         </Button>
+                      ) : fueraDeHorario ? (
+                        <Button
+                          size="sm"
+                          className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                          onClick={() => { setJustModal(emp); setJustTexto(""); }}
+                        >
+                          <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                          Fuera de horario
+                        </Button>
                       ) : (
                         <Button
                           size="sm"
@@ -433,6 +350,54 @@ export function EmpleadosDomesticosPage() {
                       )}
                     </TableCell>
                   </TableRow>
+                  {isExpanded && (
+                    <TableRow className={`sm:hidden ${isBloqueado ? "bg-red-50" : "bg-muted/30"}`}>
+                      <TableCell colSpan={7} className="px-4 pb-3 pt-0">
+                        <div className="flex flex-col gap-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Tipo</span>
+                            <span>{emp.tipo_empleado || "—"}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Días</span>
+                            <span>{formatDias(emp.dias_autorizados)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Horario</span>
+                            <span>{formatHorario(emp.horarios_autorizados)}</span>
+                          </div>
+                          <div className="pt-1">
+                            {isBloqueado ? (
+                              <Button size="sm" disabled className="w-full bg-red-200 text-red-700 cursor-not-allowed hover:bg-red-200">
+                                <Lock className="h-3.5 w-3.5 mr-1" />
+                                Bloqueado
+                              </Button>
+                            ) : isInactivo ? (
+                              <Button size="sm" disabled variant="outline" className="w-full cursor-not-allowed">
+                                <UserX className="h-3.5 w-3.5 mr-1" />
+                                Dado de baja
+                              </Button>
+                            ) : fueraDeHorario ? (
+                              <Button
+                                size="sm"
+                                className="w-full bg-yellow-500 hover:bg-yellow-600 text-white"
+                                onClick={() => { setJustModal(emp); setJustTexto(""); }}
+                              >
+                                <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                                Fuera de horario
+                              </Button>
+                            ) : (
+                              <Button size="sm" className="w-full bg-amber-500 hover:bg-amber-600 text-white">
+                                <LogIn className="h-3.5 w-3.5 mr-1" />
+                                Registrar entrada
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  </React.Fragment>
                 );
               })
             )}
@@ -442,7 +407,7 @@ export function EmpleadosDomesticosPage() {
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-muted-foreground">
         <span className="text-center sm:text-left">
-          {`Mostrando ${filtered.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, filtered.length)} de ${filtered.length} empleados`}
+          {loading ? "Cargando..." : `Mostrando ${totalEmpleados === 0 ? 0 : (currentPage - 1) * 8 + 1}–${Math.min(currentPage * 8, totalEmpleados)} de ${totalEmpleados} empleados`}
         </span>
 
         <div className="flex flex-col items-center sm:items-end gap-1">
@@ -450,8 +415,8 @@ export function EmpleadosDomesticosPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage((p) => p - 1)}
-              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1 || loading}
             >
               <ChevronLeft className="h-4 w-4" />
               <span className="hidden xs:inline">Anterior</span>
@@ -475,8 +440,8 @@ export function EmpleadosDomesticosPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage((p) => p + 1)}
-              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage === totalPages || loading}
             >
               <span className="hidden xs:inline">Siguiente</span>
               <ChevronRight className="h-4 w-4" />
@@ -492,5 +457,43 @@ export function EmpleadosDomesticosPage() {
         </div>
       </div>
     </div>
+
+      <Dialog open={!!justModal} onOpenChange={(open) => { if (!open) setJustModal(null); }}>
+        <DialogContent className="sm:max-w-md p-7">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              Acceso fuera de horario
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-2 text-sm pt-2">
+                <p><strong>{justModal?.nombre_completo}</strong> intenta acceder fuera de su horario autorizado.</p>
+                <p className="text-yellow-700 font-medium">{justModal ? checkHorario(justModal).razon : ""}</p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-3">
+            <p className="text-sm font-medium">Justificación del acceso *</p>
+            <Textarea
+              placeholder="Describe el motivo por el que se permite el acceso..."
+              value={justTexto}
+              onChange={(e) => setJustTexto(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setJustModal(null)}>Cancelar</Button>
+            <Button
+              disabled={!justTexto.trim()}
+              className="bg-amber-500 hover:bg-amber-600 text-white"
+              onClick={() => { setJustModal(null); setJustTexto(""); }}
+            >
+              <LogIn className="h-3.5 w-3.5 mr-1" />
+              Confirmar paso
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
