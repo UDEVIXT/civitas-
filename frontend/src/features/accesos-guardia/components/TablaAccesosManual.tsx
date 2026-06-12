@@ -41,6 +41,12 @@ const tipoVisitaBadge: Record<TipoDisplay, { label: string; className: string }>
   Proveedor: { label: "Proveedor", className: "bg-orange-100 text-orange-500 hover:bg-orange-100 border-0 rounded-full" },
 };
 
+const tipoVisitaBadge: Record<TipoVisita, { label: string; className: string }> = {
+  Visitante: { label: "Visitante", className: "bg-blue-100 text-blue-600 hover:bg-blue-100 border-0 rounded-full" },
+  "Empleado doméstico": { label: "Empleado doméstico", className: "bg-teal-100 text-teal-600 hover:bg-teal-100 border-0 rounded-full" },
+  Proveedor: { label: "Proveedor", className: "bg-orange-100 text-orange-500 hover:bg-orange-100 border-0 rounded-full" },
+};
+
 const estadoQRBadge: Record<EstadoQR, { label: string; className: string }> = {
   Activo: { label: "Activo", className: "bg-green-100 text-green-800 hover:bg-green-100 border-0" },
   Expirado: { label: "Expirado", className: "bg-amber-100 text-amber-800 hover:bg-amber-100 border-0" },
