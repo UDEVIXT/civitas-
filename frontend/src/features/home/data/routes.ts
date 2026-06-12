@@ -11,6 +11,7 @@ import {
   Scan,
   HardHat,
   ListChecks,
+  ShieldCheck,
   BriefcaseBusiness,
 } from "lucide-react";
 
@@ -35,6 +36,13 @@ export const routes: Route[] = [
     label: "Empleados Domésticos",
     description: "Lista de empleados domésticos autorizados por los residentes.",
     icon: HardHat,
+    roles: [ROLES.GUARDIA],
+  },
+  {
+    path: "/accesos-guardia",
+    label: "Autorización de accesos",
+    description: "Acepta o rechaza el acceso de visitantes, proveedores y empleados domésticos.",
+    icon: ShieldCheck,
     roles: [ROLES.GUARDIA],
   },
   {
