@@ -20,7 +20,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 
-type TipoVisita = "Visitante" | "Proveedor" | "Empleado";
+type TipoVisita = "Visitante" | "Proveedor" | "Empleado doméstico";
 type EstadoQR = "Activo" | "Expirado" | "Desactivado";
 
 interface AccesoManual {
@@ -69,7 +69,7 @@ const DATOS_ESTATICOS: AccesoManual[] = [
     residente_autorizador: "Jorge Sánchez",
     fecha_entrada: "2026-06-09T08:00:00",
     fecha_salida: "2026-06-09T17:00:00",
-    tipo_visita: "Empleado",
+    tipo_visita: "Empleado doméstico",
     estado_qr: "Expirado",
   },
   {
@@ -104,7 +104,7 @@ const DATOS_ESTATICOS: AccesoManual[] = [
     residente_autorizador: "Claudia Morales",
     fecha_entrada: "2026-06-09T07:30:00",
     fecha_salida: null,
-    tipo_visita: "Empleado",
+    tipo_visita: "Empleado doméstico",
     estado_qr: "Activo",
   },
   {
@@ -131,6 +131,12 @@ const DATOS_ESTATICOS: AccesoManual[] = [
     nota: "Recarga de tanque. Coordinar con encargado de mantenimiento.",
   },
 ];
+
+const tipoVisitaBadge: Record<TipoVisita, { label: string; className: string }> = {
+  Visitante: { label: "Visitante", className: "bg-blue-100 text-blue-600 hover:bg-blue-100 border-0 rounded-full" },
+  "Empleado doméstico": { label: "Empleado doméstico", className: "bg-teal-100 text-teal-600 hover:bg-teal-100 border-0 rounded-full" },
+  Proveedor: { label: "Proveedor", className: "bg-orange-100 text-orange-500 hover:bg-orange-100 border-0 rounded-full" },
+};
 
 const estadoQRBadge: Record<EstadoQR, { label: string; className: string }> = {
   Activo: { label: "Activo", className: "bg-green-100 text-green-800 hover:bg-green-100 border-0" },
@@ -168,6 +174,7 @@ export function TablaAccesosManual() {
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead className="min-w-[140px]">Nombre</TableHead>
+              <TableHead className="hidden sm:table-cell">Tipo</TableHead>
               <TableHead className="hidden md:table-cell min-w-[160px]">Información general</TableHead>
               <TableHead className="hidden sm:table-cell min-w-[130px]">Propiedad</TableHead>
               <TableHead className="hidden lg:table-cell">
@@ -176,7 +183,6 @@ export function TablaAccesosManual() {
               <TableHead className="hidden lg:table-cell">
                 <span className="flex items-center gap-1">Fecha esperada de salida <ArrowUpDown className="h-3 w-3" /></span>
               </TableHead>
-              <TableHead className="hidden lg:table-cell">Tipo</TableHead>
               <TableHead>Estado QR</TableHead>
               <TableHead className="hidden sm:table-cell text-center">Nota</TableHead>
             </TableRow>
@@ -184,6 +190,7 @@ export function TablaAccesosManual() {
           <TableBody>
             {DATOS_ESTATICOS.map((acceso) => {
               const qrBadge = estadoQRBadge[acceso.estado_qr];
+              const tipoBadge = tipoVisitaBadge[acceso.tipo_visita];
               const isExpanded = expandedId === acceso.id;
 
               return (
@@ -205,6 +212,10 @@ export function TablaAccesosManual() {
                           className={`h-4 w-4 text-muted-foreground shrink-0 sm:hidden transition-transform ${isExpanded ? "rotate-180" : ""}`}
                         />
                       </div>
+                    </TableCell>
+
+                    <TableCell className="hidden sm:table-cell">
+                      <Badge className={tipoBadge.className}>{tipoBadge.label}</Badge>
                     </TableCell>
 
                     <TableCell className="hidden md:table-cell max-w-[200px]">
@@ -242,10 +253,6 @@ export function TablaAccesosManual() {
                       ) : (
                         <span className="text-xs text-muted-foreground italic">Sin registrar</span>
                       )}
-                    </TableCell>
-
-                    <TableCell className="hidden lg:table-cell text-sm">
-                      {acceso.tipo_visita}
                     </TableCell>
 
                     <TableCell>
@@ -286,9 +293,9 @@ export function TablaAccesosManual() {
                               <p className="text-muted-foreground">{acceso.info_general}</p>
                             )}
                           </div>
-                          <div className="flex justify-between">
+                          <div className="flex justify-between items-center">
                             <span className="text-muted-foreground">Tipo</span>
-                            <span>{acceso.tipo_visita}</span>
+                            <Badge className={tipoBadge.className}>{tipoBadge.label}</Badge>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Llegada</span>
