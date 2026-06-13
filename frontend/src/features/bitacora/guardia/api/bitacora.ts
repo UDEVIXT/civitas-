@@ -19,12 +19,14 @@ export interface BitacoraRegistro {
     nombre: string;
     avatar_url: string | null;
   };
-  fecha_entrada: string;
-  fecha_salida: string;
+  fecha_entrada: string | null;
+  fecha_salida: string | null;
   metodo_acceso: string;
   guardia_registro: string;
   estado: string;
   avatar_url: string | null;
+  fecha_rechazo?: string | null;
+  motivo_rechazo?: string | null;
 }
 
 export interface BitacoraDetalle extends BitacoraRegistro {
@@ -32,7 +34,7 @@ export interface BitacoraDetalle extends BitacoraRegistro {
   qr_validado?: boolean;
   notas: string | null;
   notas_guardia?: string;
-  hora_validacion: string;
+  hora_validacion: string | null;
   foto_visitante?: string;
   servicio_nombre?: string;
   cargo_empleado?: string;

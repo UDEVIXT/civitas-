@@ -16,8 +16,11 @@ export class AccesoPreautorizadoService {
 
   async findAll() {
     try {
+      const ahora = new Date();
+
       const accesos = await this.prisma.acceso.findMany({
         where: {
+          codigo_qr: { not: null },
           id_visitante: { not: null },
           bitacora: {
             none: {
@@ -55,8 +58,6 @@ export class AccesoPreautorizadoService {
           fecha_creacion: 'desc',
         },
       });
-
-      const ahora = new Date();
 
       return accesos
         .filter((acceso) => acceso.visitante)
@@ -107,6 +108,22 @@ export class AccesoPreautorizadoService {
             createdAt: acceso.fecha_creacion,
             updatedAt: acceso.fecha_creacion,
           };
+        })
+        .sort((a, b) => {
+          const prioridad: Record<EstadoQrManual, number> = {
+            Activo: 0,
+            Expirado: 1,
+            Desactivado: 2,
+          };
+
+          const prioridadA = prioridad[a.estado_qr as EstadoQrManual];
+          const prioridadB = prioridad[b.estado_qr as EstadoQrManual];
+
+          if (prioridadA !== prioridadB) return prioridadA - prioridadB;
+
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
         });
     } catch (error) {
       console.error('Error al obtener accesos preautorizados:', error);

@@ -59,6 +59,7 @@ export function ModalDetalleRegistro({
     const colors: Record<string, string> = {
       entrada: "bg-green-100 text-green-800",
       salida: "bg-red-100 text-red-800",
+      rechazado: "bg-slate-100 text-slate-800",
     };
     return colors[estado] || "bg-gray-100 text-gray-800";
   };
@@ -116,9 +117,12 @@ export function ModalDetalleRegistro({
     notas?: string;
     comentario_salida?: string;
     qr_utilizado?: string;
-    hora_validacion?: string;
+    hora_validacion?: string | null;
     guardia_salida?: string;
+    fecha_rechazo?: string | null;
+    motivo_rechazo?: string | null;
   };
+  const isRechazado = registro.estado === "rechazado";
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -233,7 +237,7 @@ export function ModalDetalleRegistro({
                   <ShieldCheck className="h-5 w-5" />
                   Información de Acceso
                 </CardTitle>
-                {(!registro.fecha_salida || registro.fecha_salida === "-") && (
+                {!isRechazado && (!registro.fecha_salida || registro.fecha_salida === "-") && (
                   <Button
                     size="sm"
                     className="w-full sm:w-auto cursor-pointer"
@@ -256,7 +260,7 @@ export function ModalDetalleRegistro({
                   </span>
                 </div>
                 <Badge className={getEstadoColor(registro.estado)}>
-                  {registro.estado}
+                  {isRechazado ? "Rechazado" : registro.estado}
                 </Badge>
               </div>
 
@@ -278,6 +282,25 @@ export function ModalDetalleRegistro({
               )}
 
               <div className="space-y-2 text-sm">
+                {isRechazado && (
+                  <div className="flex items-start gap-2 flex-wrap">
+                    <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <span className="font-medium shrink-0">Rechazado:</span>
+                    <span className="text-muted-foreground">
+                      {registro.fecha_rechazo
+                        ? format(new Date(registro.fecha_rechazo), "dd/MM/yyyy HH:mm:ss", { locale: es })
+                        : "N/A"}
+                    </span>
+                  </div>
+                )}
+                {isRechazado && (
+                  <div className="flex items-start gap-2 flex-wrap">
+                    <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <span className="font-medium shrink-0">Entrada:</span>
+                    <span className="text-muted-foreground">N/A</span>
+                  </div>
+                )}
+                {!isRechazado && (
                 <div className="flex items-start gap-2 flex-wrap">
                   <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                   <span className="font-medium shrink-0">Entrada:</span>
@@ -287,7 +310,9 @@ export function ModalDetalleRegistro({
                       : "N/A"}
                   </span>
                 </div>
+                )}
 
+                {!isRechazado && (
                 <div className="flex items-start gap-2 flex-wrap">
                   <Clock className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                   <span className="font-medium shrink-0">Hora validación:</span>
@@ -297,8 +322,17 @@ export function ModalDetalleRegistro({
                       : "No registrada"}
                   </span>
                 </div>
+                )}
 
-                {registro.fecha_salida && registro.fecha_salida !== "-" && (
+                {isRechazado && (
+                  <div className="flex items-start gap-2 flex-wrap">
+                    <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <span className="font-medium shrink-0">Salida:</span>
+                    <span className="text-muted-foreground">N/A</span>
+                  </div>
+                )}
+
+                {!isRechazado && registro.fecha_salida && registro.fecha_salida !== "-" && (
                   <div className="flex items-start gap-2 flex-wrap">
                     <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                     <span className="font-medium shrink-0">Salida:</span>
@@ -312,7 +346,7 @@ export function ModalDetalleRegistro({
               <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-2 text-sm">
                   <ShieldCheck className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="font-medium">Guardia entrada:</span>
+                  <span className="font-medium">{isRechazado ? "Guardia que rechazÃ³:" : "Guardia entrada:"}</span>
                   <span className="text-muted-foreground">{registro.guardia_registro}</span>
                 </div>
               </div>
@@ -324,12 +358,16 @@ export function ModalDetalleRegistro({
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <FileText className="h-5 w-5" />
-                Notas de entrada del Guardia
+                {isRechazado ? "Motivo del rechazo" : "Notas de entrada del Guardia"}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="p-3 sm:p-4 bg-muted rounded-lg min-h-[80px] sm:min-h-[100px]">
-                {registro.notas ? (
+                {isRechazado ? (
+                  <p className="text-sm whitespace-pre-wrap">
+                    {registro.motivo_rechazo || registro.notas || "Sin motivo registrado."}
+                  </p>
+                ) : registro.notas ? (
                   <p className="text-sm whitespace-pre-wrap">{registro.notas}</p>
                 ) : (
                   <p className="text-sm text-muted-foreground italic">
