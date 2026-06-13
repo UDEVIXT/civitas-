@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 
-import { FileText, ArrowUpDown, ChevronDown, AlertCircle, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
+import { FileText, ArrowUpDown, ChevronDown, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, Check, X, Loader2 } from "lucide-react";
 import { ScanLine, ListFilter,Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -21,14 +21,21 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { useAccesosPreautorizados } from "../hooks/useAccesosPreautorizados";
-import { AccesoPreautorizado } from "../api/accesos";
+import {
+  AccesoPreautorizado,
+  aceptarAccesoManual,
+  rechazarAccesoManual,
+} from "../api/accesos";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu"
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 type TipoDisplay = "Visitante" | "Proveedor" | "Empleado doméstico";
-type EstadoQR = "Activo" | "Expirado";
+type EstadoQR = "Activo" | "Expirado" | "Desactivado";
 
 const TIPO_DISPLAY: Record<"Visitante" | "Proveedor" | "Empleado", TipoDisplay> = {
   Visitante: "Visitante",
@@ -49,6 +56,7 @@ const tipoVisitaBadge: Record<TipoDisplay, { label: string; className: string }>
 const estadoQRBadge: Record<EstadoQR, { label: string; className: string }> = {
   Activo: { label: "Activo", className: "bg-green-100 text-green-800 hover:bg-green-100 border-0" },
   Expirado: { label: "Expirado", className: "bg-amber-100 text-amber-800 hover:bg-amber-100 border-0" },
+  Desactivado: { label: "Desactivado", className: "bg-slate-100 text-slate-700 hover:bg-slate-100 border-0" },
 };
 
 function formatFecha(iso: string): string {
@@ -76,6 +84,10 @@ export function TablaAccesosManual() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState("1");
   const [searchTerm, setSearchTerm] = useState("");
+  const [accesoParaRechazar, setAccesoParaRechazar] =
+    useState<AccesoPreautorizado | null>(null);
+  const [motivoRechazo, setMotivoRechazo] = useState("");
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   const [filterVisitantes, setFilterVisitantes] = React.useState(false)
   const [filterProveedores, setFilterProveedores] = React.useState(false)
@@ -110,6 +122,71 @@ export function TablaAccesosManual() {
   useEffect(() => {
     setCurrentPage(1);
   }, [filterVisitantes, filterProveedores, filterEmpleados, searchTerm]);
+
+  const getErrorMessage = (error: unknown) => {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "response" in error
+    ) {
+      const response = error.response as {
+        data?: { message?: string | string[] };
+      };
+      const message = response.data?.message;
+
+      if (Array.isArray(message)) return message.join(" | ");
+      if (typeof message === "string") return message;
+    }
+
+    return "No fue posible registrar la decision. Intenta nuevamente.";
+  };
+
+  const handleAceptar = async (acceso: AccesoPreautorizado) => {
+    if (!acceso.id_acceso) {
+      toast.error("Este registro no tiene un acceso asociado.");
+      return;
+    }
+
+    setProcessingId(acceso.id_acceso_preautorizado);
+    try {
+      const response = await aceptarAccesoManual(acceso.id_acceso);
+      toast.success(response.message || "Acceso autorizado correctamente.", {
+        description:
+          "La hora de entrada se registro en el historial de accesos.",
+      });
+      await refetch();
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleRechazar = async () => {
+    if (!accesoParaRechazar?.id_acceso) return;
+
+    const motivo = motivoRechazo.trim();
+    if (!motivo) {
+      toast.error("Escribe el motivo del rechazo.");
+      return;
+    }
+
+    setProcessingId(accesoParaRechazar.id_acceso_preautorizado);
+    try {
+      const response = await rechazarAccesoManual(
+        accesoParaRechazar.id_acceso,
+        motivo,
+      );
+      toast.success(response.message || "Acceso rechazado correctamente.");
+      setAccesoParaRechazar(null);
+      setMotivoRechazo("");
+      await refetch();
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setProcessingId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -206,6 +283,7 @@ export function TablaAccesosManual() {
               </TableHead>
               <TableHead>Estado QR</TableHead>
               <TableHead className="hidden sm:table-cell text-center">Nota</TableHead>
+              <TableHead className="hidden min-w-52 text-right sm:table-cell">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -218,7 +296,7 @@ export function TablaAccesosManual() {
             ) : (
               paginados.map((acceso) => {
                 const tipoDisplay = TIPO_DISPLAY[acceso.tipo];
-                const estadoQR = getEstadoQR(acceso.fecha_expiracion);
+                const estadoQR = acceso.estado_qr ?? getEstadoQR(acceso.fecha_expiracion);
                 const qrBadge = estadoQRBadge[estadoQR];
                 const tipoBadge = tipoVisitaBadge[tipoDisplay];
                 const isExpanded = expandedId === acceso.id_acceso_preautorizado;
@@ -293,6 +371,50 @@ export function TablaAccesosManual() {
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </TableCell>
+                      <TableCell className="hidden text-right sm:table-cell">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100 hover:text-emerald-800"
+                            disabled={
+                              estadoQR !== "Activo" ||
+                              !acceso.id_acceso ||
+                              processingId !== null
+                            }
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleAceptar(acceso);
+                            }}
+                          >
+                            {processingId === acceso.id_acceso_preautorizado ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Check className="h-4 w-4" />
+                            )}
+                            Aceptar
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="border-red-200 bg-red-50 text-red-700 hover:border-red-300 hover:bg-red-100 hover:text-red-800"
+                            disabled={
+                              estadoQR !== "Activo" ||
+                              !acceso.id_acceso ||
+                              processingId !== null
+                            }
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setAccesoParaRechazar(acceso);
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                            Rechazar
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
 
                     {isExpanded && (
@@ -332,6 +454,42 @@ export function TablaAccesosManual() {
                                 </Button>
                               </div>
                             )}
+                            <div className="grid grid-cols-2 gap-2 pt-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                disabled={
+                                  estadoQR !== "Activo" ||
+                                  !acceso.id_acceso ||
+                                  processingId !== null
+                                }
+                                onClick={() => void handleAceptar(acceso)}
+                              >
+                                {processingId === acceso.id_acceso_preautorizado ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Check className="h-4 w-4" />
+                                )}
+                                Aceptar
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                                disabled={
+                                  estadoQR !== "Activo" ||
+                                  !acceso.id_acceso ||
+                                  processingId !== null
+                                }
+                                onClick={() => setAccesoParaRechazar(acceso)}
+                              >
+                                <X className="h-4 w-4" />
+                                Rechazar
+                              </Button>
+                            </div>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -416,6 +574,68 @@ export function TablaAccesosManual() {
               {notaModal?.informacion_general ?? "Sin contenido registrado."}
             </p>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!accesoParaRechazar}
+        onOpenChange={(open) => {
+          if (!open && processingId === null) {
+            setAccesoParaRechazar(null);
+            setMotivoRechazo("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rechazar acceso</DialogTitle>
+            <DialogDescription>
+              Indica por que no se autorizara la entrada de{" "}
+              <strong>{accesoParaRechazar?.nombre}</strong>. El motivo quedara
+              registrado en la bitacora de auditoria.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 py-2">
+            <label htmlFor="motivo-rechazo" className="text-sm font-medium">
+              Motivo del rechazo
+            </label>
+            <Textarea
+              id="motivo-rechazo"
+              value={motivoRechazo}
+              onChange={(event) => setMotivoRechazo(event.target.value)}
+              placeholder="Ej. La identidad no coincide con la autorizacion."
+              className="min-h-28 resize-none"
+              disabled={processingId !== null}
+            />
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={processingId !== null}
+              onClick={() => {
+                setAccesoParaRechazar(null);
+                setMotivoRechazo("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              className="bg-red-600 text-white hover:bg-red-700"
+              disabled={processingId !== null || !motivoRechazo.trim()}
+              onClick={() => void handleRechazar()}
+            >
+              {processingId !== null ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <X className="h-4 w-4" />
+              )}
+              Confirmar rechazo
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
