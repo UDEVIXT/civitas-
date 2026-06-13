@@ -733,13 +733,31 @@ export class EmpleadoService {
       // CA008: Transacción atómica para evitar corrupción de datos si falla la red
       return await this.prisma.$transaction(async (tx) => {
         // CA003 y CA005: Registrar la entrada física en la Bitácora general
-        const solicitudRetirada = await tx.accesoPreautorizado.deleteMany({
-          where: { id_acceso },
+        const accesoYaAceptado = await tx.bitacora.findFirst({
+          where: {
+            id_acceso,
+            id_guardia: { not: null },
+          },
+          select: { id_bitacora: true },
         });
 
-        if (solicitudRetirada.count === 0) {
+        if (accesoYaAceptado) {
           throw new ConflictException(
-            'Esta solicitud ya fue atendida por otro guardia.',
+            'Esta solicitud ya fue aceptada por otro guardia.',
+          );
+        }
+
+        const accesoYaRechazado = await tx.bitacoraQrVisitante.findFirst({
+          where: {
+            id_acceso,
+            accion: 'RECHAZADO',
+          },
+          select: { id_bitacora_qr: true },
+        });
+
+        if (accesoYaRechazado) {
+          throw new ConflictException(
+            'Esta solicitud ya fue rechazada por otro guardia.',
           );
         }
 
@@ -809,13 +827,31 @@ export class EmpleadoService {
       // CA008: Uso de transacción
       return await this.prisma.$transaction(async (tx) => {
         // CA004 y CA005: Registrar el rechazo en la auditoría del QR con su motivo
-        const solicitudRetirada = await tx.accesoPreautorizado.deleteMany({
-          where: { id_acceso },
+        const accesoYaAceptado = await tx.bitacora.findFirst({
+          where: {
+            id_acceso,
+            id_guardia: { not: null },
+          },
+          select: { id_bitacora: true },
         });
 
-        if (solicitudRetirada.count === 0) {
+        if (accesoYaAceptado) {
           throw new ConflictException(
-            'Esta solicitud ya fue atendida por otro guardia.',
+            'Esta solicitud ya fue aceptada por otro guardia.',
+          );
+        }
+
+        const accesoYaRechazado = await tx.bitacoraQrVisitante.findFirst({
+          where: {
+            id_acceso,
+            accion: 'RECHAZADO',
+          },
+          select: { id_bitacora_qr: true },
+        });
+
+        if (accesoYaRechazado) {
+          throw new ConflictException(
+            'Esta solicitud ya fue rechazada por otro guardia.',
           );
         }
 

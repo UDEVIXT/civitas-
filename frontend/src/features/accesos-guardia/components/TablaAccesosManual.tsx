@@ -35,7 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 type TipoDisplay = "Visitante" | "Proveedor" | "Empleado doméstico";
-type EstadoQR = "Activo" | "Expirado";
+type EstadoQR = "Activo" | "Expirado" | "Desactivado";
 
 const TIPO_DISPLAY: Record<"Visitante" | "Proveedor" | "Empleado", TipoDisplay> = {
   Visitante: "Visitante",
@@ -56,6 +56,7 @@ const tipoVisitaBadge: Record<TipoDisplay, { label: string; className: string }>
 const estadoQRBadge: Record<EstadoQR, { label: string; className: string }> = {
   Activo: { label: "Activo", className: "bg-green-100 text-green-800 hover:bg-green-100 border-0" },
   Expirado: { label: "Expirado", className: "bg-amber-100 text-amber-800 hover:bg-amber-100 border-0" },
+  Desactivado: { label: "Desactivado", className: "bg-slate-100 text-slate-700 hover:bg-slate-100 border-0" },
 };
 
 function formatFecha(iso: string): string {
@@ -295,7 +296,7 @@ export function TablaAccesosManual() {
             ) : (
               paginados.map((acceso) => {
                 const tipoDisplay = TIPO_DISPLAY[acceso.tipo];
-                const estadoQR = getEstadoQR(acceso.fecha_expiracion);
+                const estadoQR = acceso.estado_qr ?? getEstadoQR(acceso.fecha_expiracion);
                 const qrBadge = estadoQRBadge[estadoQR];
                 const tipoBadge = tipoVisitaBadge[tipoDisplay];
                 const isExpanded = expandedId === acceso.id_acceso_preautorizado;

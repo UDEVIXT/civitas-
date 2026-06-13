@@ -1,6 +1,7 @@
 import apiClient from "@/api/axios";
 
 export type TipoVisitaAPI = "Visitante" | "Proveedor" | "Empleado";
+export type EstadoQrAPI = "Activo" | "Expirado" | "Desactivado";
 
 export interface AccesoPreautorizado {
   id_acceso_preautorizado: string;
@@ -12,6 +13,7 @@ export interface AccesoPreautorizado {
   fecha_salida: string | null;
   fecha_expiracion: string;
   tipo: TipoVisitaAPI;
+  estado_qr?: EstadoQrAPI;
   tiene_nota: boolean;
   id_usuario: string;
   id_acceso: string | null;
