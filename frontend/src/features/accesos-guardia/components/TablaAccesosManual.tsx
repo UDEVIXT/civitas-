@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+
 import { FileText, ArrowUpDown, ChevronDown, AlertCircle, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
+import { ScanLine, ListFilter,Search } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +24,8 @@ import {
 } from "@/components/ui/dialog";
 import { useAccesosPreautorizados } from "../hooks/useAccesosPreautorizados";
 import { AccesoPreautorizado } from "../api/accesos";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu"
 
 type TipoDisplay = "Visitante" | "Proveedor" | "Empleado doméstico";
 type EstadoQR = "Activo" | "Expirado";
@@ -70,17 +75,41 @@ export function TablaAccesosManual() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState("1");
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const totalPages = Math.max(1, Math.ceil(accesos.length / PAGE_SIZE));
+  const [filterVisitantes, setFilterVisitantes] = React.useState(false)
+  const [filterProveedores, setFilterProveedores] = React.useState(false)
+  const [filterEmpleados, setFilterEmpleados] = React.useState(false)
+
+  const filteredAccesos = useMemo(() => {
+    return accesos.filter((acceso) => {
+      const hasAnyFilter = filterVisitantes || filterProveedores || filterEmpleados;
+      const tipoMatch = !hasAnyFilter || 
+        (acceso.tipo === "Visitante" && filterVisitantes) ||
+        (acceso.tipo === "Proveedor" && filterProveedores) ||
+        (acceso.tipo === "Empleado" && filterEmpleados);
+      
+      const searchMatch = searchTerm === "" || 
+        acceso.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      return tipoMatch && searchMatch;
+    });
+  }, [accesos, filterVisitantes, filterProveedores, filterEmpleados, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredAccesos.length / PAGE_SIZE));
 
   const paginados = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
-    return accesos.slice(start, start + PAGE_SIZE);
-  }, [accesos, currentPage]);
+    return filteredAccesos.slice(start, start + PAGE_SIZE);
+  }, [filteredAccesos, currentPage]);
 
   useEffect(() => {
     setPageInput(String(currentPage));
   }, [currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterVisitantes, filterProveedores, filterEmpleados, searchTerm]);
 
   if (loading) {
     return (
@@ -107,13 +136,68 @@ export function TablaAccesosManual() {
 
   return (
     <>
+      <div className="flex justify-between">
+        <InputGroup className="max-w-sm">
+          <InputGroupInput 
+            id="input-group-url" 
+            placeholder="Buscar por nombre..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <InputGroupAddon>
+            <Search />
+          </InputGroupAddon>
+        </InputGroup>
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="cursor-pointer">
+                <ListFilter /> Filtros
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-40">
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Tipos de visitas</DropdownMenuLabel>
+                <DropdownMenuCheckboxItem
+                  checked={filterVisitantes}
+                  onCheckedChange={setFilterVisitantes}
+                  className="cursor-pointer"
+                >
+                  Visitantes
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={filterProveedores}
+                  onCheckedChange={setFilterProveedores}
+                  className="cursor-pointer"
+                >
+                  Proveedores
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={filterEmpleados}
+                  onCheckedChange={setFilterEmpleados}
+                  className="cursor-pointer"
+                >
+                  Empleados domésticos
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <a href="/servicios-repartidores/guardia">
+            <Button className="cursor-pointer text-foreground">
+              <ScanLine /> Escanear QR
+            </Button>
+          </a>
+        </div>
+      </div>
+
       <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="min-w-[140px]">Nombre</TableHead>
+              <TableHead className="min-w-35">Nombre</TableHead>
               <TableHead className="hidden sm:table-cell">Tipo</TableHead>
-              <TableHead className="hidden sm:table-cell min-w-[130px]">Propiedad</TableHead>
+              <TableHead className="hidden sm:table-cell min-w-32.5">Propiedad</TableHead>
               <TableHead className="hidden lg:table-cell">
                 <span className="flex items-center gap-1">Fecha esperada de llegada <ArrowUpDown className="h-3 w-3" /></span>
               </TableHead>
@@ -125,7 +209,7 @@ export function TablaAccesosManual() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {accesos.length === 0 ? (
+            {filteredAccesos.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-12 text-sm text-muted-foreground">
                   No hay accesos preautorizados registrados.
@@ -262,7 +346,7 @@ export function TablaAccesosManual() {
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-muted-foreground mt-3">
         <span className="text-center sm:text-left">
-          {`Mostrando ${accesos.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, accesos.length)} de ${accesos.length} registros`}
+          {`Mostrando ${filteredAccesos.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, filteredAccesos.length)} de ${filteredAccesos.length} registros`}
         </span>
         <div className="flex items-center gap-2 justify-center sm:justify-end">
           <Button
