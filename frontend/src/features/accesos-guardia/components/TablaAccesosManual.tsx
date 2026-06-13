@@ -92,21 +92,46 @@ export function TablaAccesosManual() {
   const [filterVisitantes, setFilterVisitantes] = React.useState(false)
   const [filterProveedores, setFilterProveedores] = React.useState(false)
   const [filterEmpleados, setFilterEmpleados] = React.useState(false)
+  const [filterQrActivos, setFilterQrActivos] = React.useState(false)
+  const [filterQrExpirados, setFilterQrExpirados] = React.useState(false)
+  const [filterQrDesactivados, setFilterQrDesactivados] = React.useState(false)
 
   const filteredAccesos = useMemo(() => {
+    const prioridadEstado: Record<EstadoQR, number> = {
+      Activo: 0,
+      Expirado: 1,
+      Desactivado: 2,
+    };
+
     return accesos.filter((acceso) => {
       const hasAnyFilter = filterVisitantes || filterProveedores || filterEmpleados;
       const tipoMatch = !hasAnyFilter || 
         (acceso.tipo === "Visitante" && filterVisitantes) ||
         (acceso.tipo === "Proveedor" && filterProveedores) ||
         (acceso.tipo === "Empleado" && filterEmpleados);
+
+      const estadoQR = acceso.estado_qr ?? getEstadoQR(acceso.fecha_expiracion);
+      const hasAnyEstadoFilter = filterQrActivos || filterQrExpirados || filterQrDesactivados;
+      const estadoMatch = !hasAnyEstadoFilter ||
+        (estadoQR === "Activo" && filterQrActivos) ||
+        (estadoQR === "Expirado" && filterQrExpirados) ||
+        (estadoQR === "Desactivado" && filterQrDesactivados);
       
       const searchMatch = searchTerm === "" || 
         acceso.nombre.toLowerCase().includes(searchTerm.toLowerCase());
       
-      return tipoMatch && searchMatch;
+      return tipoMatch && estadoMatch && searchMatch;
+    }).sort((a, b) => {
+      const estadoA = a.estado_qr ?? getEstadoQR(a.fecha_expiracion);
+      const estadoB = b.estado_qr ?? getEstadoQR(b.fecha_expiracion);
+      const prioridadA = prioridadEstado[estadoA];
+      const prioridadB = prioridadEstado[estadoB];
+
+      if (prioridadA !== prioridadB) return prioridadA - prioridadB;
+
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [accesos, filterVisitantes, filterProveedores, filterEmpleados, searchTerm]);
+  }, [accesos, filterVisitantes, filterProveedores, filterEmpleados, filterQrActivos, filterQrExpirados, filterQrDesactivados, searchTerm]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAccesos.length / PAGE_SIZE));
 
@@ -121,7 +146,7 @@ export function TablaAccesosManual() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterVisitantes, filterProveedores, filterEmpleados, searchTerm]);
+  }, [filterVisitantes, filterProveedores, filterEmpleados, filterQrActivos, filterQrExpirados, filterQrDesactivados, searchTerm]);
 
   const getErrorMessage = (error: unknown) => {
     if (
@@ -255,6 +280,30 @@ export function TablaAccesosManual() {
                   className="cursor-pointer"
                 >
                   Empleados domésticos
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuGroup>
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Estado QR</DropdownMenuLabel>
+                <DropdownMenuCheckboxItem
+                  checked={filterQrActivos}
+                  onCheckedChange={setFilterQrActivos}
+                  className="cursor-pointer"
+                >
+                  Activos
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={filterQrExpirados}
+                  onCheckedChange={setFilterQrExpirados}
+                  className="cursor-pointer"
+                >
+                  Expirados
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={filterQrDesactivados}
+                  onCheckedChange={setFilterQrDesactivados}
+                  className="cursor-pointer"
+                >
+                  Desactivados
                 </DropdownMenuCheckboxItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>

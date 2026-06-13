@@ -55,6 +55,7 @@ const getEstadoBadge = (estado: string) => {
     salida: "bg-red-100 text-red-800 border-red-200",
     fuera: "bg-red-100 text-red-800 border-red-200",
     excedido: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    rechazado: "bg-slate-100 text-slate-800 border-slate-200",
   };
   return variants[estado] || "bg-gray-100 text-gray-800 border-gray-200";
 };
@@ -86,6 +87,7 @@ function RegistroCard({
   const fechaEntrada = registro.fecha_entrada ? new Date(registro.fecha_entrada) : null;
   const fechaSalida = registro.fecha_salida && registro.fecha_salida !== "-"
     ? new Date(registro.fecha_salida) : null;
+  const isRechazado = registro.estado === "rechazado";
 
   return (
     <div className={`border rounded-lg overflow-hidden ${selected ? "ring-2 ring-primary" : ""}`}>
@@ -95,7 +97,7 @@ function RegistroCard({
         <input
           type="checkbox"
           className="w-4 h-4 cursor-pointer shrink-0"
-          disabled={!!fechaSalida}
+          disabled={!!fechaSalida || isRechazado}
           checked={selected}
           onChange={onToggle}
         />
@@ -195,11 +197,13 @@ function RegistroCard({
                     <span>{format(fechaEntrada, "HH:mm")}</span>
                   </div>
                 </>
-              ) : <span className="text-muted-foreground">-</span>}
+              ) : <span className="text-muted-foreground">N/A</span>}
             </div>
             <div className="space-y-1">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Salida</p>
-              {fechaSalida ? (
+              {isRechazado ? (
+                <span className="text-muted-foreground">N/A</span>
+              ) : fechaSalida ? (
                 <>
                   <div className="flex items-center gap-1.5 text-muted-foreground">
                     <Calendar className="h-3.5 w-3.5" />
@@ -328,6 +332,7 @@ export function TablaAccesosGuardia({
             const fechaSalida = registro.fecha_salida && registro.fecha_salida !== "-"
               ? new Date(registro.fecha_salida) : null;
             const metodoNorm = (registro.metodo_acceso || "").trim().toLowerCase();
+            const isRechazado = registro.estado === "rechazado";
 
             return (
               <TableRow
@@ -339,7 +344,7 @@ export function TablaAccesosGuardia({
                   <input
                     type="checkbox"
                     className="w-4 h-4 cursor-pointer"
-                    disabled={!!fechaSalida}
+                    disabled={!!fechaSalida || isRechazado}
                     checked={selectedIds.includes(registro.id)}
                     onChange={(e) => { e.stopPropagation(); onToggleSelection(registro.id); }}
                   />
@@ -428,10 +433,12 @@ export function TablaAccesosGuardia({
                         <span>{format(fechaEntrada, "HH:mm")}</span>
                       </div>
                     </div>
-                  ) : <span className="text-muted-foreground text-sm">-</span>}
+                  ) : <span className="text-muted-foreground text-sm">N/A</span>}
                 </TableCell>
                 <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                  {fechaSalida ? (
+                  {isRechazado ? (
+                    <span className="text-muted-foreground text-sm">N/A</span>
+                  ) : fechaSalida ? (
                     <div className="flex flex-col items-center gap-1">
                       <div className="flex items-center gap-1.5 text-muted-foreground">
                         <Calendar className="h-3.5 w-3.5" />
