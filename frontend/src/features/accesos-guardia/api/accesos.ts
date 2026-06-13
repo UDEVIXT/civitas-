@@ -23,3 +23,28 @@ export async function obtenerAccesosPreautorizados(): Promise<AccesoPreautorizad
   const res = await apiClient.get<AccesoPreautorizado[]>("acceso-preautorizado");
   return res.data;
 }
+
+export interface DecisionAccesoResponse {
+  success: boolean;
+  message: string;
+}
+
+export async function aceptarAccesoManual(
+  idAcceso: string,
+): Promise<DecisionAccesoResponse> {
+  const response = await apiClient.post<DecisionAccesoResponse>(
+    `empleado/${idAcceso}/aceptar`,
+  );
+  return response.data;
+}
+
+export async function rechazarAccesoManual(
+  idAcceso: string,
+  motivo: string,
+): Promise<DecisionAccesoResponse> {
+  const response = await apiClient.post<DecisionAccesoResponse>(
+    `empleado/${idAcceso}/rechazar`,
+    { motivo },
+  );
+  return response.data;
+}

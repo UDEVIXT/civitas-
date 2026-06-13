@@ -733,6 +733,16 @@ export class EmpleadoService {
       // CA008: Transacción atómica para evitar corrupción de datos si falla la red
       return await this.prisma.$transaction(async (tx) => {
         // CA003 y CA005: Registrar la entrada física en la Bitácora general
+        const solicitudRetirada = await tx.accesoPreautorizado.deleteMany({
+          where: { id_acceso },
+        });
+
+        if (solicitudRetirada.count === 0) {
+          throw new ConflictException(
+            'Esta solicitud ya fue atendida por otro guardia.',
+          );
+        }
+
         const nuevaBitacora = await tx.bitacora.create({
           data: {
             id_acceso: id_acceso,
@@ -759,6 +769,8 @@ export class EmpleadoService {
         };
       });
     } catch (error: any) {
+      if (error instanceof ConflictException) throw error;
+
       this.logger.error(`Error en aceptarAccesoVisitante: ${error.message}`);
       // CA008: Mensaje controlado ante problemas técnicos
       throw new InternalServerErrorException(
@@ -797,6 +809,16 @@ export class EmpleadoService {
       // CA008: Uso de transacción
       return await this.prisma.$transaction(async (tx) => {
         // CA004 y CA005: Registrar el rechazo en la auditoría del QR con su motivo
+        const solicitudRetirada = await tx.accesoPreautorizado.deleteMany({
+          where: { id_acceso },
+        });
+
+        if (solicitudRetirada.count === 0) {
+          throw new ConflictException(
+            'Esta solicitud ya fue atendida por otro guardia.',
+          );
+        }
+
         const auditoriaRechazo = await tx.bitacoraQrVisitante.create({
           data: {
             id_acceso: id_acceso,
@@ -819,6 +841,8 @@ export class EmpleadoService {
         };
       });
     } catch (error: any) {
+      if (error instanceof ConflictException) throw error;
+
       this.logger.error(`Error en rechazarAccesoVisitante: ${error.message}`);
       throw new InternalServerErrorException(
         'Ocurrió un problema técnico al registrar el rechazo. Intente de nuevo.',
