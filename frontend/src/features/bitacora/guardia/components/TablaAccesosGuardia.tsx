@@ -318,7 +318,7 @@ export function TablaAccesosGuardia({
             <TableHead>Nombre</TableHead>
             <TableHead>Proveedor o empresa</TableHead>
             <TableHead className="text-center">Tipo de acceso</TableHead>
-            <TableHead className="text-center">Residente asociado</TableHead>
+            <TableHead className="text-center">Propiedad/residencia asociada</TableHead>
             <TableHead className="text-center">Método de acceso</TableHead>
             <TableHead className="text-center">Guardias (Ent / Sal)</TableHead>
             <TableHead className="text-center">Estado</TableHead>
