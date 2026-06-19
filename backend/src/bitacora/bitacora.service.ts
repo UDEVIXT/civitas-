@@ -1013,12 +1013,12 @@ export class BitacoraService {
       throw new NotFoundException('El código de acceso escaneado no existe.');
     }
 
-    const ultimoMovimiento = accesoActual.bitacora[0];
+    /*const ultimoMovimiento = accesoActual.bitacora[0];
     if (ultimoMovimiento && !ultimoMovimiento.fecha_hora_salida) {
       throw new BadRequestException(
         'No se puede desactivar el código QR porque el visitante se encuentra actualmente dentro del residencial. Registre su salida primero.',
       );
-    }
+    }*/
 
     // CA004: Si el QR ya expiró o fue desactivado previamente
     if (accesoActual.estatus === 'Inactivo') {
