@@ -8,29 +8,24 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 // My components
 import { SolicitudesRow } from "./SolicitudesRow"
 import { Pagination } from "./Pagination"
-
-interface Persona {
-  id: string;
-  nombre: string;
-  rol: string;
-  fechaSolicitud: string;
-  estado: string;
-}
+import type { PersonaSolicitud } from "../types/persona"
 
 interface SolicitudesTableProps {
-    personas: Persona[];
+    personas: PersonaSolicitud[];
     selectedRows: Set<string>;
     selectAll: boolean;
     onSelectAll: (checked: boolean) => void;
     onSelectRow: (id: string, checked: boolean) => void;
+    onVerMas: (persona: PersonaSolicitud) => void;
     currentPage: number;
     totalPages: number;
     onPageChange: (page: number) => void;
+    emptyMessage: string;
 }
 
-export function SolicitudesTable({ personas, selectedRows, selectAll, onSelectAll, onSelectRow, currentPage, totalPages, onPageChange }: SolicitudesTableProps) {
+export function SolicitudesTable({ personas, selectedRows, selectAll, onSelectAll, onSelectRow, onVerMas, currentPage, totalPages, onPageChange, emptyMessage }: SolicitudesTableProps) {
     return (
-        <ScrollArea className="md:w-full w-70 rounded-xl border border-foreground-muted">  
+        <ScrollArea className="md:w-full w-70 rounded-xl border border-foreground-muted">
             <Table>
                 <TableHeader className="bg-muted">
                     <TableRow>
@@ -40,6 +35,7 @@ export function SolicitudesTable({ personas, selectedRows, selectAll, onSelectAl
                               name="select-all-checkbox"
                               checked={selectAll}
                               onCheckedChange={onSelectAll}
+                              disabled={personas.length === 0}
                             />
                         </TableHead>
                         <TableHead className="whitespace-nowrap">Nombre del usuario</TableHead>
@@ -51,32 +47,35 @@ export function SolicitudesTable({ personas, selectedRows, selectAll, onSelectAl
                 <TableBody>
                   {personas.length === 0 ? (
                     <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8">
-                            <p className="text-muted-foreground">Aún sin solicitudes</p>
+                        <TableCell colSpan={5} className="py-12 text-center">
+                            <p className="font-medium text-foreground">{emptyMessage}</p>
                         </TableCell>
                     </TableRow>
                   ) : (
                     personas.map((persona) => (
                         <SolicitudesRow
-                          key={persona.nombre}
+                          key={persona.id}
                           persona={persona}
                           isSelected={selectedRows.has(persona.id)}
                           onSelect={onSelectRow}
+                          onVerMas={onVerMas}
                         />
                     ))
                   )}
                 </TableBody>
-                <TableFooter>
-                    <TableRow>
-                        <TableCell colSpan={5} className="text-center py-4">
-                            <Pagination
-                              currentPage={currentPage}
-                              totalPages={totalPages}
-                              onPageChange={onPageChange}
-                            />
-                        </TableCell>
-                    </TableRow>
-                </TableFooter>
+                {personas.length > 0 && (
+                    <TableFooter>
+                        <TableRow>
+                            <TableCell colSpan={5} className="text-center py-4">
+                                <Pagination
+                                  currentPage={currentPage}
+                                  totalPages={totalPages}
+                                  onPageChange={onPageChange}
+                                />
+                            </TableCell>
+                        </TableRow>
+                    </TableFooter>
+                )}
             </Table>
             <ScrollBar orientation="horizontal" />
         </ScrollArea>

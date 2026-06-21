@@ -5,24 +5,18 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { TableCell, TableRow } from "@/components/ui/table"
-
-interface Persona {
-  id: string;
-  nombre: string;
-  rol: string;
-  fechaSolicitud: string;
-  estado: string;
-}
+import type { PersonaSolicitud } from "../types/persona"
 
 interface SolicitudesRowProps {
-    persona: Persona;
+    persona: PersonaSolicitud;
     isSelected: boolean;
     onSelect: (id: string, checked: boolean) => void;
+    onVerMas: (persona: PersonaSolicitud) => void;
 }
 
-export function SolicitudesRow({ persona, isSelected, onSelect }: SolicitudesRowProps) {
+export function SolicitudesRow({ persona, isSelected, onSelect, onVerMas }: SolicitudesRowProps) {
     return (
-        <TableRow key={persona.nombre} data-state={isSelected ? "selected" : undefined}>
+        <TableRow data-state={isSelected ? "selected" : undefined}>
             <TableCell className="flex justify-center whitespace-nowrap">
                 <Checkbox
                   id={`row-${persona.id}-checkbox`}
@@ -40,12 +34,9 @@ export function SolicitudesRow({ persona, isSelected, onSelect }: SolicitudesRow
             <TableCell className="text-center whitespace-nowrap">
                 {new Date(persona.fechaSolicitud).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })} {new Date(persona.fechaSolicitud).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </TableCell>
-            <TableCell className="flex justify-center gap-2 whitespace-nowrap">
-                <Button className="cursor-pointer bg-green-100 text-green-800 hover:bg-green-200">
-                    Aceptar
-                </Button>
-                <Button variant="destructive" className="cursor-pointer">
-                    Rechazar
+            <TableCell className="text-center whitespace-nowrap">
+                <Button size="sm" className="cursor-pointer" onClick={() => onVerMas(persona)}>
+                    Ver más +
                 </Button>
             </TableCell>
         </TableRow>

@@ -200,6 +200,7 @@ model Guardia {
   id_guardia String     @id @default(uuid())
   id_usuario String     @unique
   nombre     String     @db.VarChar(128)
+  numero_empleado String? @unique
   turno      String?
   bitacoras         Bitacora[] @relation("GuardiaEntrada")
   bitacoras_salida  Bitacora[] @relation("GuardiaSalida")
@@ -219,6 +220,7 @@ model Administrador {
   id_usuario       String  @unique
   nombre           String  @db.VarChar(128)
   apellidos        String?  @db.VarChar(128)
+  numero_empleado  String? @unique
   cargo            Cargo?
   usuario          Usuario @relation(fields: [id_usuario], references: [id_usuario])
 }
@@ -280,6 +282,9 @@ model Solicitud_administrador_guardia {
   fecha_nacimiento DateTime
   telefono         String?
   correo             String         @unique
+  numero_empleado    String?        @unique
+  credencial_frente_key  String?
+  credencial_reverso_key String?
   estatus_solicitud Estatus_Solicitud @default(Pendiente)
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
