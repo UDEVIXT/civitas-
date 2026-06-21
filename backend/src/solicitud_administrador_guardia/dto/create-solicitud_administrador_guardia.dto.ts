@@ -33,4 +33,12 @@ export class CreateSolicitudAdministradorGuardiaDto {
   @IsEnum(Estatus_Solicitud)
   @IsOptional()
   estatus_solicitud?: Estatus_Solicitud;
+
+  @IsString()
+  @IsOptional()
+  credencial_frente_key?: string;
+
+  @IsString()
+  @IsOptional()
+  credencial_reverso_key?: string;
 }

@@ -1,10 +1,4 @@
 import apiClient from "@/api/axios";
-import axios from "axios";
-
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  process.env.REACT_APP_API_URL ||
-  "http://localhost:3001/api";
 
 export const loginRequest = async (
   usuario: string,
@@ -34,10 +28,11 @@ export const verifyCredentialRequest = async (
   formData.append("frente", frente);
   formData.append("reverso", reverso);
 
-  const response = await axios.post(
-    `${BASE_URL}/auth/validar-credencial`,
-    formData,
-  );
+  const response = await apiClient.post("/auth/validar-credencial", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
   return response.data;
 };
 
@@ -53,6 +48,6 @@ export const registerRequest = async (data: {
   rol: string;
   verificationAccessToken: string;
 }) => {
-  const response = await axios.post(`${BASE_URL}/auth/register`, data);
+  const response = await apiClient.post("/auth/register", data);
   return response.data;
 };
