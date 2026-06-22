@@ -19,6 +19,7 @@ import { createWorker } from 'tesseract.js';
 import { NotFoundException } from '@nestjs/common';
 import { SolicitudAdministradorGuardiaService } from '../solicitud_administrador_guardia/solicitud_administrador_guardia.service';
 import { Estatus_Solicitud } from '@prisma/client';
+import { ArchivosService } from '../r2-module/archivos.service';
 
 function detectarDispositivo(userAgent?: string) {
   if (!userAgent) {
@@ -52,6 +53,7 @@ export class AuthService {
     private readonly authGateway: AuthGateway,
     private readonly mailerService: MailerService,
     private readonly solicitudService: SolicitudAdministradorGuardiaService,
+    private readonly archivosService: ArchivosService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -91,7 +93,23 @@ export class AuthService {
         'La validación de credencial expiró o es inválida.',
       );
     }*/
-   
+
+    // Las imágenes de credencial INE se suben a R2 en validarCredencial() y
+    // viajan como claims dentro del mismo token de verificación, para no
+    // tener que volver a enviarlas en este paso del registro.
+    let credencialFrenteKey: string | undefined;
+    let credencialReversoKey: string | undefined;
+    try {
+      const payloadToken = this.jwtService.decode(verificationAccessToken) as {
+        credencial_frente_key?: string;
+        credencial_reverso_key?: string;
+      } | null;
+      credencialFrenteKey = payloadToken?.credencial_frente_key;
+      credencialReversoKey = payloadToken?.credencial_reverso_key;
+    } catch {
+      // Token no decodificable: se continúa el registro sin imágenes de credencial.
+    }
+
     // VALIDAR PASSWORDS CA006 — Password y confirmación distintas
     if (password !== confirmPassword) {
       throw new BadRequestException('Las contraseñas no coinciden.');
@@ -162,7 +180,9 @@ export class AuthService {
             genero,
             fecha_nacimiento,
             telefono,
-            correo
+            correo,
+            credencial_frente_key: credencialFrenteKey,
+            credencial_reverso_key: credencialReversoKey,
             };
 
           try{
@@ -335,12 +355,29 @@ async verifyEmail(token: string) {
     //console.log('\n ROL VALIDO');
 
     // ---------------------------------------------
+    // PERSISTENCIA DE CREDENCIAL (solo Guardia/Administrador)
+    // ---------------------------------------------
+    // Las solicitudes de Residente no pasan por revisión de un administrador,
+    // así que no hay razón para conservar su INE: se valida y se descarta.
+    let credencialFrenteKey: string | undefined;
+    let credencialReversoKey: string | undefined;
+
+    if (dto.rol === 'Guardia' || dto.rol === 'Administrador') {
+      [credencialFrenteKey, credencialReversoKey] = await Promise.all([
+        this.archivosService.subirArchivoPrivado(frente, 'credenciales-ine'),
+        this.archivosService.subirArchivoPrivado(reverso, 'credenciales-ine'),
+      ]);
+    }
+
+    // ---------------------------------------------
     // TOKEN TEMPORAL
     // ---------------------------------------------
 
     const payload = {
       rol: dto.rol,
       credencial_validada: true,
+      credencial_frente_key: credencialFrenteKey,
+      credencial_reverso_key: credencialReversoKey,
       jti: crypto.randomUUID(),
     };
 

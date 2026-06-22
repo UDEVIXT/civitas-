@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Camera, Clock, XCircle, CheckCircle } from "lucide-react";
+import { Camera, Clock, XCircle, CheckCircle, UserRoundPlus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -70,12 +70,14 @@ export function EscaneoServiciosDashboard() {
     <div className="p-6 max-w-7xl mx-auto flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-zinc-900">Escaneo de códigos QR</h1>
-        <Button
-          onClick={() => setIsManualModalOpen(true)}
-          className="bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-sm"
-        >
-          Registrar sin QR
-        </Button>
+        <a href="/accesos-guardia">
+          <Button
+            //onClick={() => setIsManualModalOpen(true)}
+            className="text-foreground cursor-pointer"
+          >
+            <UserRoundPlus /> Registrar sin QR
+          </Button>
+        </a>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

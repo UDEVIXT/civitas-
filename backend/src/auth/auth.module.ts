@@ -7,6 +7,7 @@ import { NotificacionModule } from '../notificacion/notificacion.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { MailModule } from '../mail/mail.module';
 import { SolicitudAdministradorGuardiaModule } from '../solicitud_administrador_guardia/solicitud_administrador_guardia.module';
+import { ArchivosModule } from '../r2-module/archivos.module';
 
 @Module({
   imports: [
@@ -21,7 +22,8 @@ import { SolicitudAdministradorGuardiaModule } from '../solicitud_administrador_
     }),
     NotificacionModule,
     MailModule,
-    SolicitudAdministradorGuardiaModule
+    SolicitudAdministradorGuardiaModule,
+    ArchivosModule,
   ],
 
   controllers: [AuthController],
