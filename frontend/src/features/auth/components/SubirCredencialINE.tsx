@@ -93,6 +93,7 @@ function StepperIndicator() {
 
 function StepCredencial({ rol }: { rol: string }) {
   const stepper = useStepper();
+  const router = useRouter();
   const [images, setImages] = useState<ImageItem[]>([]);
   const [activeSlide, setActiveSlide] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -244,7 +245,7 @@ function StepCredencial({ rol }: { rol: string }) {
       )}
 
       <div className="flex gap-3 pt-2">
-        <Button variant="outline" className="cursor-pointer flex-1">
+        <Button variant="outline" className="cursor-pointer flex-1" onClick={() => router.back()}>
           Cancelar
         </Button>
         <Button
