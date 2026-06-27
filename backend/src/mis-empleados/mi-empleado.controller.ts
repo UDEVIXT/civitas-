@@ -105,30 +105,43 @@ async update(
 
   const dataRecibida = body.data ?? body;
 
-  if (accion === 'actualizacion_residente') {
-    const diasAutorizados =
-      typeof dataRecibida.dias_autorizados === 'string'
-        ? JSON.parse(dataRecibida.dias_autorizados)
-        : dataRecibida.dias_autorizados || [];
+if (accion === 'actualizacion_residente') {
+  let horarios: any[] = [];
 
-    const data = {
-      nombre: dataRecibida.nombre,
-      telefono: dataRecibida.telefono,
-      cargo: dataRecibida.cargo,
-      notas_adicionales: dataRecibida.notas_adicionales,
-      hora_entrada: dataRecibida.hora_entrada,
-      hora_salida: dataRecibida.hora_salida,
-      dias_autorizados: diasAutorizados,
-    };
-
-    if (!data.nombre) {
-      throw new BadRequestException(
-        'El nombre del empleado es obligatorio para actualizar',
-      );
+  if (typeof dataRecibida.horarios === 'string') {
+    try {
+      horarios = JSON.parse(dataRecibida.horarios);
+    } catch {
+      throw new BadRequestException('El formato de horarios no es válido');
     }
-
-    return this.empleadoService.actualizarEmpleado(id, data, file);
+  } else if (Array.isArray(dataRecibida.horarios)) {
+    horarios = dataRecibida.horarios;
   }
+
+  const diasAutorizados =
+    typeof dataRecibida.dias_autorizados === 'string'
+      ? JSON.parse(dataRecibida.dias_autorizados)
+      : dataRecibida.dias_autorizados || [];
+
+  const data = {
+    nombre: dataRecibida.nombre,
+    telefono: dataRecibida.telefono,
+    cargo: dataRecibida.cargo,
+    notas_adicionales: dataRecibida.notas_adicionales,
+    horarios,
+    hora_entrada: dataRecibida.hora_entrada,
+    hora_salida: dataRecibida.hora_salida,
+    dias_autorizados: diasAutorizados,
+  };
+
+  if (!data.nombre) {
+    throw new BadRequestException(
+      'El nombre del empleado es obligatorio para actualizar',
+    );
+  }
+
+  return this.empleadoService.actualizarEmpleado(id, data, file);
+}
 
   const activo = body.activo !== undefined ? body.activo : dataRecibida.activo;
   const motivo = body.motivo !== undefined ? body.motivo : dataRecibida.motivo;
