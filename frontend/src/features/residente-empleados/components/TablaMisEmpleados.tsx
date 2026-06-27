@@ -163,7 +163,10 @@ export function TablaMisEmpleados({
                         </div>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-zinc-900">
-                            {empleado.nombre} - {empleado.servicio?.tipo_servicio?.nombre || "Empleado"}
+                            {empleado.nombre} -{" "}
+                            {empleado.servicio?.cargo ||
+                              empleado.servicio?.tipo_servicio?.nombre ||
+                              "Empleado"}
                           </p>
                           <p className="truncate text-xs text-zinc-500">
                             {empleado.residente?.vivienda?.numero_vivienda
