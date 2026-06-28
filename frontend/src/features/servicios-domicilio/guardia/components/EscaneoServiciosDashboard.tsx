@@ -11,6 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { accesosServiciosApi } from "../api/accesos-servicios.api";
 import { QrScannerPlugin } from "./QrScannerPlugin";
 import { useToast } from "@/hooks/use-toast";
+import { Html5Qrcode } from "html5-qrcode";
 
 // Componente principal para el dashboard del Guardia
 export function EscaneoServiciosDashboard() {
@@ -62,8 +63,44 @@ export function EscaneoServiciosDashboard() {
     // Normalmente se ignoran hasta que tiene un éxito.
   };
 
-  const handleSimulateScan = () => {
-    onScanSuccess("mock-scan-id");
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (selectedAccessId || isVerifying) return;
+    
+    setIsVerifying(true);
+    try {
+      const html5QrCode = new Html5Qrcode("hidden-qr-canvas");
+      const decodedText = await html5QrCode.scanFile(file, false);
+      html5QrCode.clear();
+      
+      // Proceso similar a onScanSuccess
+      const data = await queryClient.fetchQuery({
+        queryKey: ["detalleServicio", decodedText],
+        queryFn: () => accesosServiciosApi.obtenerDetalleServicio(decodedText),
+      });
+
+      if (data.estado !== "VALIDO") {
+        toast({
+          title: `QR Inválido: ${data.estado}`,
+          description: data.motivo_invalido || "El código QR escaneado no es válido.",
+          variant: "destructive",
+        });
+      } else {
+        setSelectedAccessId(decodedText);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error al escanear archivo",
+        description: error.response?.data?.message || "No se pudo detectar un código QR válido en la imagen.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsVerifying(false);
+      // Resetear el input para permitir escanear la misma imagen si es necesario
+      e.target.value = '';
+    }
   };
 
   return (
@@ -92,7 +129,7 @@ export function EscaneoServiciosDashboard() {
             <CardContent className="p-0 flex-1 flex items-center justify-center relative">
               {isScannerActive ? (
                 <div className="w-full h-full bg-zinc-200 flex flex-col items-center justify-center relative">
-                  <div className="absolute inset-0 [&>div]:!border-none [&>div]:!shadow-none [&>div>video]:!object-cover">
+                  <div className="absolute inset-0 [&>div]:!border-none [&>div]:!shadow-none [&>div>video]:!object-cover [&_#html5qr-code-full-region_dashboard_section_swaplink]:hidden">
                     <QrScannerPlugin
                       fps={10}
                       qrbox={250}
@@ -101,9 +138,24 @@ export function EscaneoServiciosDashboard() {
                       qrCodeErrorCallback={onScanError}
                     />
                   </div>
-                  <Button variant="outline" onClick={handleSimulateScan} className="absolute bottom-4 z-20">
-                    Simular Escaneo Exitoso
-                  </Button>
+                  <div className="absolute bottom-4 z-20">
+                    <input 
+                      type="file" 
+                      id="qr-image-upload" 
+                      className="hidden" 
+                      accept="image/*" 
+                      onChange={handleImageUpload} 
+                    />
+                    <Button 
+                      variant="outline" 
+                      onClick={() => document.getElementById('qr-image-upload')?.click()} 
+                      className="bg-white shadow-md font-medium text-zinc-700 hover:bg-zinc-50"
+                      disabled={isVerifying}
+                    >
+                      <Camera className="w-4 h-4 mr-2" />
+                      Escanee un archivo de imagen
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
@@ -177,6 +229,7 @@ export function EscaneoServiciosDashboard() {
         open={isManualModalOpen}
         onOpenChange={setIsManualModalOpen}
       />
+      <div id="hidden-qr-canvas" style={{ display: 'none' }}></div>
     </div>
   );
 }
