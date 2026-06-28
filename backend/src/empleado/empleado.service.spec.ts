@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EmpleadoService } from './empleado.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ArchivosService } from '../r2-module/archivos.service';
 
 describe('EmpleadoService', () => {
   let service: EmpleadoService;
@@ -14,6 +15,12 @@ describe('EmpleadoService', () => {
           useValue: {
             visitante: {},
             servicio: {},
+          },
+        },
+        {
+          provide: ArchivosService,
+          useValue: {
+            subirImagen: jest.fn(),
           },
         },
       ],
