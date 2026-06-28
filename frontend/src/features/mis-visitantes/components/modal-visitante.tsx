@@ -268,7 +268,7 @@ export function ModalVisitante({
                 <FormField
                   control={form.control}
                   name="foto"
-                  render={({ field: { onChange, ...fieldProps } }) => (
+                  render={({ field: { onChange, value, ...fieldProps } }) => (
                     <FormItem>
                       <FormLabel className="font-semibold text-gray-700">
                         Foto del visitante:
