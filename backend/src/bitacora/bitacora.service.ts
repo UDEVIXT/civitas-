@@ -197,6 +197,7 @@ export class BitacoraService {
             select: {
               codigo_qr: true,
               fecha_expiracion: true,
+              fecha_visita_programada: true,
               usuario: {
                 select: {
                   persona: { select: { nombre: true, url_imagen: true } },
@@ -376,11 +377,13 @@ export class BitacoraService {
         guardia_registro: item.guardia?.nombre ?? 'N/A',
         guardia_salida: item.guardia_salida?.nombre ?? 'Pendiente',
         estado:
-          item.fecha_hora_salida === null
-            ? tiempoExcedido
-              ? 'excedido'
-              : 'dentro'
-            : 'fuera',
+          item.acceso.fecha_visita_programada && new Date(item.acceso.fecha_visita_programada) > ahora
+            ? 'pendiente'
+            : item.fecha_hora_salida === null
+              ? tiempoExcedido
+                ? 'excedido'
+                : 'dentro'
+              : 'fuera',
         avatar_url: null,
       };
     });
@@ -474,6 +477,25 @@ export class BitacoraService {
       }
 
       const ids = Array.isArray(id_bitacora) ? id_bitacora : [id_bitacora];
+
+      const registros = await this.prisma.bitacora.findMany({
+        where: {
+          id_bitacora: {
+            in: ids,
+          },
+        },
+        include: {
+          acceso: true,
+        },
+      });
+
+      for (const reg of registros) {
+        if (reg.acceso.fecha_visita_programada && new Date(reg.acceso.fecha_visita_programada) > new Date()) {
+          throw new ConflictException(
+            `No se puede registrar la salida de una visita programada para el futuro (${reg.acceso.fecha_visita_programada.toLocaleDateString()}).`,
+          );
+        }
+      }
 
       const auditoria = ` (Registrado por: ${guardiaInfo.nombre})`;
       const textoSalida = comentario_salida
@@ -961,7 +983,11 @@ export class BitacoraService {
       metodoAcceso = 'manual';
     }
 
-    const estado = registro.fecha_hora_salida ? 'salida' : 'entrada';
+    const estado = registro.acceso.fecha_visita_programada && new Date(registro.acceso.fecha_visita_programada) > new Date()
+      ? 'pendiente'
+      : registro.fecha_hora_salida
+        ? 'salida'
+        : 'entrada';
 
     let residenteNombre = '-';
     let residenteVivienda = '-';
