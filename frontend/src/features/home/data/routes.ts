@@ -67,6 +67,13 @@ export const routes: Route[] = [
     roles: [ROLES.ADMINISTRADOR],
   },
   {
+    path: "/bajas-personal",
+    label: "Historial de Bajas",
+    description: "Historial y Comentarios de Bajas de Personal doméstico.",
+    icon: ClipboardList,
+    roles: [ROLES.ADMINISTRADOR],
+  },
+  {
     path: "/incidencias/residente",
     label: "Incidencias",
     description: "Reporte y seguimiento de incidencias en la comunidad.",

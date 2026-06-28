@@ -95,6 +95,15 @@ export class EmpleadoService {
           residente: {
             select: { vivienda: { select: { numero_vivienda: true } } },
           },
+          accesos: {
+            orderBy: {
+              fecha_creacion: 'desc',
+            },
+            take: 1,
+            select: {
+              comentario_admin: true,
+            },
+          },
         },
         skip: (page - 1) * (limit ?? 10),
         take: limit ?? 10,
@@ -883,6 +892,44 @@ export class EmpleadoService {
       throw new InternalServerErrorException(
         'Ocurrió un problema técnico al registrar el rechazo. Intente de nuevo.',
       );
+    }
+  }
+
+  async obtenerDetalleBaja(id: string) {
+    try {
+      const empleado = await this.prisma.visitante.findUnique({
+        where: { id_visitante: id },
+        select: {
+          id_visitante: true,
+          nombre: true,
+          url_imagen: true,
+          servicio: {
+            select: {
+              activo: true,
+              tipo_servicio: { select: { nombre: true } },
+            },
+          },
+          accesos: {
+            orderBy: { fecha_creacion: 'desc' },
+            take: 1,
+            select: {
+              comentario_admin: true,
+            },
+          },
+        },
+      });
+
+      if (!empleado) {
+        throw new NotFoundException('Empleado no encontrado');
+      }
+
+      return {
+        success: true,
+        data: empleado,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException('Error al obtener el detalle de la baja');
     }
   }
 }
