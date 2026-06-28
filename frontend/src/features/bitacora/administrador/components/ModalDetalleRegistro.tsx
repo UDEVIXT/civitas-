@@ -197,6 +197,7 @@ export function ModalDetalleRegistro({
                   )}
                   <span className="text-muted-foreground">
                     {registro.residente_asociado?.nombre || "N/A"}
+                    {registro.residente_asociado?.vivienda && ` (${registro.residente_asociado.vivienda})`}
                   </span>
                 </div>
               </div>

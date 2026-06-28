@@ -15,7 +15,7 @@ export interface BitacoraRegistroAdmin {
   nombre: string;
   tipo_persona: string;
   qr_utilizado: string;
-  residente_asociado?: { nombre: string; avatar_url?: string };
+  residente_asociado?: { nombre: string; avatar_url?: string; vivienda?: string };
   fecha_entrada: string;
   fecha_salida?: string;
   metodo_acceso: string;

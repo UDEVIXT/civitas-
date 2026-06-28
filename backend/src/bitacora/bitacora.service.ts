@@ -199,7 +199,7 @@ export class BitacoraService {
               fecha_expiracion: true,
               usuario: {
                 select: {
-                  persona: { select: { nombre: true } },
+                  persona: { select: { nombre: true, url_imagen: true } },
                   residentes: {
                     select: {
                       vivienda: { select: { numero_vivienda: true } },
@@ -214,7 +214,14 @@ export class BitacoraService {
                   es_frecuente: true,
                   id_servicio: true,
                   residente: {
-                    select: { vivienda: { select: { numero_vivienda: true } } },
+                    select: {
+                      vivienda: { select: { numero_vivienda: true } },
+                      usuario: {
+                        select: {
+                          persona: { select: { nombre: true, url_imagen: true } },
+                        },
+                      },
+                    },
                   },
                   servicio: {
                     select: {
@@ -259,7 +266,7 @@ export class BitacoraService {
                   fecha_expiracion: true,
                   usuario: {
                     select: {
-                      persona: { select: { nombre: true } },
+                      persona: { select: { nombre: true, url_imagen: true } },
                       residentes: {
                         select: {
                           vivienda: {
@@ -279,6 +286,11 @@ export class BitacoraService {
                         select: {
                           vivienda: {
                             select: { numero_vivienda: true },
+                          },
+                          usuario: {
+                            select: {
+                              persona: { select: { nombre: true, url_imagen: true } },
+                            },
                           },
                         },
                       },
@@ -325,14 +337,18 @@ export class BitacoraService {
         metodoAccesoCalculado = 'Manual';
       }
 
-      let residenteNombre: string;
+      let residenteNombre = '-';
+      let residenteVivienda = '-';
+      let residenteAvatar: string | null = null;
+
       if (isResidenteDirecto) {
-        residenteNombre =
-          item.acceso.usuario?.residentes?.[0]?.vivienda?.numero_vivienda ??
-          'Sin asignar';
+        residenteNombre = item.acceso.usuario?.persona?.nombre ?? '-';
+        residenteVivienda = item.acceso.usuario?.residentes?.[0]?.vivienda?.numero_vivienda ?? 'Sin asignar';
+        residenteAvatar = item.acceso.usuario?.persona?.url_imagen ?? null;
       } else {
-        residenteNombre =
-          visitante?.residente?.vivienda?.numero_vivienda ?? '-';
+        residenteNombre = (visitante?.residente as any)?.usuario?.persona?.nombre ?? item.acceso.usuario?.persona?.nombre ?? '-';
+        residenteVivienda = visitante?.residente?.vivienda?.numero_vivienda ?? item.acceso.usuario?.residentes?.[0]?.vivienda?.numero_vivienda ?? '-';
+        residenteAvatar = (visitante?.residente as any)?.usuario?.persona?.url_imagen ?? item.acceso.usuario?.persona?.url_imagen ?? null;
       }
 
       return {
@@ -350,10 +366,9 @@ export class BitacoraService {
         tipo_persona: this.obtenerTipoPersona(visitante, isResidenteDirecto),
 
         residente_asociado: {
-          // Si es residente directo, buscamos su propia vivienda en el arreglo.
-          // Si es visitante, buscamos la vivienda del residente al que visita.
           nombre: residenteNombre,
-          avatar_url: null,
+          vivienda: residenteVivienda,
+          avatar_url: residenteAvatar,
         },
         fecha_entrada: item.fecha_hora_entrada,
         fecha_salida: item.fecha_hora_salida,
@@ -373,10 +388,20 @@ export class BitacoraService {
     const registrosRechazados = rechazos.map((item) => {
       const visitante = item.acceso.visitante;
       const isResidenteDirecto = !visitante;
-      const residenteNombre = isResidenteDirecto
-        ? (item.acceso.usuario?.residentes?.[0]?.vivienda?.numero_vivienda ??
-          'Sin asignar')
-        : (visitante?.residente?.vivienda?.numero_vivienda ?? '-');
+
+      let residenteNombre = '-';
+      let residenteVivienda = '-';
+      let residenteAvatar: string | null = null;
+
+      if (isResidenteDirecto) {
+        residenteNombre = item.acceso.usuario?.persona?.nombre ?? '-';
+        residenteVivienda = item.acceso.usuario?.residentes?.[0]?.vivienda?.numero_vivienda ?? 'Sin asignar';
+        residenteAvatar = item.acceso.usuario?.persona?.url_imagen ?? null;
+      } else {
+        residenteNombre = (visitante?.residente as any)?.usuario?.persona?.nombre ?? item.acceso.usuario?.persona?.nombre ?? '-';
+        residenteVivienda = visitante?.residente?.vivienda?.numero_vivienda ?? item.acceso.usuario?.residentes?.[0]?.vivienda?.numero_vivienda ?? '-';
+        residenteAvatar = (visitante?.residente as any)?.usuario?.persona?.url_imagen ?? item.acceso.usuario?.persona?.url_imagen ?? null;
+      }
 
       return {
         id: `rechazo_${item.id_bitacora_qr}`,
@@ -393,7 +418,8 @@ export class BitacoraService {
         tipo_persona: this.obtenerTipoPersona(visitante, isResidenteDirecto),
         residente_asociado: {
           nombre: residenteNombre,
-          avatar_url: null,
+          vivienda: residenteVivienda,
+          avatar_url: residenteAvatar,
         },
         fecha_entrada: null,
         fecha_salida: null,
@@ -741,13 +767,16 @@ export class BitacoraService {
           acceso: {
             include: {
               usuario: {
-                include: { persona: true },
+                include: { persona: true, residentes: { include: { vivienda: true } } },
               },
               visitante: {
                 include: {
                   residente: {
                     include: {
-                      usuario: true,
+                      usuario: {
+                        include: { persona: true },
+                      },
+                      vivienda: true,
                     },
                   },
                   servicio: {
@@ -787,6 +816,20 @@ export class BitacoraService {
       const isResidenteDirecto = !visitante;
       const tipoPersona = this.obtenerTipoPersona(visitante, isResidenteDirecto);
 
+      let residenteNombre = '-';
+      let residenteVivienda = '-';
+      let residenteAvatar: string | null = null;
+
+      if (isResidenteDirecto) {
+        residenteNombre = rechazo.acceso.usuario?.persona?.nombre ?? '-';
+        residenteVivienda = rechazo.acceso.usuario?.residentes?.[0]?.vivienda?.numero_vivienda ?? 'Sin asignar';
+        residenteAvatar = rechazo.acceso.usuario?.persona?.url_imagen ?? null;
+      } else {
+        residenteNombre = (visitante?.residente as any)?.usuario?.persona?.nombre ?? rechazo.acceso.usuario?.persona?.nombre ?? '-';
+        residenteVivienda = visitante?.residente?.vivienda?.numero_vivienda ?? rechazo.acceso.usuario?.residentes?.[0]?.vivienda?.numero_vivienda ?? '-';
+        residenteAvatar = (visitante?.residente as any)?.usuario?.persona?.url_imagen ?? rechazo.acceso.usuario?.persona?.url_imagen ?? null;
+      }
+
       return {
         id,
         nombre: isResidenteDirecto
@@ -794,8 +837,9 @@ export class BitacoraService {
           : visitante?.nombre,
         tipo_persona: tipoPersona,
         residente_asociado: {
-          nombre: rechazo.acceso.usuario?.persona?.nombre || '-',
-          avatar_url: rechazo.acceso.usuario?.persona?.url_imagen || null,
+          nombre: residenteNombre,
+          vivienda: residenteVivienda,
+          avatar_url: residenteAvatar,
         },
         fecha_entrada: null,
         fecha_salida: null,
@@ -831,7 +875,12 @@ export class BitacoraService {
               include: {
                 residente: {
                   include: {
-                    usuario: true,
+                    usuario: {
+                      include: {
+                        persona: true,
+                      },
+                    },
+                    vivienda: true,
                   },
                 },
                 servicio: {
@@ -846,7 +895,14 @@ export class BitacoraService {
               },
             },
             usuario: {
-              include: { persona: true },
+              include: {
+                persona: true,
+                residentes: {
+                  include: {
+                    vivienda: true,
+                  },
+                },
+              },
             },
           },
         },
@@ -907,6 +963,20 @@ export class BitacoraService {
 
     const estado = registro.fecha_hora_salida ? 'salida' : 'entrada';
 
+    let residenteNombre = '-';
+    let residenteVivienda = '-';
+    let residenteAvatar: string | null = null;
+
+    if (isResidenteDirecto) {
+      residenteNombre = registro.acceso.usuario?.persona?.nombre ?? '-';
+      residenteVivienda = registro.acceso.usuario?.residentes?.[0]?.vivienda?.numero_vivienda ?? 'Sin asignar';
+      residenteAvatar = registro.acceso.usuario?.persona?.url_imagen ?? null;
+    } else {
+      residenteNombre = (visitante?.residente?.usuario as any)?.persona?.nombre ?? registro.acceso.usuario?.persona?.nombre ?? '-';
+      residenteVivienda = visitante?.residente?.vivienda?.numero_vivienda ?? registro.acceso.usuario?.residentes?.[0]?.vivienda?.numero_vivienda ?? '-';
+      residenteAvatar = (visitante?.residente?.usuario as any)?.persona?.url_imagen ?? registro.acceso.usuario?.persona?.url_imagen ?? null;
+    }
+
     return {
       id: registro.id_bitacora,
       // Usamos el nombre del residente si visitante es null
@@ -915,8 +985,9 @@ export class BitacoraService {
         : visitante.nombre,
       tipo_persona: tipoPersona,
       residente_asociado: {
-        nombre: registro.acceso.usuario?.persona?.nombre || '-',
-        avatar_url: registro.acceso.usuario?.persona?.url_imagen || null,
+        nombre: residenteNombre,
+        vivienda: residenteVivienda,
+        avatar_url: residenteAvatar,
       },
       fecha_entrada: registro.fecha_hora_entrada,
       fecha_salida: registro.fecha_hora_salida || '-',
