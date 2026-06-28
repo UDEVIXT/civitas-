@@ -56,6 +56,8 @@ const getEstadoBadge = (estado: string) => {
     fuera: "bg-red-100 text-red-800 border-red-200",
     excedido: "bg-yellow-100 text-yellow-800 border-yellow-200",
     rechazado: "bg-slate-100 text-slate-800 border-slate-200",
+    pendiente: "bg-blue-100 text-blue-800 border-blue-200",
+    programado: "bg-blue-100 text-blue-800 border-blue-200",
   };
   return variants[estado] || "bg-gray-100 text-gray-800 border-gray-200";
 };
@@ -97,7 +99,7 @@ function RegistroCard({
         <input
           type="checkbox"
           className="w-4 h-4 cursor-pointer shrink-0"
-          disabled={!!fechaSalida || isRechazado}
+          disabled={!!fechaSalida || isRechazado || registro.estado === "pendiente" || registro.estado === "programado"}
           checked={selected}
           onChange={onToggle}
         />
@@ -217,6 +219,15 @@ function RegistroCard({
                     <span>{format(fechaSalida, "HH:mm")}</span>
                   </div>
                 </>
+              ) : (registro.estado === "pendiente" || registro.estado === "programado") ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs mt-1"
+                  disabled
+                >
+                  Registrar Salida
+                </Button>
               ) : (
                 <Button
                   variant="outline"
@@ -347,7 +358,7 @@ export function TablaAccesosGuardia({
                   <input
                     type="checkbox"
                     className="w-4 h-4 cursor-pointer"
-                    disabled={!!fechaSalida || isRechazado}
+                    disabled={!!fechaSalida || isRechazado || registro.estado === "pendiente" || registro.estado === "programado"}
                     checked={selectedIds.includes(registro.id)}
                     onChange={(e) => { e.stopPropagation(); onToggleSelection(registro.id); }}
                   />
@@ -457,6 +468,14 @@ export function TablaAccesosGuardia({
                         <span>{format(fechaSalida, "HH:mm")}</span>
                       </div>
                     </div>
+                  ) : (registro.estado === "pendiente" || registro.estado === "programado") ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled
+                    >
+                      Registrar Salida
+                    </Button>
                   ) : (
                     <Button
                       className="cursor-pointer"

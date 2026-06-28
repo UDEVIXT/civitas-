@@ -264,14 +264,6 @@ export class VisitanteService {
       );
     }
 
-    const bitacoraAcceso = await this.prisma.bitacora.create({
-      data: {
-        id_acceso: accesoCreado.id_acceso,
-        fecha_hora_entrada: accesoCreado.fecha_creacion,
-        comentario: 'Registro de visitante inicial',
-      },
-    });
-
     return visitante;
   }
 

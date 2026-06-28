@@ -63,6 +63,8 @@ const getEstadoBadge = (estado: string) => {
     salida: "bg-red-100 text-red-800",
     fuera: "bg-red-100 text-red-800",
     excedido: "bg-yellow-100 text-yellow-800",
+    pendiente: "bg-blue-100 text-blue-800",
+    programado: "bg-blue-100 text-blue-800",
   };
   return variants[estado] || "bg-gray-100 text-gray-800";
 };
@@ -120,7 +122,7 @@ function AccesoCard({
           <div className="min-w-0">
             <p className="font-medium truncate">{acceso.nombre}</p>
             <div className="flex items-center gap-2 mt-0.5">
-              <Badge className={`${getEstadoBadge(acceso.estado)} text-xs`}>
+              <Badge className={`capitalize ${getEstadoBadge(acceso.estado)} text-xs`}>
                 {acceso.estado === "excedido" ? "Excedido" : acceso.estado}
               </Badge>
               <Badge className={`${getTipoPersonaColor(acceso.tipo_persona)} text-xs`}>
@@ -429,7 +431,7 @@ export function TablaAccesosAdmin({
                     </div>
                   </TableCell>
                   <TableCell className="text-center">
-                    <Badge className={getEstadoBadge(acceso.estado)}>
+                    <Badge className={`capitalize ${getEstadoBadge(acceso.estado)}`}>
                       {acceso.estado === "excedido" ? "Excedido" : acceso.estado}
                     </Badge>
                   </TableCell>
