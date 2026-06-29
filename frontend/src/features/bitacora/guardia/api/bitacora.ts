@@ -18,6 +18,7 @@ export interface BitacoraRegistro {
   residente_asociado: {
     nombre: string;
     avatar_url: string | null;
+    vivienda?: string;
   };
   fecha_entrada: string | null;
   fecha_salida: string | null;
@@ -48,6 +49,7 @@ export interface BitacoraDetalle extends BitacoraRegistro {
   residente_asociado: {
     nombre: string;
     avatar_url: string | null;
+    vivienda?: string;
     apartamento?: string;
     torre?: string;
   };

@@ -64,3 +64,8 @@ export const eliminarEmpleadoDomestico = async (
     };
   }
 };
+
+export const obtenerDetalleBaja = async (id: string) => {
+  const response = await apiClient.get<{ success: boolean; data: any }>(`/empleado/${id}/baja`);
+  return response.data;
+};

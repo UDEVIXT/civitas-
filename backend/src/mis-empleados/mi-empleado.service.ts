@@ -63,71 +63,54 @@ export class EmpleadoService {
     return `${hours12}:${padded}${period}`;
   }
 
-  private buildHorarioTexto(
-    horarios: Array<{
-      dia_semana: string;
-      hora_inicio: Date | string;
-      hora_fin: Date | string;
-    }>,
-  ) {
-    if (!horarios.length) {
-      return '';
-    }
-    const byDay = new Map<string, typeof horarios>();
-    for (const horario of horarios) {
-      const current = byDay.get(horario.dia_semana) ?? [];
-      current.push(horario);
-      byDay.set(horario.dia_semana, current);
-    }
-
-    const orderedDays = this.dayOrder.filter((day) => byDay.has(day));
-    const firstDay = orderedDays[0];
-    const lastDay = orderedDays[orderedDays.length - 1];
-
-    const parts: string[] = [];
-
-    const buildRangeForDay = (day: string) => {
-      const dayHorarios = byDay.get(day) ?? [];
-      if (!dayHorarios.length) {
-        return null;
-      }
-
-      const toMinutes = (value: Date | string) => {
-        const { hours, minutes } = this.parseTime(value);
-        return hours * 60 + minutes;
-      };
-
-      const sortedByStart = dayHorarios
-        .slice()
-        .sort((a, b) => toMinutes(a.hora_inicio) - toMinutes(b.hora_inicio));
-      const sortedByEnd = dayHorarios
-        .slice()
-        .sort((a, b) => toMinutes(a.hora_fin) - toMinutes(b.hora_fin));
-
-      const start = sortedByStart[0];
-      const end = sortedByEnd[sortedByEnd.length - 1];
-
-      return `${this.dayLabel[day] ?? day}: ${this.formatTime(
-        start.hora_inicio,
-      )} - ${this.formatTime(end.hora_fin)}`;
-    };
-
-    if (firstDay) {
-      const firstText = buildRangeForDay(firstDay);
-      if (firstText) {
-        parts.push(firstText);
-      }
-    }
-
-    if (lastDay && lastDay !== firstDay) {
-      const lastText = buildRangeForDay(lastDay);
-      if (lastText) {
-        parts.push(lastText);
-      }
-    }
-
-    return parts.join(' | ');
+private buildHorarioTexto(
+  horarios: Array<{
+    dia_semana: string;
+    hora_inicio: Date | string;
+    hora_fin: Date | string;
+  }>,
+) {
+  if (!horarios.length) {
+    return '';
   }
+
+  const byDay = new Map<string, typeof horarios>();
+
+  for (const horario of horarios) {
+    const current = byDay.get(horario.dia_semana) ?? [];
+    current.push(horario);
+    byDay.set(horario.dia_semana, current);
+  }
+
+  const toMinutes = (value: Date | string) => {
+    const { hours, minutes } = this.parseTime(value);
+    return hours * 60 + minutes;
+  };
+
+  const parts: string[] = [];
+
+  for (const day of this.dayOrder) {
+    const dayHorarios = byDay.get(day) ?? [];
+
+    if (!dayHorarios.length) {
+      continue;
+    }
+
+    const sorted = dayHorarios
+      .slice()
+      .sort((a, b) => toMinutes(a.hora_inicio) - toMinutes(b.hora_inicio));
+
+    const ranges = sorted.map((horario) => {
+      return `${this.formatTime(horario.hora_inicio)} - ${this.formatTime(
+        horario.hora_fin,
+      )}`;
+    });
+
+    parts.push(`${this.dayLabel[day] ?? day}: ${ranges.join(', ')}`);
+  }
+
+  return parts.join(' | ');
+}
 
   //HU-1.5.6: Administrador puede ver empleados domesticos dentro del residencial
  // HU-1.5.6: Administrador puede ver empleados domesticos dentro del residencial
@@ -470,47 +453,113 @@ async actualizarEmpleado(
       console.log('🟢 VISITANTE ACTUALIZADO:', visitanteActualizado);
 
       // 5. Actualizar servicio y horarios
-      if (visitante.id_servicio) {
-        const mapeoDias: Record<string, string> = {
-          Lunes: 'LUNES',
-          Martes: 'MARTES',
-          Miércoles: 'MIERCOLES',
-          Jueves: 'JUEVES',
-          Viernes: 'VIERNES',
-          Sábado: 'SABADO',
-          Domingo: 'DOMINGO',
+if (visitante.id_servicio) {
+  const mapeoDias: Record<string, string> = {
+    Lunes: 'LUNES',
+    Martes: 'MARTES',
+    Miércoles: 'MIERCOLES',
+    Miercoles: 'MIERCOLES',
+    Jueves: 'JUEVES',
+    Viernes: 'VIERNES',
+    Sábado: 'SABADO',
+    Sabado: 'SABADO',
+    Domingo: 'DOMINGO',
+
+    LUNES: 'LUNES',
+    MARTES: 'MARTES',
+    MIERCOLES: 'MIERCOLES',
+    JUEVES: 'JUEVES',
+    VIERNES: 'VIERNES',
+    SABADO: 'SABADO',
+    DOMINGO: 'DOMINGO',
+  };
+
+  const toTimeDate = (value: string) => {
+    if (!value || typeof value !== 'string') {
+      throw new BadRequestException('Hora inválida');
+    }
+
+    const cleanValue = value.substring(0, 5);
+
+    if (!/^\d{2}:\d{2}$/.test(cleanValue)) {
+      throw new BadRequestException(`Formato de hora inválido: ${value}`);
+    }
+
+    return new Date(`1970-01-01T${cleanValue}:00.000Z`);
+  };
+
+  let nuevosHorarios: any[] = [];
+
+  if (Array.isArray(data.horarios) && data.horarios.length > 0) {
+    nuevosHorarios = data.horarios
+      .filter((horario: any) => horario.activo)
+      .map((horario: any) => {
+        const diaEnum =
+          mapeoDias[horario.dia] || mapeoDias[horario.dia_semana];
+
+        if (!diaEnum) {
+          throw new BadRequestException(
+            `Día no válido en horario: ${horario.dia || horario.dia_semana}`,
+          );
+        }
+
+        if (!horario.hora_entrada || !horario.hora_salida) {
+          throw new BadRequestException(
+            `El horario de ${horario.dia || horario.dia_semana} está incompleto`,
+          );
+        }
+
+        if (horario.hora_entrada >= horario.hora_salida) {
+          throw new BadRequestException(
+            `La hora de salida debe ser mayor a la hora de entrada en ${horario.dia || horario.dia_semana}`,
+          );
+        }
+
+        return {
+          dia_semana: diaEnum,
+          hora_inicio: toTimeDate(horario.hora_entrada),
+          hora_fin: toTimeDate(horario.hora_salida),
+          activo: true,
         };
+      });
+  } else {
+    const diasSeleccionados: string[] = data.dias_autorizados || [];
 
-        const diasSeleccionados: string[] = data.dias_autorizados || [];
+    nuevosHorarios = diasSeleccionados
+      .map((dia: string) => {
+        const diaEnum = mapeoDias[dia];
+        if (!diaEnum) return null;
 
-        const nuevosHorarios = diasSeleccionados
-          .map((dia: string) => {
-            const diaEnum = mapeoDias[dia];
-            if (!diaEnum) return null;
+        const entrada = data.hora_entrada || '08:00';
+        const salida = data.hora_salida || '16:00';
 
-            const entrada = data.hora_entrada || '08:00';
-            const salida = data.hora_salida || '16:00';
+        return {
+          dia_semana: diaEnum,
+          hora_inicio: toTimeDate(entrada),
+          hora_fin: toTimeDate(salida),
+          activo: true,
+        };
+      })
+      .filter(Boolean);
+  }
 
-            return {
-              dia_semana: diaEnum,
-              hora_inicio: new Date(`1970-01-01T${entrada}:00.000Z`),
-              hora_fin: new Date(`1970-01-01T${salida}:00.000Z`),
-              activo: true,
-            };
-          })
-          .filter(Boolean);
+  if (!nuevosHorarios.length) {
+    throw new BadRequestException(
+      'Debes autorizar al menos un día de acceso',
+    );
+  }
 
-        await tx.servicio.update({
-          where: { id_servicio: visitante.id_servicio },
-          data: {
-            cargo: data.cargo,
-            horarios: {
-              deleteMany: {},
-              create: nuevosHorarios as any,
-            },
-          },
-        });
-      }
+  await tx.servicio.update({
+    where: { id_servicio: visitante.id_servicio },
+    data: {
+      cargo: data.cargo,
+      horarios: {
+        deleteMany: {},
+        create: nuevosHorarios as any,
+      },
+    },
+  });
+}
 
       // 6. Actualizar acceso
       await tx.acceso.updateMany({

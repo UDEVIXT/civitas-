@@ -17,10 +17,11 @@ export interface EmpleadoDomestico {
   telefono: string;
   url_imagen?: string;
   notas_adicionales?: string | null;
-  servicio: {
+   servicio: {
     activo: boolean;
     bloqueo_global?: boolean;
     fecha_registro: Date;
+    cargo?: string | null;
     horarios: HorarioServicio[];
     tipo_servicio: {
       nombre: string;

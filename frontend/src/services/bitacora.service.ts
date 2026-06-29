@@ -16,6 +16,7 @@ export interface BitacoraDetalleResponse {
     residente_asociado: {
       nombre: string;
       avatar_url: string | null;
+      vivienda?: string;
     };
 
     fecha_entrada: string;

@@ -56,6 +56,8 @@ const getEstadoBadge = (estado: string) => {
     fuera: "bg-red-100 text-red-800 border-red-200",
     excedido: "bg-yellow-100 text-yellow-800 border-yellow-200",
     rechazado: "bg-slate-100 text-slate-800 border-slate-200",
+    pendiente: "bg-blue-100 text-blue-800 border-blue-200",
+    programado: "bg-blue-100 text-blue-800 border-blue-200",
   };
   return variants[estado] || "bg-gray-100 text-gray-800 border-gray-200";
 };
@@ -97,7 +99,7 @@ function RegistroCard({
         <input
           type="checkbox"
           className="w-4 h-4 cursor-pointer shrink-0"
-          disabled={!!fechaSalida || isRechazado}
+          disabled={!!fechaSalida || isRechazado || registro.estado === "pendiente" || registro.estado === "programado"}
           checked={selected}
           onChange={onToggle}
         />
@@ -157,7 +159,10 @@ function RegistroCard({
                     </AvatarFallback>
                   )}
                 </Avatar>
-                <span className="font-medium text-foreground">{registro.residente_asociado.nombre}</span>
+                <span className="font-medium text-foreground">
+                  {registro.residente_asociado.nombre}
+                  {registro.residente_asociado.vivienda && ` (${registro.residente_asociado.vivienda})`}
+                </span>
               </div>
             </div>
           )}
@@ -214,6 +219,15 @@ function RegistroCard({
                     <span>{format(fechaSalida, "HH:mm")}</span>
                   </div>
                 </>
+              ) : (registro.estado === "pendiente" || registro.estado === "programado") ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs mt-1"
+                  disabled
+                >
+                  Registrar Salida
+                </Button>
               ) : (
                 <Button
                   variant="outline"
@@ -318,7 +332,7 @@ export function TablaAccesosGuardia({
             <TableHead>Nombre</TableHead>
             <TableHead>Proveedor o empresa</TableHead>
             <TableHead className="text-center">Tipo de acceso</TableHead>
-            <TableHead className="text-center">Propiedad/residencia asociada</TableHead>
+            <TableHead>Propiedad/residencia asociada</TableHead>
             <TableHead className="text-center">Método de acceso</TableHead>
             <TableHead className="text-center">Guardias (Ent / Sal)</TableHead>
             <TableHead className="text-center">Estado</TableHead>
@@ -344,14 +358,14 @@ export function TablaAccesosGuardia({
                   <input
                     type="checkbox"
                     className="w-4 h-4 cursor-pointer"
-                    disabled={!!fechaSalida || isRechazado}
+                    disabled={!!fechaSalida || isRechazado || registro.estado === "pendiente" || registro.estado === "programado"}
                     checked={selectedIds.includes(registro.id)}
                     onChange={(e) => { e.stopPropagation(); onToggleSelection(registro.id); }}
                   />
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-3">
-                    <Avatar>
+                    <Avatar className="h-9 w-9 shrink-0">
                       {registro.avatar_url ? (
                         <img src={registro.avatar_url} alt={registro.nombre} className="h-full w-full object-cover rounded-full" />
                       ) : (
@@ -360,7 +374,7 @@ export function TablaAccesosGuardia({
                         </AvatarFallback>
                       )}
                     </Avatar>
-                    <span className="font-medium">{registro.nombre}</span>
+                    <span className="font-medium text-sm">{registro.nombre}</span>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -375,8 +389,8 @@ export function TablaAccesosGuardia({
                 </TableCell>
                 <TableCell>
                   {registro.residente_asociado?.nombre && registro.residente_asociado.nombre !== "-" ? (
-                    <div className="flex items-center gap-2 justify-center">
-                      <Avatar className="h-8 w-8">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9 shrink-0">
                         {registro.residente_asociado.avatar_url ? (
                           <img src={registro.residente_asociado.avatar_url} alt={registro.residente_asociado.nombre} className="h-full w-full object-cover rounded-full" />
                         ) : (
@@ -385,10 +399,15 @@ export function TablaAccesosGuardia({
                           </AvatarFallback>
                         )}
                       </Avatar>
-                      <span className="font-medium">{registro.residente_asociado.nombre}</span>
+                      <div className="flex flex-col items-start text-left min-w-0">
+                        <span className="font-medium text-sm">{registro.residente_asociado.nombre}</span>
+                        {registro.residente_asociado.vivienda && (
+                          <span className="text-xs text-muted-foreground">Vivienda: {registro.residente_asociado.vivienda}</span>
+                        )}
+                      </div>
                     </div>
                   ) : (
-                    <span className="text-muted-foreground text-center block">-</span>
+                    <span className="text-muted-foreground pl-12 block text-left">-</span>
                   )}
                 </TableCell>
                 <TableCell className="text-center text-muted-foreground">
@@ -449,6 +468,14 @@ export function TablaAccesosGuardia({
                         <span>{format(fechaSalida, "HH:mm")}</span>
                       </div>
                     </div>
+                  ) : (registro.estado === "pendiente" || registro.estado === "programado") ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled
+                    >
+                      Registrar Salida
+                    </Button>
                   ) : (
                     <Button
                       className="cursor-pointer"

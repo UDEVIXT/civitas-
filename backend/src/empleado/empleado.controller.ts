@@ -98,6 +98,13 @@ export class EmpleadoController {
     return this.empleadoService.obtenerViviendasConEmpleados();
   }
 
+  @Get(':id/baja')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Administrador')
+  async findOneBaja(@Param('id') id: string) {
+    return this.empleadoService.obtenerDetalleBaja(id);
+  }
+
   @Get(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Administrador')

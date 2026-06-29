@@ -63,6 +63,8 @@ const getEstadoBadge = (estado: string) => {
     salida: "bg-red-100 text-red-800",
     fuera: "bg-red-100 text-red-800",
     excedido: "bg-yellow-100 text-yellow-800",
+    pendiente: "bg-blue-100 text-blue-800",
+    programado: "bg-blue-100 text-blue-800",
   };
   return variants[estado] || "bg-gray-100 text-gray-800";
 };
@@ -120,7 +122,7 @@ function AccesoCard({
           <div className="min-w-0">
             <p className="font-medium truncate">{acceso.nombre}</p>
             <div className="flex items-center gap-2 mt-0.5">
-              <Badge className={`${getEstadoBadge(acceso.estado)} text-xs`}>
+              <Badge className={`capitalize ${getEstadoBadge(acceso.estado)} text-xs`}>
                 {acceso.estado === "excedido" ? "Excedido" : acceso.estado}
               </Badge>
               <Badge className={`${getTipoPersonaColor(acceso.tipo_persona)} text-xs`}>
@@ -173,6 +175,7 @@ function AccesoCard({
                   </Avatar>
                   <span className="font-medium text-foreground">
                     {acceso.residente_asociado.nombre}
+                    {acceso.residente_asociado.vivienda && ` (${acceso.residente_asociado.vivienda})`}
                   </span>
                 </div>
               </div>
@@ -297,7 +300,7 @@ export function TablaAccesosAdmin({
             <TableHead>Nombre</TableHead>
             <TableHead>Nombre del proveedor o empresa</TableHead>
             <TableHead className="text-center">Tipo de acceso</TableHead>
-            <TableHead className="text-center">Propiedad asociada</TableHead>
+            <TableHead>Propiedad asociada</TableHead>
             <TableHead className="text-center">Método de acceso</TableHead>
             <TableHead className="text-center">Guardia que registró</TableHead>
             <TableHead className="text-center">Estado</TableHead>
@@ -335,7 +338,7 @@ export function TablaAccesosAdmin({
                 >
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <Avatar>
+                      <Avatar className="h-9 w-9 shrink-0">
                         {acceso.avatar_url ? (
                           <img
                             src={acceso.avatar_url}
@@ -353,7 +356,7 @@ export function TablaAccesosAdmin({
                           </AvatarFallback>
                         )}
                       </Avatar>
-                      <span className="font-medium">{acceso.nombre}</span>
+                      <span className="font-medium text-sm">{acceso.nombre}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -371,8 +374,8 @@ export function TablaAccesosAdmin({
                   <TableCell>
                     {acceso.residente_asociado?.nombre &&
                     acceso.residente_asociado.nombre !== "-" ? (
-                      <div className="flex items-center gap-2 justify-center">
-                        <Avatar className="h-8 w-8">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9 shrink-0">
                           {acceso.residente_asociado.avatar_url ? (
                             <img
                               src={acceso.residente_asociado.avatar_url}
@@ -390,10 +393,15 @@ export function TablaAccesosAdmin({
                             </AvatarFallback>
                           )}
                         </Avatar>
-                        <span className="font-medium">{acceso.residente_asociado.nombre}</span>
+                        <div className="flex flex-col items-start text-left min-w-0">
+                          <span className="font-medium text-sm">{acceso.residente_asociado.nombre}</span>
+                          {acceso.residente_asociado.vivienda && (
+                            <span className="text-xs text-muted-foreground">Vivienda: {acceso.residente_asociado.vivienda}</span>
+                          )}
+                        </div>
                       </div>
                     ) : (
-                      <div className="text-center text-muted-foreground">-</div>
+                      <span className="text-muted-foreground pl-12 block text-left">-</span>
                     )}
                   </TableCell>
                   <TableCell className="text-center text-muted-foreground">
@@ -423,7 +431,7 @@ export function TablaAccesosAdmin({
                     </div>
                   </TableCell>
                   <TableCell className="text-center">
-                    <Badge className={getEstadoBadge(acceso.estado)}>
+                    <Badge className={`capitalize ${getEstadoBadge(acceso.estado)}`}>
                       {acceso.estado === "excedido" ? "Excedido" : acceso.estado}
                     </Badge>
                   </TableCell>

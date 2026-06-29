@@ -110,46 +110,45 @@ export function useResidenteEmpleados(idResidente: string) {
   // =========================
 
   const updateMutation = useMutation({
-    mutationFn: (values: UpdateEmpleadoValues) => {
-      if (!selectedEmpleado) {
-        return Promise.reject(new Error("No hay empleado seleccionado"));
-      }
+   mutationFn: (values: UpdateEmpleadoValues) => {
+  if (!selectedEmpleado) {
+    return Promise.reject(new Error("No hay empleado seleccionado"));
+  }
 
-      // Días activos
-      const diasAutorizados = (values.horarios || [])
-        .filter((h) => h.activo)
-        .map((h) => h.dia);
+  const horarios = values.horarios || [];
 
-      // Tomamos primer horario activo
-      const primerDiaActivo = (values.horarios || []).find((h) => h.activo);
-      const entradaLimpia = primerDiaActivo?.hora_entrada || "08:00";
-      const salidaLimpia = primerDiaActivo?.hora_salida || "16:00";
+  const horariosActivos = horarios
+    .filter((h) => h.activo)
+    .map((h) => ({
+      dia: h.dia,
+      activo: h.activo,
+      hora_entrada: h.hora_entrada,
+      hora_salida: h.hora_salida,
+    }));
 
-      const formData = new FormData();
-          
-      formData.append("accion", "actualizacion_residente");
-      formData.append("nombre", values.nombre);
-      formData.append("telefono", values.telefono || "");
-      formData.append("cargo", values.cargo || "");
-      formData.append("notas_adicionales", values.notas_adicionales || "");
-      formData.append("hora_entrada", entradaLimpia);
-      formData.append("hora_salida", salidaLimpia);
-      formData.append("dias_autorizados", JSON.stringify(diasAutorizados));
-          
-      if (values.foto instanceof File) {
-        formData.append("foto_empleado", values.foto);
-      }
-      
-      console.log("🚀 [HOOK] FormData enviado al backend:");
-      for (const [key, value] of formData.entries()) {
-        console.log(key, value);
-      }
-      
-      return actualizarEmpleadoResidente(
-        selectedEmpleado.id_visitante,
-        formData,
-      );
-    },
+  const formData = new FormData();
+
+  formData.append("accion", "actualizacion_residente");
+  formData.append("nombre", values.nombre);
+  formData.append("telefono", values.telefono || "");
+  formData.append("cargo", values.cargo || "");
+  formData.append("notas_adicionales", values.notas_adicionales || "");
+  formData.append("horarios", JSON.stringify(horariosActivos));
+
+  if (values.foto instanceof File) {
+    formData.append("foto_empleado", values.foto);
+  }
+
+  console.log("🚀 [HOOK] FormData enviado al backend:");
+  for (const [key, value] of formData.entries()) {
+    console.log(key, value);
+  }
+
+  return actualizarEmpleadoResidente(
+    selectedEmpleado.id_visitante,
+    formData,
+  );
+},
 
     onSuccess: () => {
       // Al lanzar excepciones limpias desde la API, si llegamos aquí es un éxito garantizado
