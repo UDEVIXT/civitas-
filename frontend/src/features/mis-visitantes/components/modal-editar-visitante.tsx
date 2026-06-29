@@ -60,15 +60,20 @@ function normalizeTimeLocal(value: string) {
 function isVisitInProgress(visitante?: Visitante | null) {
   if (!visitante?.fecha_visita || !visitante?.hora_estimada) return false;
   
-  // Si el estatus del visitante ya no es "Activo" (es Expirado o Inactivo),
-  // significa que no está en curso y liberamos todos los campos del formulario.
+  // 1. Si la tabla lo reporta como Inactivo o Expirado, liberamos campos para reciclar
   if (visitante.estatus !== "Activo") return false;
 
   try {
     const [y, m, d] = visitante.fecha_visita.split("-").map(Number);
-    const [hh, mm] = normalizeTimeLocal(visitante.hora_estimada).split(":").map(Number);
-    const llegada = new Date(y, m - 1, d, hh, mm, 0, 0);
-    return llegada <= new Date();
+    const [hhLlegada, mmLlegada] = normalizeTimeLocal(visitante.hora_estimada).split(":").map(Number);
+    
+    // Convertimos la hora de llegada a un objeto Date real
+    const llegada = new Date(y, m - 1, d, hhLlegada, mmLlegada, 0, 0);
+    const ahora = new Date();
+
+    // 2. ¿Está en curso? 
+    // Se bloquean los campos (retorna true) SOLAMENTE si la hora actual ya alcanzó o pasó la hora de llegada.
+    return llegada <= ahora;
   } catch {
     return false;
   }
@@ -124,27 +129,31 @@ export function ModalEditarVisitante({
   })
 
   React.useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen || !visitante) return
+console.log("Datos que recibe el modal:", visitante); // <--- REVISA LA CONSOLA DEL NAVEGADOR
+    // 1. Convertimos la fecha de string (YYYY-MM-DD) a objeto Date real
+    const fechaComoDate = visitante?.fecha_visita 
+      ? new Date(`${visitante.fecha_visita}T00:00:00`) 
+      : undefined;
+      
+    setDate(fechaComoDate); // Esto actualizará el calendario visual
 
     reset({
       nombre_completo: visitante?.nombre_completo ?? "",
-      telefono: (visitante?.telefono ?? "").replace(/\D/g, ""), 
-      fecha_visita: visitante?.fecha_visita ?? "",
+      telefono: (visitante?.telefono ?? "").replace(/\D/g, ""),
+      fecha_visita: visitante?.fecha_visita ?? "", 
       hora_estimada: visitante?.hora_estimada ?? "",
       hora_salida: visitante?.hora_salida ?? "",
-      tipo_visitante: visitante?.tipo_visitante ?? "Otro",
+      tipo_visitante: (visitante?.tipo_visitante as any) ?? "Otro",
       motivo_visita: visitante?.motivo_visita ?? "",
       notas_adicionales: visitante?.notas_adicionales ?? "",
-      foto: undefined,
-      // ✅ CORRECCIÓN 2: Extraemos el valor real que viene de la base de datos
       es_frecuente: visitante?.es_frecuente ?? false,
-    })
-    
+    });
     if (fotoObjectUrlRef.current) {
       URL.revokeObjectURL(fotoObjectUrlRef.current)
       fotoObjectUrlRef.current = null
     }
-  }, [isOpen, visitante, reset])
+  }, [isOpen, visitante, reset]);
 
   React.useEffect(() => {
     return () => {
@@ -163,6 +172,19 @@ export function ModalEditarVisitante({
       return
     }
 
+    // Si la visita está en curso, "filtramos" el objeto
+    // para enviar única y exclusivamente las fechas, engañando a react-hook-form
+    if (visitaEnCurso) {
+      const datosParciales: Partial<EditarVisitanteFormValues> = {
+        fecha_visita: data.fecha_visita,
+        hora_salida: data.hora_salida,
+      };
+      
+      void onSave(datosParciales as EditarVisitanteFormValues);
+      return;
+    }
+
+    // Si no está en curso, enviamos todo normal
     void onSave(data)
   }
 

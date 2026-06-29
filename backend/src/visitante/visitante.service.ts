@@ -1034,11 +1034,12 @@ export class VisitanteService {
       telefono,
       es_frecuente,
       notas_adicionales,
+      motivo,
     } = dto;
     let hayCambiosDatos = false;
     let hayCambiosFechas = false;
 
-    if (nombre !== undefined && nombre !== visitante.nombre) {
+    if (motivo !== undefined && motivo !== visitante.motivo) {
       hayCambiosDatos = true;
     }
     if (
@@ -1106,11 +1107,12 @@ export class VisitanteService {
         hayCambiosFechas ||
         (nombre !== undefined && nombre !== visitante.nombre) ||
         (tipo_visitante !== undefined &&
-          tipo_visitante !== visitante.tipo_visitante);
+          tipo_visitante !== visitante.tipo_visitante) ||
+        (motivo !== undefined && motivo !== visitante.motivo); // Aseguramos regeneración por motivo también
 
       return await this.prisma.$transaction(
         async (prisma: Prisma.TransactionClient) => {
-          // Actualización de registro base
+          // Actualización de registro base (Visitante)
           await prisma.visitante.update({
             where: { id_visitante: idVisitante },
             data: {
@@ -1120,12 +1122,15 @@ export class VisitanteService {
               ...(telefono !== undefined && { telefono }),
               ...(es_frecuente !== undefined && { es_frecuente }),
               ...(notas_adicionales !== undefined && { notas_adicionales }),
+              ...(motivo !== undefined && { motivo }),
               ...(file && { url_imagen: nuevaUrlImagen }),
             },
           });
 
-          // Actualización de la ventana de acceso
-          if (hayCambiosFechas && accesoActual) {
+          // ✅ CORRECCIÓN 1: Le indicamos "any" para que TypeScript acepte el objeto de Prisma sin llorar
+          let accesoActualizado: any = null;
+
+          if (accesoActual) {
             const origenInicio =
               accesoActual.fecha_visita_programada ??
               accesoActual.fecha_creacion;
@@ -1133,46 +1138,17 @@ export class VisitanteService {
               accesoActual.fecha_salida_programada ??
               accesoActual.fecha_expiracion;
 
-            const nuevaCreacion = fecha_inicio
-              ? new Date(fecha_inicio)
-              : origenInicio;
-            const nuevaExpiracion = fecha_fin ? new Date(fecha_fin) : origenFin;
-
-            await prisma.acceso.update({
-              where: { id_acceso: accesoActual.id_acceso },
-              data: {
-                fecha_creacion: nuevaCreacion,
-                fecha_visita_programada: nuevaCreacion,
-                fecha_expiracion: nuevaExpiracion,
-                fecha_salida_programada: nuevaExpiracion,
-              },
-            });
-          }
-
-          // Invalidación y regeneración de llaves criptográficas (CA007)
-          if (requiereNuevoQr && accesoActual && accesoActual.codigo_qr) {
-            await prisma.acceso.update({
-              where: { id_acceso: accesoActual.id_acceso },
-              data: { estatus: 'Inactivo' },
-            });
-
-            const codigoQr = await this.generarCodigoQrUnico(prisma);
-            const origenInicio =
-              accesoActual.fecha_visita_programada ??
-              accesoActual.fecha_creacion;
-            const origenFin =
-              accesoActual.fecha_salida_programada ??
-              accesoActual.fecha_expiracion;
             const { inicio, fin } = this.obtenerFechasAcceso(
               fecha_inicio || origenInicio,
               fecha_fin || origenFin,
             );
 
-            await prisma.acceso.create({
+            // ✅ CORRECCIÓN 2: Sustituimos el CREATE por un UPDATE directo a la fila existente
+            accesoActualizado = await prisma.acceso.update({
+              where: { id_acceso: accesoActual.id_acceso },
               data: {
-                id_usuario: idUsuario,
-                id_visitante: idVisitante,
-                codigo_qr: codigoQr,
+                // Si requiere un nuevo QR, generamos uno y sobrescribimos la cadena vieja. Si no, se queda igual.
+                ...(requiereNuevoQr && { codigo_qr: await this.generarCodigoQrUnico(prisma) }),
                 fecha_creacion: inicio,
                 fecha_visita_programada: inicio,
                 fecha_expiracion: fin,
@@ -1185,6 +1161,7 @@ export class VisitanteService {
           return {
             success: true,
             message: 'Información del visitante actualizada con éxito.',
+            data: accesoActualizado, // 👈 Mandamos el acceso modificado de vuelta al frontend
           };
         },
       );
