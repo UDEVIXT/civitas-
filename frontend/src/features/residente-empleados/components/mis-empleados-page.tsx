@@ -391,6 +391,7 @@ const guardarEmpleado = React.useCallback(
       <MiEmpleadoHorarioDialog
         nombre={modalEdit.selectedEmpleado?.nombre || ""}
         horarios={modalEdit.selectedEmpleado?.servicio?.horarios || []}
+        codigoQr={modalEdit.selectedEmpleado?.codigo_qr ?? null}
         open={modalHorario.isOpen}
         onOpenChange={modalHorario.setIsOpen}
       />

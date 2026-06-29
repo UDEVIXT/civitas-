@@ -236,6 +236,15 @@ private buildHorarioTexto(
               },
             },
           },
+
+          accesos: {
+            select: {
+              codigo_qr: true,
+              fecha_creacion: true,
+            },
+            orderBy: { fecha_creacion: 'desc' },
+            take: 1,
+          },
         },
 
         skip: (page - 1) * (limit ?? 10),
@@ -251,9 +260,11 @@ private buildHorarioTexto(
       const horario_texto = this.buildHorarioTexto(
         item.servicio?.horarios ?? [],
       );
+      const ultimoAcceso = item.accesos?.[0] ?? null;
 
       return {
         ...item,
+        codigo_qr: ultimoAcceso?.codigo_qr ?? null,
         servicio: item.servicio
           ? {
               ...item.servicio,

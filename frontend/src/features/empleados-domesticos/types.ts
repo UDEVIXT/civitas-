@@ -17,6 +17,7 @@ export interface EmpleadoDomestico {
   telefono: string;
   url_imagen?: string;
   notas_adicionales?: string | null;
+  codigo_qr?: string | null;
    servicio: {
     activo: boolean;
     bloqueo_global?: boolean;

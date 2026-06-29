@@ -1,5 +1,6 @@
 "use client";
 import { Clock } from "lucide-react";
+import QRCode from "react-qr-code";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,6 +21,7 @@ type HorarioServicio = {
 type MiEmpleadoHorarioDialogProps = {
   nombre: string;
   horarios: HorarioServicio[];
+  codigoQr?: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
@@ -52,6 +54,7 @@ const formatearHoraLimpia = (timeValue: any) => {
 export function MiEmpleadoHorarioDialog({
   nombre,
   horarios,
+  codigoQr,
   open,
   onOpenChange,
 }: MiEmpleadoHorarioDialogProps) {
@@ -72,26 +75,46 @@ export function MiEmpleadoHorarioDialog({
           </div>
         </div>
         
-        <div className="p-6">
-          <h3 className="text-lg font-semibold mb-3">Horarios Autorizados</h3>
-          <div className="text-sm text-muted-foreground bg-gray-50 p-4 rounded-xl space-y-1">
-            {horarios && horarios.length > 0 ? (
-              horarios.map((horario) => (
-                <div
-                  key={horario.dia_semana}
-                  className="flex justify-between py-2 border-b last:border-0 border-gray-100"
-                >
-                  <span className="font-medium text-gray-700">
-                    {capitalizeFirstLetter(horario.dia_semana.toLowerCase())}
-                  </span>
-                  <span className="font-semibold text-gray-900">
-                    {formatearHoraLimpia(horario.hora_inicio)} - {formatearHoraLimpia(horario.hora_fin)}
-                  </span>
+        <div className="p-6 space-y-6">
+          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+            <h3 className="mb-3 text-lg font-semibold">QR de acceso</h3>
+            {codigoQr ? (
+              <div className="flex flex-col items-center gap-3">
+                <div className="rounded-2xl bg-white p-3 shadow-sm">
+                  <QRCode value={codigoQr} size={180} level="M" />
                 </div>
-              ))
+                <p className="text-center text-sm text-zinc-600">
+                  Comparte este código QR para identificar al empleado.
+                </p>
+              </div>
             ) : (
-              <p className="italic text-center py-2">No hay horarios registrados.</p>
+              <p className="text-center text-sm italic text-zinc-500">
+                Aún no hay un QR disponible para este empleado.
+              </p>
             )}
+          </div>
+
+          <div>
+            <h3 className="mb-3 text-lg font-semibold">Horarios Autorizados</h3>
+            <div className="text-sm text-muted-foreground bg-gray-50 p-4 rounded-xl space-y-1">
+              {horarios && horarios.length > 0 ? (
+                horarios.map((horario) => (
+                  <div
+                    key={horario.dia_semana}
+                    className="flex justify-between py-2 border-b last:border-0 border-gray-100"
+                  >
+                    <span className="font-medium text-gray-700">
+                      {capitalizeFirstLetter(horario.dia_semana.toLowerCase())}
+                    </span>
+                    <span className="font-semibold text-gray-900">
+                      {formatearHoraLimpia(horario.hora_inicio)} - {formatearHoraLimpia(horario.hora_fin)}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="italic text-center py-2">No hay horarios registrados.</p>
+              )}
+            </div>
           </div>
         </div>
         
